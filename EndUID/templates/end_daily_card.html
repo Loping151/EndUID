@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endfield Daily</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #0f1014;
+        --c-accent: #ffe600; /* Endfield Yellow */
+        --c-text: #ffffff;
+        --c-subtext: #8b8b8b;
+        --c-panel: rgba(20, 21, 24, 0.95);
+        --c-border: rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 1150px;
+        height: 850px;
+        overflow: hidden;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: var(--c-text);
+    }
+
+    .container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .bg-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 0;
+        background: #111;
+    }
+
+    .bg-image {
+        width: 100%; height: 100%; object-fit: cover;
+        opacity: 0.5;
+        filter: grayscale(30%) contrast(110%);
+    }
+
+    .grid-deco {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .overlay-gradient {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 70% 40%, transparent 0%, rgba(15,16,20,0.6) 40%, rgba(15,16,20,0.98) 90%);
+        z-index: 1;
+    }
+
+    .char-layer {
+        position: absolute;
+        top: -40px;
+        right: -80px;
+        height: 105%;
+        width: auto;
+        z-index: 2;
+        filter: drop-shadow(-10px 5px 20px rgba(0,0,0,0.5));
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%);
+        mask-image: linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%);
+    }
+
+    .logo {
+        position: absolute;
+        top: 35px;
+        left: 25px;
+        width: 190px;
+        height: auto;
+        z-index: 20;
+    }
+
+    .ui-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 10;
+        padding: 40px 45px; /* 调整内边距，防止贴边 */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .hud-sidebar {
+        width: 480px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px; /* 卡片间距 */
+        margin-top: 100px; /* 避让 Logo */
+    }
+
+    .header-group {
+        margin-bottom: 15px;
+        border-left: 8px solid var(--c-accent);
+        padding-left: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .header-title {
+        font-family: 'Oswald', sans-serif;
+        font-size: 60px; /* 大字体 */
+        font-weight: 700;
+        color: white;
+        line-height: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .header-subtitle {
+        font-family: 'Source Han Sans CN', sans-serif;
+        font-size: 16px;
+        color: var(--c-accent);
+        margin-top: 6px;
+        letter-spacing: 2px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .time-badge {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        background: rgba(255,255,255,0.08);
+        padding: 5px 15px;
+        margin-top: 12px;
+        font-family: 'JetBrains Mono', 'Source Han Sans CN';
+        font-size: 14px;
+        color: #ddd;
+        border: 1px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(5px);
+    }
+
+    .time-badge.urgent {
+        border-color: #ff4d4f;
+        color: #ff4d4f;
+        background: rgba(255, 77, 79, 0.15);
+    }
+
+    .time-badge span {
+        color: #777;
+        margin-right: 8px;
+        font-family: 'JetBrains Mono';
+        font-weight: bold;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, rgba(35, 37, 41, 0.95) 0%, rgba(25, 27, 30, 0.85) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--c-border);
+        padding: 18px 25px; /* 紧凑 Padding */
+        position: relative;
+        /* 右下角切角 */
+        clip-path: polygon(0 0, 100% 0, 100% 80%, 96% 100%, 0 100%);
+    }
+
+    .stat-card::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 20px;
+        height: 20px;
+        background: linear-gradient(135deg, transparent 50%, var(--c-accent) 50%);
+        opacity: 0.8;
+    }
+
+    .stat-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center; /* 垂直居中对齐 */
+        margin-bottom: 12px;
+    }
+
+    .stat-info {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .stat-icon-box {
+        width: 54px;
+        height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+    }
+
+    .stat-labels {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        line-height: 1.1;
+    }
+
+    /* 中文主标题 */
+    .stat-name-cn {
+        font-size: 28px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .stat-name-en {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: #777;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-top: 2px;
+    }
+
+    .stat-val-group {
+        text-align: right;
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+    }
+
+    .stat-cur {
+        font-family: 'Oswald', sans-serif;
+        font-size: 52px; /* 大数字 */
+        font-weight: 700;
+        color: var(--c-text);
+        line-height: 1;
+    }
+
+    .stat-total {
+        font-family: 'Oswald', sans-serif;
+        font-size: 20px;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .progress-track {
+        width: 100%;
+        height: 6px;
+        background: rgba(255,255,255,0.1);
+        position: relative;
+    }
+
+    .progress-fill {
+        height: 100%;
+        position: relative;
+        box-shadow: 0 0 10px currentColor;
+    }
+
+    .progress-fill::after {
+        content: "";
+        position: absolute;
+        right: 0; top: 0; bottom: 0;
+        width: 2px;
+        background: #fff;
+    }
+
+    .hud-footer {
+        width: 100%;
+        height: 100px;
+        display: flex;
+        align-items: flex-end;
+        gap: 20px;
+    }
+
+    .user-card {
+        flex: 1;
+        height: 100%;
+        background: rgba(255,255,255,0.05);
+        border-left: 6px solid var(--c-accent);
+        backdrop-filter: blur(15px);
+        display: flex;
+        align-items: center;
+        padding: 0 25px;
+        gap: 20px;
+        clip-path: polygon(0 0, 100% 0, 98% 100%, 0 100%);
+    }
+
+    .avatar-hex {
+        width: 70px;
+        height: 70px;
+        background: #222;
+        border: 2px solid rgba(255,255,255,0.3);
+        clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+        overflow: hidden;
+    }
+
+    .avatar-img {
+        width: 100%; height: 100%; object-fit: cover;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+    }
+
+    .user-name {
+        font-size: 28px;
+        font-weight: 700;
+        color: white;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+
+    .user-uid {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        color: var(--c-accent);
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+
+    .user-uid::before {
+        content: "UID_";
+        color: #666;
+    }
+
+    /* 底部迷你数据 */
+    .footer-stats {
+        display: flex;
+        gap: 15px;
+        height: 100%;
+    }
+
+    .mini-stat-box {
+        background: rgba(0,0,0,0.7);
+        border: 1px solid rgba(255,255,255,0.15);
+        height: 100%;
+        min-width: 120px;
+        padding: 10px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+    }
+
+    .mini-stat-box::before {
+        content: "";
+        position: absolute;
+        top: -1px; left: -1px;
+        width: 10px; height: 10px;
+        border-top: 3px solid var(--c-accent);
+        border-left: 3px solid var(--c-accent);
+    }
+
+    .mini-label {
+        font-family: 'Source Han Sans CN';
+        font-size: 14px;
+        color: #999;
+        margin-bottom: 5px;
+        font-weight: 700;
+    }
+
+    .mini-val {
+        font-family: 'Oswald', sans-serif;
+        font-size: 40px;
+        font-weight: 700;
+        color: white;
+        line-height: 1;
+    }
+    
+    .mini-val span {
+        font-size: 18px;
+        color: #666;
+        margin-left: 4px;
+        font-weight: 600;
+    }
+
+</style>
+</head>
+<body>
+<div class="container">
+
+    <div class="bg-layer">
+        {% if has_bg %}
+            <img src="{{ pile_url }}" class="bg-image">
+        {% else %}
+            <img src="{{ bg_url }}" class="bg-image">
+        {% endif %}
+    </div>
+    
+    <div class="grid-deco"></div>
+    <div class="overlay-gradient"></div>
+
+    {% if logo_url %}
+    <img src="{{ logo_url }}" class="logo">
+    {% endif %}
+
+    {% if not has_bg %}
+    <img src="{{ pile_url }}" class="char-layer">
+    {% endif %}
+
+    <div class="ui-layer">
+        
+        <div class="hud-sidebar">
+            <div class="header-group">
+                <div class="header-title">Endfield Daily</div>
+                <div class="header-subtitle">每日监控协议 <span>//</span> MONITORING</div>
+                
+                <div class="time-badge {% if stamina.urgent %}urgent{% endif %}">
+                    <span>RECOVERY</span> {{ stamina.recovery_text }}
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-top">
+                    <div class="stat-info">
+                        <div class="stat-icon-box">
+                            <img src="{{ stamina_icon_url }}" class="stat-icon">
+                        </div>
+                        <div class="stat-labels">
+                            <div class="stat-name-cn">理智</div>
+                            <div class="stat-name-en">SANITY // AP_CA</div>
+                        </div>
+                    </div>
+                    <div class="stat-val-group">
+                        <span class="stat-cur">{{ stamina.cur }}</span>
+                        <span class="stat-total">/{{ stamina.total }}</span>
+                    </div>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ stamina.percent }}%; background-color: {{ stamina.color }}; color: {{ stamina.color }};"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-top">
+                    <div class="stat-info">
+                        <div class="stat-icon-box">
+                            <img src="{{ bp_icon_url }}" class="stat-icon">
+                        </div>
+                        <div class="stat-labels">
+                            <div class="stat-name-cn">通行证</div>
+                            <div class="stat-name-en">ACCESS // BP_01</div>
+                        </div>
+                    </div>
+                    <div class="stat-val-group">
+                        <span class="stat-cur">{{ battle_pass.cur }}</span>
+                        <span class="stat-total" style="font-size: 16px;">LEVEL</span>
+                    </div>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ battle_pass.percent }}%; background-color: {{ battle_pass.color }}; color: {{ battle_pass.color }};"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-top">
+                    <div class="stat-info">
+                        <div class="stat-icon-box">
+                            <img src="{{ liveness_icon_url }}" class="stat-icon">
+                        </div>
+                        <div class="stat-labels">
+                            <div class="stat-name-cn">活跃度</div>
+                            <div class="stat-name-en">ACTIVE // ACT_V</div>
+                        </div>
+                    </div>
+                    <div class="stat-val-group">
+                        <span class="stat-cur">{{ liveness.cur }}</span>
+                        <span class="stat-total">/{{ liveness.total }}</span>
+                    </div>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: {{ liveness.percent }}%; background-color: {{ liveness.color }}; color: {{ liveness.color }};"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-footer">
+            <div class="user-card">
+                <div class="avatar-hex">
+                    <img src="{{ avatar_url }}" class="avatar-img">
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ user_name|truncate(10, True, '') }}</div>
+                    <div class="user-uid">{{ uid }}</div>
+                </div>
+            </div>
+
+            <div class="footer-stats">
+                <div class="mini-stat-box">
+                    <div class="mini-label">等级</div>
+                    <div class="mini-val">{{ user_level }}</div>
+                </div>
+                <div class="mini-stat-box">
+                    <div class="mini-label">世界等级</div>
+                    <div class="mini-val">{{ world_level }}</div>
+                </div>
+                <div class="mini-stat-box" style="min-width: 150px;">
+                    <div class="mini-label">理智上限</div>
+                    <div class="mini-val">{{ stamina.total }}<span>MAX</span></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</body>
+</html>

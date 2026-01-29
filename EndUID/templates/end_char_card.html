@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endfield Character Card</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #0f1014;
+        --c-panel: rgba(20, 21, 24, 0.95);
+        --c-accent: #ffe600;
+        --c-text: #ffffff;
+        --c-subtext: #8b8b8b;
+        --c-grid: rgba(255, 255, 255, 0.05);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        width: 1000px;
+        height: 1750px; 
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        overflow: hidden;
+        color: var(--c-text);
+    }
+
+    .container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .bg-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 0;
+        background: radial-gradient(circle at 50% 30%, #1a1b20 0%, #0f1014 80%);
+    }
+
+    .bg-image {
+        position: absolute;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0.15;
+        mix-blend-mode: overlay;
+    }
+
+    .grid-deco {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(var(--c-grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+        background-size: 40px 40px;
+        z-index: 1;
+        mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    }
+
+    .char-layer {
+        position: absolute;
+        top: -60px;
+        right: -120px;
+        height: 1150px;
+        width: auto;
+        z-index: 2;
+        filter: drop-shadow(-15px 5px 25px rgba(0,0,0,0.6));
+    }
+
+    .overlay-gradient {
+        position: absolute;
+        bottom: 0; left: 0; width: 100%; height: 65%;
+        background: linear-gradient(to top, #0f1014 15%, rgba(15, 16, 20, 0.95) 55%, transparent 100%);
+        z-index: 3;
+    }
+
+    
+    .ui-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 10;
+        padding: 50px; 
+    }
+
+    .header {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-top: 40px;
+        z-index: 20;
+    }
+
+    .header-left {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .char-name {
+        font-family: 'Source Han Sans CN', sans-serif;
+        font-weight: 700;
+        font-size: 100px;
+        line-height: 1;
+        letter-spacing: -3px;
+        color: white;
+        text-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        margin-left: -5px;
+    }
+
+    .rarity {
+        color: var(--c-accent);
+        font-size: 28px;
+        letter-spacing: 5px;
+        margin: 10px 0 20px 5px;
+    }
+
+    .tags {
+        display: flex;
+        gap: 15px;
+    }
+
+    .tag-box {
+        height: 36px;
+        padding: 0 24px;
+        background: rgba(255,255,255,0.08);
+        border-left: 4px solid var(--c-accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: skewX(-20deg);
+        box-shadow: 5px 5px 15px rgba(0,0,0,0.4);
+        backdrop-filter: blur(5px);
+    }
+
+    .tag-box span {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 16px;
+        transform: skewX(20deg);
+        color: #eee;
+        text-transform: uppercase;
+    }
+
+    .tag-box.element {
+        background: #d13c31;
+        border: none;
+        color: white;
+    }
+
+    .header-right {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .level-box {
+        position: relative;
+    }
+
+    .level-label {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 500;
+        font-size: 24px;
+        color: var(--c-subtext);
+        letter-spacing: 6px;
+        text-align: right;
+        margin-bottom: -15px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .level-num {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 160px;
+        line-height: 0.9;
+        color: white;
+        text-shadow: 0 0 50px rgba(0,0,0,0.5);
+    }
+
+    .phase-badge {
+        margin-top: 5px;
+        background: var(--c-accent);
+        color: #0f1014;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 18px;
+        padding: 4px 16px;
+        transform: skewX(-20deg);
+        display: inline-block;
+        box-shadow: 0 5px 15px rgba(255, 230, 0, 0.2);
+    }
+    
+    .phase-badge span {
+        display: block;
+        transform: skewX(20deg);
+    }
+
+    
+    .content-panel {
+        position: absolute;
+        bottom: 110px; 
+        left: 50px;
+        width: 900px; 
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        z-index: 10;
+    }
+
+    .section-title {
+        font-family: 'Source Han Sans CN', sans-serif;
+        font-weight: 700;
+        font-size: 24px;
+        color: var(--c-text);
+        margin-bottom: 15px;
+        border-left: 6px solid var(--c-accent);
+        padding-left: 15px;
+        display: flex;
+        align-items: center;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .section-title span {
+        font-family: 'JetBrains Mono';
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--c-subtext);
+        margin-left: 12px;
+        letter-spacing: 1px;
+    }
+
+    .skills-row {
+        display: flex;
+        gap: 35px;
+        padding-left: 10px;
+    }
+
+    .skill-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .skill-icon {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: rgba(20, 20, 20, 0.6);
+        border: 2px solid rgba(255,255,255,0.15);
+        padding: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .skill-img {
+        width: 80%;
+        height: 80%;
+        object-fit: contain;
+    }
+
+    .skill-rank {
+        position: absolute;
+        bottom: -10px;
+        background: #2a2a2a;
+        border: 1px solid var(--c-accent);
+        color: var(--c-accent);
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 12px;
+        padding: 1px 10px;
+        border-radius: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .skill-name {
+        font-size: 16px;
+        color: #ddd;
+        font-weight: 500;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .weapon-row {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .weapon-card {
+        width: 100%;
+        height: 140px;
+        background: #e0e0e0;
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding: 0 40px;
+        overflow: hidden;
+        clip-path: polygon(0 0, 100% 0, 100% 85%, 98% 100%, 0 100%);
+        border-left: 8px solid var(--c-accent);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .weapon-info {
+        display: flex;
+        flex-direction: column;
+        z-index: 2;
+        color: #1a1a1a;
+    }
+
+    .weapon-level {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 60px;
+        line-height: 1;
+        letter-spacing: -1px;
+    }
+
+    .weapon-level small {
+        font-size: 20px;
+        margin-left: 5px;
+        font-weight: 500;
+        color: #555;
+        letter-spacing: 0;
+    }
+
+    .weapon-name-text {
+        font-family: 'Source Han Sans CN', sans-serif;
+        font-weight: 700;
+        font-size: 24px;
+        margin-top: 2px;
+    }
+    
+    .weapon-stars {
+        font-size: 18px;
+        color: #1a1a1a;
+        margin-top: 2px;
+        letter-spacing: 2px;
+    }
+
+    .weapon-img-wrap {
+        position: absolute;
+        right: 40px;
+        top: -25px;
+        height: 190px;
+        width: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+    }
+
+    .weapon-img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+        display: block;
+        object-fit: contain;
+        transform: rotate(8deg);
+        filter: drop-shadow(5px 10px 10px rgba(0,0,0,0.2));
+    }
+
+    
+    .equip-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr; 
+        gap: 15px;
+        
+        height: 320px; 
+        margin-bottom: 20px; 
+    }
+
+    .equip-left {
+        grid-column: 1;
+        height: 100%;
+    }
+
+    .equip-right {
+        grid-column: 2;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr; 
+        gap: 15px;
+        height: 100%;
+    }
+
+    .equip-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.12);
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+        justify-content: center; 
+        position: relative;
+        overflow: hidden; 
+        backdrop-filter: blur(5px);
+        padding: 0; 
+    }
+    
+    .equip-card.big {
+        height: 100%;
+        justify-content: flex-start;
+        padding-top: 60px; 
+        align-items: center;
+        background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+    }
+
+    .equip-level {
+        position: absolute;
+        top: 12px;
+        left: 15px;
+        font-family: 'Oswald', sans-serif;
+        font-weight: 500;
+        font-size: 26px;
+        color: #fff;
+        z-index: 3;
+        line-height: 1;
+    }
+    
+    .equip-level span {
+        font-size: 14px;
+        color: rgba(255,255,255,0.6);
+        margin-left: 2px;
+        font-weight: 400;
+    }
+
+    
+    .equip-icon {
+        width: auto;
+        height: auto;
+        max-width: 75%;
+        max-height: 65%;
+        object-fit: contain;
+        z-index: 2;
+        filter: drop-shadow(0 5px 8px rgba(0,0,0,0.5));
+    }
+    
+    .equip-card.big .equip-icon {
+        max-width: 85%;
+        max-height: 60%;
+        margin-top: 10px;
+    }
+
+    .equip-name {
+        position: absolute;
+        bottom: 12px;
+        left: 15px;
+        font-family: 'Source Han Sans CN', sans-serif;
+        font-weight: 500;
+        font-size: 18px;
+        color: #ddd;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: calc(100% - 30px);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .equip-name img {
+        opacity: 0.7;
+    }
+
+
+    .empty-slot {
+        background: rgba(0,0,0,0.15);
+        border: 1px dashed rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        width: 100%;
+    }
+
+    .empty-icon {
+        width: 30px;
+        height: 30px;
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    
+    .empty-line {
+        width: 100%;
+        height: 2px;
+        background: rgba(255,255,255,0.1);
+        transform: rotate(-45deg);
+    }
+
+    .footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 80px;
+        background: rgba(12, 13, 16, 0.95);
+        border-top: 1px solid rgba(255,255,255,0.15);
+        backdrop-filter: blur(15px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 50px;
+        z-index: 20;
+    }
+
+    .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 25px;
+    }
+
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #222;
+        border: 2px solid var(--c-accent);
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .user-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .user-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .user-name-text {
+        font-family: 'Source Han Sans CN', sans-serif;
+        font-weight: 700;
+        font-size: 20px;
+        color: white;
+        line-height: 1;
+    }
+
+    .user-tags {
+        display: flex;
+        gap: 10px;
+    }
+
+    .u-tag {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 500;
+        font-size: 12px;
+        background: rgba(255,255,255,0.1);
+        padding: 3px 10px;
+        border-radius: 2px;
+        color: #aaa;
+        line-height: 1;
+    }
+
+    .footer-right {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        color: var(--c-accent);
+        letter-spacing: 2px;
+    }
+
+</style>
+</head>
+<body>
+<div class="container">
+    
+    <div class="bg-layer">
+        <img src="{{ bg_url }}" class="bg-image">
+    </div>
+    <div class="grid-deco"></div>
+    
+    <img src="{{ char_url }}" class="char-layer">
+    
+    <div class="overlay-gradient"></div>
+
+    <div class="ui-layer">
+        
+        <div class="header">
+            <div class="header-left">
+                <div class="char-name">{{ name }}</div>
+                <div class="rarity">
+                    {% for _ in range(rarity|int) %}★{% endfor %}
+                </div>
+                <div class="tags">
+                    <div class="tag-box element">
+                        <span>{{ property }}</span>
+                    </div>
+                    <div class="tag-box">
+                        <span>{{ profession }}</span>
+                    </div>
+                    <div class="tag-box">
+                        <span>{{ weapon_type }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="level-box">
+                    <div class="level-label">LEVEL</div>
+                    <div class="level-num">{{ level }}</div>
+                </div>
+                <div class="phase-badge">
+                    <span>PHASE {{ evolve_phase }} / POTENTIAL {{ potential }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-panel">
+            
+            <div>
+                <div class="section-title">技能 <span>SKILLS</span></div>
+                <div class="skills-row">
+                    {% for skill in skills %}
+                    <div class="skill-item">
+                        <div class="skill-icon">
+                            <img src="{{ skill.icon }}" class="skill-img">
+                            <div class="skill-rank">RANK {{ skill.level }}</div>
+                        </div>
+                        <div class="skill-name">{{ skill.name }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">武器 <span>WEAPON</span></div>
+                <div class="weapon-row">
+                    {% if weapon %}
+                    <div class="weapon-card">
+                        <div class="weapon-info">
+                            <div class="weapon-level">{{ weapon.level }}<small>Lv</small></div>
+                            <div class="weapon-stars">
+                                {% for _ in range(weapon.rarity|int) %}★{% endfor %}
+                            </div>
+                            <div class="weapon-name-text">{{ weapon.name }}</div>
+                        </div>
+                        <div class="weapon-img-wrap">
+                            <img src="{{ weapon.icon }}" class="weapon-img">
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="weapon-card" style="background: rgba(255,255,255,0.05); border-left-color: #555;">
+                        <div class="weapon-info" style="color: #666;">
+                            <div class="weapon-name-text">未装备武器</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <div class="section-title">装备 <span>EQUIPMENT</span></div>
+                <div class="equip-grid">
+                    
+                    <div class="equip-left">
+                        {% if body_equip %}
+                        <div class="equip-card big">
+                            <div class="equip-level">{{ body_equip.level }}<span>LEVEL</span></div>
+                            <img src="{{ body_equip.icon }}" class="equip-icon">
+                            <div class="equip-name">
+                                <img src="https://api.iconify.design/game-icons:chest-armor.svg?color=%23888888" width="16" height="16">
+                                {{ body_equip.name }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="empty-slot big" style="height:100%">
+                             <div class="empty-icon"><div class="empty-line"></div></div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="equip-right">
+                        {% for item in equip_slots %}
+                            {% if item.slot != 'body' %}
+                            <div class="equip-card">
+                                {% if item.name %}
+                                    {% if item.level %}
+                                    <div class="equip-level">{{ item.level }}<span>Lv</span></div>
+                                    {% endif %}
+                                    <img src="{{ item.icon }}" class="equip-icon">
+                                    <div class="equip-name">{{ item.name }}</div>
+                                {% else %}
+                                    <div class="empty-slot" style="width:100%; height:100%; border:none; background:none;">
+                                         <div class="empty-icon" style="width:20px; height:20px;"><div class="empty-line"></div></div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if equip_slots|length < 5 %}
+                             {% for _ in range(5 - equip_slots|length) %}
+                             <div class="equip-card">
+                                 <div class="empty-slot" style="width:100%; height:100%; border:none; background:none;">
+                                     <div class="empty-icon" style="width:20px; height:20px;"><div class="empty-line"></div></div>
+                                 </div>
+                             </div>
+                             {% endfor %}
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="footer-left">
+            <div class="user-avatar">
+                {% if user_avatar %}
+                <img src="{{ user_avatar }}">
+                {% else %}
+                <div style="font-size:20px; color:#888;">?</div>
+                {% endif %}
+            </div>
+            <div class="user-details">
+                <div class="user-name-text">{{ user_name }}</div>
+                <div class="user-tags">
+                    <div class="u-tag">Lv.{{ user_level }}</div>
+                    <div class="u-tag">WORLD {{ world_level }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-right">
+            UID {{ user_uid }}
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

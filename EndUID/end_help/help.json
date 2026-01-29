@@ -1,0 +1,175 @@
+{
+  "账号绑定": {
+    "desc": "绑定/切换终末地账号",
+    "data": [
+      {
+        "name": "绑定凭证",
+        "desc": "绑定 cred 或 token",
+        "eg": "绑定 cred",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "登录",
+        "desc": "扫码登录或直接传 cred/token",
+        "eg": "登录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "切换账号",
+        "desc": "切换绑定的特征码",
+        "eg": "切换123456",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "查看绑定",
+        "desc": "查看绑定列表",
+        "eg": "查看",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "删除绑定",
+        "desc": "删除当前绑定",
+        "eg": "删除",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "信息查询": {
+    "desc": "卡片与面板查询",
+    "data": [
+      {
+        "name": "每日/体力",
+        "desc": "查看每日状态",
+        "eg": "每日/体力/mr",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "角色面板",
+        "desc": "查询角色面板",
+        "eg": "莱万汀面板",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "卡片",
+        "desc": "查看终末地卡片",
+        "eg": "卡片",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "刷新数据",
+        "desc": "刷新卡片详情并保存",
+        "eg": "刷新/更新",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "角色别名": {
+    "desc": "别名管理",
+    "data": [
+      {
+        "name": "别名列表",
+        "desc": "查看角色别名",
+        "eg": "莱万汀别名",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "角色别名管理": {
+    "desc": "管理员别名管理",
+    "pm": 0,
+    "data": [
+      {
+        "name": "添加别名",
+        "desc": "为角色添加别名",
+        "eg": "添加莱万汀别名42姐",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "删除别名",
+        "desc": "删除角色别名",
+        "eg": "删除莱万汀别名42姐",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      }
+    ]
+  },
+  "个人设置": {
+    "desc": "个人配置项",
+    "data": [
+      {
+        "name": "设置体力背景",
+        "desc": "设置体力背景，空参数清除",
+        "eg": "设置体力背景 莱万汀",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "签到": {
+    "desc": "每日签到",
+    "data": [
+      {
+        "name": "签到",
+        "desc": "进行签到",
+        "eg": "签到",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "开启自动签到",
+        "desc": "开启自动签到",
+        "eg": "开启自动签到",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "关闭自动签到",
+        "desc": "关闭自动签到",
+        "eg": "关闭自动签到",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "签到管理": {
+    "desc": "管理员签到任务",
+    "pm": 0,
+    "data": [
+      {
+        "name": "全部签到",
+        "desc": "执行全部签到任务",
+        "eg": "全部签到",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      }
+    ]
+  }
+}

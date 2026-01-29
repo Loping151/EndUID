@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>终末地角色别名</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f1115;
+            font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Source Han Sans CN', sans-serif;
+            width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .bg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-layer::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .bg-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            padding: 25px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .logo {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 140px;
+            height: auto;
+            z-index: 5;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+        }
+
+        .main-card {
+            background: rgba(30, 34, 42, 0.6);
+            backdrop-filter: blur(4px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.6);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, transparent, #d4b163, transparent);
+            opacity: 0.8;
+        }
+
+        .header {
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+        }
+
+        .avatar-container {
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+            margin-right: 20px;
+            position: relative;
+            border-radius: 50%;
+            background-color: #222;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border: 2px solid rgba(212, 177, 99, 0.3);
+        }
+
+        .avatar-ring {
+            position: absolute;
+            top: -4px; left: -4px; right: -4px; bottom: -4px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid #d4b163;
+            transform: rotate(45deg);
+            pointer-events: none;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .title-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .sub-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 12px;
+            color: #d4b163;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .char-name {
+            font-size: 32px;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+            line-height: 1.1;
+        }
+
+        .content-body {
+            padding: 20px 25px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .alias-label {
+            color: #aaa;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alias-label::before {
+            content: "";
+            width: 3px;
+            height: 14px;
+            background-color: #d4b163;
+            border-radius: 2px;
+        }
+
+        .alias-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .alias-item {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 16px;
+            color: #eee;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            line-height: 1.4;
+        }
+
+        .alias-item:first-child {
+            background: rgba(212, 177, 99, 0.15);
+            border-color: rgba(212, 177, 99, 0.4);
+            color: #fff;
+        }
+
+        @font-face {
+        font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji';
+        src: local('Noto Color Emoji'), local('Apple Color Emoji'), local('Segoe UI Emoji');
+        unicode-range: U+1F300-1F5FF, U+1F600-1F64F, U+1F680-1F6FF, U+2600-26FF;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="bg-layer">
+            <img src="{{ bg_url }}" class="bg-image">
+        </div>
+
+        {% if logo_url %}
+        <img src="{{ logo_url }}" class="logo">
+        {% endif %}
+
+        <div class="main-card">
+            <div class="header">
+                <div class="avatar-container">
+                    <div class="avatar-ring"></div>
+                    {% if avatar_url %}
+                    <img src="{{ avatar_url }}" class="avatar">
+                    {% else %}
+                    <div style="width:100%; height:100%; background:#333; border-radius:50%; display:flex; justify-content:center; align-items:center; color:#555; font-size:24px;">?</div>
+                    {% endif %}
+                </div>
+                <div class="title-info">
+                    <div class="sub-title">END FIELD</div>
+                    <div class="char-name">{{ char_name }}</div>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <div class="alias-label">ALIASES</div>
+                <div class="alias-grid">
+                    {% for alias in alias_list %}
+                    <div class="alias-item">{{ alias }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

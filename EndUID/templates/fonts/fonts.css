@@ -1,0 +1,47 @@
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/end/fonts/JetBrainsMono-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/end/fonts/JetBrainsMono-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/end/fonts/Oswald-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/end/fonts/Oswald-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Source Han Sans CN';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/end/fonts/SourceHanSansCN-Regular.ttc') format('truetype');
+}
+
+@font-face {
+  font-family: 'Source Han Sans CN';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/end/fonts/SourceHanSansCN-Bold.ttc') format('truetype');
+}

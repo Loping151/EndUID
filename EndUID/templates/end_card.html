@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endfield Player Card</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-grid: rgba(255, 255, 255, 0.03);
+            
+            --r-6: #ff4e20;
+            --r-5: #ffc900;
+            --r-4: #a366ff;
+            --r-3: #0091ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 1000px;
+            min-height: 1000px;
+            background-color: var(--c-bg);
+            font-family: 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--c-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+
+        
+        .header-section {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .avatar-box {
+            width: 130px;
+            height: 130px;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: #111;
+            position: relative;
+        }
+
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 130px;
+        }
+
+        .user-name {
+            font-size: 64px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .uid-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: var(--c-subtext);
+            background: rgba(255,255,255,0.05);
+            padding: 4px 8px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            vertical-align: middle;
+        }
+
+        .awake-date {
+            font-family: 'JetBrains Mono', monospace;
+            color: #aaa;
+            background: rgba(40, 40, 40, 0.8);
+            padding: 6px 12px;
+            border-radius: 2px;
+            font-size: 14px;
+            display: inline-block;
+            align-self: flex-start;
+            border-left: 3px solid var(--c-subtext);
+        }
+
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: 140px 140px;
+            gap: 15px;
+        }
+
+        .dash-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .card-mission {
+            grid-column: 1 / 3;
+            align-items: flex-start;
+            justify-content: space-between;
+            background: url("https://api.iconify.design/game-icons:factory.svg?color=%23333333") no-repeat right bottom;
+            background-size: 150px;
+            background-color: rgba(255,255,255,0.06);
+        }
+
+        .mission-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ddd;
+        }
+        
+        .mission-title span {
+            display: block;
+            font-size: 14px;
+            color: var(--c-subtext);
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .mission-val {
+            font-family: 'Source Han Sans CN', sans-serif;
+            font-size: 18px;
+            color: var(--c-subtext);
+            margin-top: auto;
+        }
+
+        .card-logo {
+            grid-column: 3 / 4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.3;
+        }
+        
+        .card-auth {
+            grid-column: 4 / 5;
+        }
+
+        .stat-num {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 64px;
+            line-height: 1;
+            color: #fff;
+        }
+        
+        .stat-label {
+            font-size: 16px;
+            color: var(--c-subtext);
+            margin-top: 5px;
+        }
+
+        
+        .char-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 28px;
+            background: var(--c-accent);
+            transform: skewX(-20deg);
+        }
+
+        .char-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        .char-card {
+            position: relative;
+            aspect-ratio: 180 / 280;
+            background: #222;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .char-img {
+            width: 100%;
+            height: 86%;
+            object-fit: cover;
+            object-position: top center;
+            background: #333;
+        }
+
+        .char-left-info {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 2;
+        }
+
+        .profession-tag {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(0,0,0,0.7);
+            padding: 3px 6px;
+            border-radius: 2px;
+            text-align: center;
+            backdrop-filter: blur(2px);
+            max-width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .prop-icon-box {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .type-icon {
+            width: 28px;
+            height: 28px;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+        }
+
+        .potential-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            z-index: 2;
+            width: 24px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .potential-num {
+            font-family: 'Oswald', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffe600; 
+            line-height: 1;
+        }
+
+        
+        .char-lvl {
+            position: absolute;
+            bottom: 45px;
+            right: 5px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+            z-index: 2;
+        }
+        
+        .char-lvl small {
+            font-size: 14px;
+            font-weight: 400;
+            margin-right: 2px;
+        }
+
+        
+        .name-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 14%;
+            background: #e6e6e6;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            z-index: 2;
+        }
+
+        .ch-name {
+            color: #1a1a1a;
+            font-family: 'Source Han Sans CN', sans-serif;
+            font-weight: 800;
+            font-size: 16px;
+            line-height: 1;
+            
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 90%;
+        }
+
+        .rarity-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--c-subtext);
+        }
+
+        .r-6 { background: var(--r-6); }
+        .r-5 { background: var(--r-5); }
+        .r-4 { background: var(--r-4); }
+        .r-3 { background: var(--r-3); }
+        
+        .ef-logo {
+            width: 60px; height: 60px; fill: #fff; opacity: 0.2;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer">
+        {% if bg %}
+        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.1; mix-blend-mode: overlay;">
+        {% endif %}
+    </div>
+    <div class="grid-deco"></div>
+
+    <div class="container">
+        
+        <div class="header-section">
+            <div class="avatar-box">
+                {% if avatar %}
+                <img src="{{ avatar }}">
+                {% else %}
+                <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; font-size:40px; color:#333;">?</div>
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <div class="user-name">
+                    {{ name }}
+                    {% if roleId %}
+                    <span class="uid-tag">UID {{ roleId }}</span>
+                    {% endif %}
+                </div>
+                <div class="awake-date">
+                    苏醒日：{{ createTime.split(' ')[0] if createTime else 'UNKNOWN' }}
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dash-card card-mission">
+                <div class="mission-title">
+                    底护之所
+                    <span>使命纪事</span>
+                </div>
+                <div class="mission-val">
+                    {% if mainMission.id %}
+                        {{ mainMission.description if mainMission.description else mainMission.id }}
+                    {% else %}
+                        暂无记录
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="dash-card card-logo">
+                <svg class="ef-logo" viewBox="0 0 24 24">
+                    <path d="M12 2L2 22h20L12 2zm0 4l6 14H6l6-14z"/>
+                </svg>
+            </div>
+
+            <div class="dash-card card-auth">
+                <div class="stat-num">{{ level }}</div>
+                <div class="stat-label">权限等级</div>
+            </div>
+
+            <div class="dash-card">
+                <div class="stat-num">{{ worldLevel }}</div>
+                <div class="stat-label">探索等级</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ charNum }}</div>
+                <div class="stat-label">干员</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ weaponNum }}</div>
+                <div class="stat-label">武器</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ docNum }}</div>
+                <div class="stat-label">档案</div>
+            </div>
+        </div>
+
+        <div class="char-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <span style="font-family:'JetBrains Mono'; color:#aaa; font-weight:400; font-size:24px;">[</span> 
+                    干员 
+                    <span style="font-family:'JetBrains Mono'; color:#aaa; font-weight:400; font-size:24px;">]</span>
+                </div>
+            </div>
+
+            <div class="char-grid">
+                {% for char in chars %}
+                <div class="char-card">
+                    {% if char.avatar %}
+                    <img class="char-img" src="{{ char.avatar }}">
+                    {% else %}
+                    <div class="char-img" style="display:flex;justify-content:center;align-items:center;color:#666;">NO IMG</div>
+                    {% endif %}
+
+                    <div class="char-left-info">
+                        {% if char.profession %}
+                        <div class="profession-tag">{{ char.profession }}</div>
+                        {% endif %}
+
+                        {% if char.property_icon %}
+                        <div class="prop-icon-box" style="background-color: {{ char.property_color }};">
+                            <img class="type-icon" src="{{ char.property_icon }}">
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if char.potentialLevel > 0 %}
+                    <div class="potential-badge">
+                        <span class="potential-num">{{ char.potentialLevel }}</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="char-lvl"><small>Lv.</small>{{ char.level }}</div>
+
+                    <div class="name-bar">
+                        <div class="ch-name">{{ char.name }}</div>
+                        <div class="rarity-line r-{{ char.rarity }}"></div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if chars|length < 5 %}
+                    {% for _ in range(5 - chars|length) %}
+                    <div class="char-card" style="opacity:0.3; background:transparent; border:1px dashed #444; box-shadow:none;"></div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
