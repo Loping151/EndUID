@@ -7,11 +7,13 @@ from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 from gsuid_core.logger import logger
 from gsuid_core.aps import scheduler
+from gsuid_core.subscribe import gs_subscribe
 
 from .sign_handler import end_sign_handler, end_auto_sign
 from .sign_state import signing_state
 from ..end_config import EndConfig
 
+TASK_NAME_SIGN_RESULT = "订阅终末地签到结果"
 
 # 普通签到
 end_sign_sv = SV("End签到")
@@ -19,6 +21,8 @@ end_sign_sv = SV("End签到")
 end_sign_all_sv = SV("End全部签到", pm=0)
 # 自动签到开关
 end_sign_switch_sv = SV("End自动签到")
+# 订阅签到结果
+end_sign_sub_sv = SV("End订阅签到结果", pm=0)
 
 
 @end_sign_sv.on_fullmatch(("签到"))
@@ -38,8 +42,8 @@ async def sign_all(bot: Bot, ev: Event):
     signing_state.set_state("manual")
     await bot.send("[EndUID] 全部签到开始执行...")
     try:
-        await end_auto_sign()
-        await bot.send("[EndUID] 全部签到执行完成")
+        msg = await end_auto_sign()
+        await bot.send(msg)
     finally:
         signing_state.clear_state()
 
@@ -76,13 +80,42 @@ async def disable_auto_sign(bot: Bot, ev: Event):
     return await bot.send("✅ 已关闭自动签到")
 
 
+# ===================== 订阅签到结果 =====================
+
+@end_sign_sub_sv.on_regex("^(订阅|取消订阅)签到结果$")
+async def end_sign_result_sub(bot: Bot, ev: Event):
+    if ev.bot_id != "onebot":
+        return
+
+    if "取消" in ev.raw_text:
+        option = "关闭"
+    else:
+        option = "开启"
+
+    if ev.group_id and option == "开启":
+        from ..utils.database.models import EndSubscribe
+        await EndSubscribe.check_and_update_bot(ev.group_id, ev.bot_self_id)
+
+    if option == "关闭":
+        await gs_subscribe.delete_subscribe("single", TASK_NAME_SIGN_RESULT, ev)
+    else:
+        await gs_subscribe.add_subscribe("single", TASK_NAME_SIGN_RESULT, ev)
+
+    await bot.send(f"[EndUID] 已{option}订阅签到结果")
+
+
 # ===================== 定时签到 =====================
 
 async def end_scheduled_sign():
-    """定时签到入口（带状态文件管理）"""
+    """定时签到入口（带状态文件管理 + 推送订阅结果）"""
     signing_state.set_state("auto")
     try:
-        await end_auto_sign()
+        msg = await end_auto_sign()
+        subscribes = await gs_subscribe.get_subscribe(TASK_NAME_SIGN_RESULT)
+        if subscribes and msg:
+            logger.info(f"[EndUID] 推送签到结果: {msg}")
+            for sub in subscribes:
+                await sub.send(msg)
     finally:
         signing_state.clear_state()
 

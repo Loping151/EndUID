@@ -90,7 +90,7 @@ async def do_sign_in(uid: str, cred: str, nickname: str) -> str:
         return f"❌ [{nickname}] 签到失败: {message}"
 
 
-async def end_auto_sign() -> None:
+async def end_auto_sign() -> str:
     """自动签到任务"""
     logger.info("[EndUID] 自动签到任务开始")
 
@@ -105,7 +105,7 @@ async def end_auto_sign() -> None:
 
     if not candidate_users:
         logger.info("[EndUID] 没有需要签到的用户")
-        return
+        return "[EndUID] 没有需要签到的用户"
 
     # 跳过今日已签到的用户
     sign_users = []
@@ -122,7 +122,7 @@ async def end_auto_sign() -> None:
 
     if not sign_users:
         logger.info("[EndUID] 所有用户今日已签到，无需执行")
-        return
+        return f"[EndUID] 所有 {len(candidate_users)} 个用户今日已签到"
 
     logger.info(f"[EndUID] 开始为 {len(sign_users)} 个用户签到")
 
@@ -168,10 +168,15 @@ async def end_auto_sign() -> None:
             await asyncio.sleep(sleep_time)
 
     # 记录结果
-    logger.info(
-        f"[EndUID] 签到任务完成: 共 {len(sign_users)} 人 | "
-        f"成功 {success_count} 人 | 已签 {signed_count} 人 | 失败 {fail_count} 人"
+    total = len(sign_users)
+    summary = (
+        f"[EndUID] 签到完成: 共 {total} 人 | "
+        f"成功 {success_count} | 已签 {signed_count} | 失败 {fail_count}"
     )
+    if skipped_count > 0:
+        summary += f" | 跳过 {skipped_count}"
+
+    logger.info(summary)
 
     record_success(success_count + signed_count)
     record_fail(fail_count)
@@ -183,6 +188,8 @@ async def end_auto_sign() -> None:
 
     # 发送推送
     await send_sign_report(private_msgs, group_msgs)
+
+    return summary
 
 
 async def do_sign_in_with_result(
