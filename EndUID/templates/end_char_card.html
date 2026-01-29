@@ -14,6 +14,9 @@
         --c-text: #ffffff;
         --c-subtext: #8b8b8b;
         --c-grid: rgba(255, 255, 255, 0.05);
+        --footer-h: 80px;
+        --content-bottom-gap: 40px;
+        --content-top: 420px;
     }
 
     * {
@@ -86,7 +89,10 @@
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
         z-index: 10;
-        padding: 50px; 
+        padding: 50px;
+        padding-bottom: calc(var(--footer-h) + var(--content-bottom-gap));
+        display: flex;
+        flex-direction: column;
     }
 
     .header {
@@ -206,12 +212,13 @@
 
     
     .content-panel {
-        position: absolute;
-        bottom: 110px; 
-        left: 50px;
-        width: 900px; 
+        position: relative;
+        width: 900px;
         display: flex;
         flex-direction: column;
+        justify-content: flex-end;
+        margin-top: 30px;
+        flex: 1 1 auto;
         gap: 30px;
         z-index: 10;
     }
@@ -378,7 +385,7 @@
         gap: 15px;
         
         height: 320px; 
-        margin-bottom: 20px; 
+        margin-bottom: 150px; 
     }
 
     .equip-left {
@@ -505,7 +512,7 @@
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 80px;
+        height: var(--footer-h);
         background: rgba(12, 13, 16, 0.95);
         border-top: 1px solid rgba(255,255,255,0.15);
         backdrop-filter: blur(15px);
@@ -542,29 +549,30 @@
 
     .user-details {
         display: flex;
-        flex-direction: column;
-        gap: 4px;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
     }
 
     .user-name-text {
         font-family: 'Source Han Sans CN', sans-serif;
         font-weight: 700;
-        font-size: 20px;
+        font-size: 28px;
         color: white;
         line-height: 1;
     }
 
     .user-tags {
         display: flex;
-        gap: 10px;
+        gap: 8px;
     }
 
     .u-tag {
         font-family: 'JetBrains Mono', monospace;
         font-weight: 500;
-        font-size: 12px;
+        font-size: 16px;
         background: rgba(255,255,255,0.1);
-        padding: 3px 10px;
+        padding: 4px 12px;
         border-radius: 2px;
         color: #aaa;
         line-height: 1;
@@ -689,8 +697,8 @@
                     </div>
 
                     <div class="equip-right">
-                        {% for item in equip_slots %}
-                            {% if item.slot != 'body' %}
+                        {% set right_slots = equip_slots | rejectattr("slot", "equalto", "body") | list %}
+                        {% for item in right_slots %}
                             <div class="equip-card">
                                 {% if item.name %}
                                     {% if item.level %}
@@ -704,11 +712,10 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            {% endif %}
                         {% endfor %}
                         
-                        {% if equip_slots|length < 5 %}
-                             {% for _ in range(5 - equip_slots|length) %}
+                        {% if right_slots|length < 4 %}
+                             {% for _ in range(4 - right_slots|length) %}
                              <div class="equip-card">
                                  <div class="empty-slot" style="width:100%; height:100%; border:none; background:none;">
                                      <div class="empty-icon" style="width:20px; height:20px;"><div class="empty-line"></div></div>

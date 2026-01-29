@@ -95,7 +95,7 @@ async def end_auto_sign() -> None:
     logger.info("[EndUID] 自动签到任务开始")
 
     # 获取所有用户
-    all_users = await EndUser.get_all()
+    all_users = await EndUser.get_all_data()
 
     # 筛选启用了签到的用户
     sign_users = [
