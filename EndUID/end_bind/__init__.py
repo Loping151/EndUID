@@ -47,6 +47,9 @@ async def _send_text(bot: Bot, ev: Event, msg: str):
 
 @EndBindUID.on_command(("绑定", "bind"), block=True)
 async def send_end_bind_msg(bot: Bot, ev: Event):
+    if ev.user_pm > 0:
+        logger.warning(f"[EndUID] 暂不支持绑定操作")
+        return
     text = _normalize_text(ev.text)
     if not text:
         msg = (
@@ -187,6 +190,7 @@ async def check_cred(
             break
 
     if not endfield_uid:
+        logger.warning(f"[EndUID] 请求返回：{binding_list}，请汇报此结果")
         return await _send_text(bot, ev, f"{GAME_TITLE} 未找到账号绑定信息")
 
     result = await EndBind.insert_end_uid(

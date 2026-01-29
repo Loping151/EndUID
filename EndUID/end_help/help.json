@@ -3,14 +3,6 @@
     "desc": "绑定/切换终末地账号",
     "data": [
       {
-        "name": "绑定凭证",
-        "desc": "绑定 cred 或 token",
-        "eg": "绑定 cred",
-        "need_ck": false,
-        "need_sk": false,
-        "need_admin": false
-      },
-      {
         "name": "登录",
         "desc": "扫码登录或直接传 cred/token",
         "eg": "登录",
