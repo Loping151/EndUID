@@ -1,5 +1,6 @@
 import io
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -50,6 +51,23 @@ def _get_property_icon(property_name: str) -> str:
         return ""
 
     return image_to_base64(icon_path)
+
+
+def _format_awaken_time(ts: str) -> str:
+    if not ts:
+        return ""
+    try:
+        ts_int = int(ts)
+    except Exception:
+        return ""
+    if ts_int <= 0:
+        return ""
+    if ts_int > 10_000_000_000:
+        ts_int = ts_int // 1000
+    try:
+        return datetime.fromtimestamp(ts_int).strftime("%Y-%m-%d")
+    except Exception:
+        return ""
 
 
 async def draw_card(ev: Event) -> Union[bytes, str]:
@@ -123,7 +141,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
     context = {
         "roleId": base.roleId if base else uid,
         "name": base.name if base and base.name else uid,
-        "createTime": base.createTime if base else "",
+        "createTime": _format_awaken_time(base.createTime) if base else "",
         "avatarUrl": base.avatarUrl if base else "",
         "avatar": base_avatar_b64,
         "mainMission": {
