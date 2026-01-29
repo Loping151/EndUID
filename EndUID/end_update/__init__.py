@@ -4,7 +4,7 @@ from gsuid_core.models import Event
 
 from .draw_update_log import draw_update_log_img
 
-sv_end_update_history = SV("end更新记录", pm=1)
+sv_end_update_history = SV("end更新记录", pm=1, priority=4)
 
 
 @sv_end_update_history.on_fullmatch(("更新记录", "更新日志", "log"))
