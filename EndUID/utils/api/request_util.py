@@ -104,13 +104,16 @@ def _get_device_id_from_smsdk(
     if platform:
         env["SMSDK_PLATFORM"] = platform
 
-    result = subprocess.run(
-        ["node", str(runner_path), str(sdk_path)],
-        cwd=str(sdk_path.parent),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    try:
+        result = subprocess.run(
+            ["node", str(runner_path), str(sdk_path)],
+            cwd=str(sdk_path.parent),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("smsdk failed: node not found, please install Node.js") from exc
     if result.returncode != 0:
         stderr = (result.stderr or "").strip()
         raise RuntimeError(f"smsdk failed: code={result.returncode} stderr={stderr}")
@@ -120,6 +123,23 @@ def _get_device_id_from_smsdk(
     if not device_id:
         raise RuntimeError("smsdk failed: empty device id")
     return device_id
+
+
+def check_node_version() -> Optional[str]:
+    try:
+        result = subprocess.run(
+            ["node", "-v"],
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    version = (result.stdout or "").strip()
+    return version or None
 
 
 

@@ -395,7 +395,7 @@ class EndApi:
             game_id=GAME_ID_ENDFIELD,
             body={"uid": uid, "gameId": str(GAME_ID_ENDFIELD)},
             use_device_id=False,
-            accept_encoding="gzip, deflate, br, zstd",
+            accept_encoding="gzip, deflate",
         )
 
     async def get_player_info(

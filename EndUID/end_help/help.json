@@ -129,6 +129,19 @@
       }
     ]
   },
+  "工具": {
+    "desc": "环境检测",
+    "data": [
+      {
+        "name": "检查Node",
+        "desc": "检查 Node.js 是否安装",
+        "eg": "检查node",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
   "签到": {
     "desc": "每日签到",
     "data": [
