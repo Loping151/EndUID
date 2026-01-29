@@ -10,7 +10,7 @@ from gsuid_core.logger import logger
 from gsuid_core.segment import MessageSegment
 
 from ..utils.api.requests import end_api
-from ..utils.database.models import EndBind, EndUser
+from ..utils.database.models import EndBind, EndUser, EndSignRecord
 from ..utils.status_store import record_fail, record_success
 from ..end_config import EndConfig
 
@@ -57,7 +57,7 @@ async def do_sign_in(uid: str, cred: str, nickname: str) -> str:
 
     if res is None:
         record_fail()
-        return f"❌ [{nickname}] 签到请求失败，请稍后重试"
+        return f"❌ [{nickname}] 签到请求失败"
 
     code = res.get("code")
 
@@ -98,13 +98,30 @@ async def end_auto_sign() -> None:
     all_users = await EndUser.get_all_data()
 
     # 筛选启用了签到的用户
-    sign_users = [
+    candidate_users = [
         user for user in all_users
         if user.cookie and user.cookie_status != "无效" and user.bbs_sign_switch == "on"
     ]
 
-    if not sign_users:
+    if not candidate_users:
         logger.info("[EndUID] 没有需要签到的用户")
+        return
+
+    # 跳过今日已签到的用户
+    sign_users = []
+    skipped_count = 0
+    for user in candidate_users:
+        record = await EndSignRecord.get_sign_record(user.uid)
+        if record and record.sign_status == 1:
+            skipped_count += 1
+            continue
+        sign_users.append(user)
+
+    if skipped_count > 0:
+        logger.info(f"[EndUID] 跳过 {skipped_count} 个今日已签到的用户")
+
+    if not sign_users:
+        logger.info("[EndUID] 所有用户今日已签到，无需执行")
         return
 
     logger.info(f"[EndUID] 开始为 {len(sign_users)} 个用户签到")
@@ -168,38 +185,67 @@ async def end_auto_sign() -> None:
     await send_sign_report(private_msgs, group_msgs)
 
 
-async def do_sign_in_with_result(user: EndUser) -> Dict:
-    """执行签到并返回结构化结果
+async def do_sign_in_with_result(
+    user: EndUser,
+    max_retries: int = 3,
+    retry_delay: float = 1.0,
+) -> Dict:
+    """执行签到并返回结构化结果（失败自动重试）
 
     Args:
         user: 用户对象
+        max_retries: 最大重试次数
+        retry_delay: 重试间隔（秒）
 
     Returns:
         签到结果字典: {"status": "success/signed/fail", "message": "..."}
     """
     display_uid = user.uid or user.nickname
 
-    try:
-        res = await end_api.attendance(user.cookie, user.uid)
+    for attempt in range(1, max_retries + 1):
+        try:
+            res = await end_api.attendance(user.cookie, user.uid)
 
-        if res is None:
-            return {"status": "fail", "message": f"[{display_uid}] 签到请求失败"}
+            if res is None:
+                if attempt < max_retries:
+                    logger.warning(
+                        f"[EndUID] {display_uid} 签到请求失败，第 {attempt}/{max_retries} 次重试"
+                    )
+                    await asyncio.sleep(retry_delay)
+                    continue
+                return {"status": "fail", "message": f"[{display_uid}] 签到请求失败（已重试{max_retries}次）"}
 
-        code = res.get("code")
+            code = res.get("code")
 
-        if code == 0:
-            logger.info(f"[EndUID] {display_uid} 签到成功")
-            return {"status": "success", "message": f"[{display_uid}] 签到成功"}
-        elif code == 10001:
-            logger.info(f"[EndUID] {display_uid} 今日已签到")
-            return {"status": "signed", "message": f"[{display_uid}] 今日已签到"}
-        else:
-            logger.warning(f"[EndUID] {display_uid} 签到失败: {res}")
-            return {"status": "fail", "message": f"[{display_uid}] 签到失败"}
+            if code == 0:
+                logger.info(f"[EndUID] {display_uid} 签到成功")
+                await EndSignRecord.mark_signed(user.uid)
+                return {"status": "success", "message": f"[{display_uid}] 签到成功"}
+            elif code == 10001:
+                logger.info(f"[EndUID] {display_uid} 今日已签到")
+                await EndSignRecord.mark_signed(user.uid)
+                return {"status": "signed", "message": f"[{display_uid}] 今日已签到"}
+            else:
+                if attempt < max_retries:
+                    logger.warning(
+                        f"[EndUID] {display_uid} 签到失败（code={code}），第 {attempt}/{max_retries} 次重试"
+                    )
+                    await asyncio.sleep(retry_delay)
+                    continue
+                logger.warning(f"[EndUID] {display_uid} 签到失败（已重试{max_retries}次）: {res}")
+                return {"status": "fail", "message": f"[{display_uid}] 签到失败"}
 
-    except Exception as e:
-        logger.error(f"[EndUID] {display_uid} 签到异常: {e}")
-        return {"status": "fail", "message": f"[{display_uid}] 签到异常"}
+        except Exception as e:
+            if attempt < max_retries:
+                logger.warning(
+                    f"[EndUID] {display_uid} 签到异常（第 {attempt}/{max_retries} 次重试）: {e}"
+                )
+                await asyncio.sleep(retry_delay)
+                continue
+            logger.error(f"[EndUID] {display_uid} 签到异常（已重试{max_retries}次）: {e}")
+            return {"status": "fail", "message": f"[{display_uid}] 签到异常"}
+
+    return {"status": "fail", "message": f"[{display_uid}] 签到失败"}
 
 
 def _extract_awards(data: Dict) -> List[Tuple[str, int]]:

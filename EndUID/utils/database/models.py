@@ -3,7 +3,9 @@ import time
 from typing import Optional, Type
 
 from sqlmodel import Field, select, col
-from sqlalchemy import Index, update
+from datetime import datetime
+
+from sqlalchemy import Index, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import and_, or_
 
@@ -493,6 +495,69 @@ class EndUserActivity(BaseBotIDModel, table=True):
         )
         session.add(new_record)
         return True
+
+
+class EndSignRecord(BaseModel, table=True):
+    """每日签到记录表"""
+
+    __tablename__ = "EndSignRecord"
+    __table_args__ = {"extend_existing": True}
+
+    uid: str = Field(default="", title="游戏 UID")
+    sign_status: int = Field(default=0, title="签到状态 (1=已签到)")
+    date: str = Field(default="", title="签到日期")
+
+    @classmethod
+    @with_session
+    async def get_sign_record(
+        cls,
+        session: AsyncSession,
+        uid: str,
+        date: Optional[str] = None,
+    ) -> Optional["EndSignRecord"]:
+        """查询指定 UID 当天的签到记录"""
+        date = date or datetime.now().strftime("%Y-%m-%d")
+        sql = select(cls).where(and_(cls.uid == uid, cls.date == date))
+        result = await session.execute(sql)
+        return result.scalars().first()
+
+    @classmethod
+    @with_session
+    async def mark_signed(
+        cls,
+        session: AsyncSession,
+        uid: str,
+        date: Optional[str] = None,
+    ):
+        """标记用户今日已签到"""
+        date = date or datetime.now().strftime("%Y-%m-%d")
+        sql = select(cls).where(and_(cls.uid == uid, cls.date == date))
+        result = await session.execute(sql)
+        existing = result.scalars().first()
+
+        if existing:
+            existing.sign_status = 1
+            session.add(existing)
+        else:
+            record = cls(
+                bot_id="",
+                user_id="",
+                uid=uid,
+                sign_status=1,
+                date=date,
+            )
+            session.add(record)
+
+    @classmethod
+    @with_session
+    async def clear_sign_records(
+        cls,
+        session: AsyncSession,
+        before_date: str,
+    ):
+        """清除指定日期之前的签到记录"""
+        sql = delete(cls).where(cls.date <= before_date)
+        await session.execute(sql)
 
 
 @site.register_admin

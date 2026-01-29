@@ -89,7 +89,7 @@ async def ann_list_card() -> Union[bytes, str]:
 
         ann_list = await end_api.get_ann_list()
         if not ann_list:
-            return "获取公告列表失败，请稍后重试"
+            return "获取公告列表失败"
 
         # 限制 18 条
         ann_list = ann_list[:18]

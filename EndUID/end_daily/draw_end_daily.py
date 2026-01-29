@@ -98,11 +98,11 @@ async def draw_end_daily_img(ev: Event, uid: str):
         bot_id=ev.bot_id,
     )
     if not res:
-        return "❌ 获取卡片详情失败，请稍后重试"
+        return "获取卡片详情失败"
 
     if res.get("code") != 0:
         message = res.get("message", "未知错误")
-        return f"❌ 获取卡片详情失败: {message}"
+        return f"获取卡片详情失败: {message}"
 
     try:
         player_dir = PLAYER_PATH / uid
