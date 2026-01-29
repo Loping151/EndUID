@@ -68,6 +68,19 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         False,
     ),
 
+    # ==================== 公告配置 ====================
+    "AnnOpen": GsBoolConfig(
+        "公告推送开关",
+        "开启后将自动推送终末地最新公告",
+        True,
+    ),
+    "AnnMinuteCheck": GsIntConfig(
+        "公告检查间隔（分钟）",
+        "每隔多少分钟检查一次新公告",
+        15,
+        max_value=60,
+    ),
+
     # ==================== 渲染配置 ====================
     "UseHtmlRender": GsBoolConfig(
         "使用HTML渲染",

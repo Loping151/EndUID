@@ -25,14 +25,6 @@ from .draw_char_card import end_templates
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
 CACHE_PATH = MAIN_PATH / "cache" / "end_card"
 
-PROPERTY_COLOR_MAP = {
-    "物理": "#7d7d7d",
-    "自然": "#8bc34a",
-    "电磁": "#ffca28",
-    "寒冷": "#29b6f6",
-    "灼热": "#ef5350",
-    "default": "rgba(0,0,0,0.6)" 
-}
 
 def _get_property_icon(property_name: str) -> str:
     if not property_name:
@@ -47,6 +39,26 @@ def _get_property_icon(property_name: str) -> str:
     }
 
     icon_path = icon_map.get(property_name)
+    if not icon_path or not icon_path.exists():
+        return ""
+
+    return image_to_base64(icon_path)
+
+
+def _get_profession_icon(profession_name: str) -> str:
+    if not profession_name:
+        return ""
+
+    icon_map = {
+        "先锋": TEXTURE_PATH / "先锋.png",
+        "突击": TEXTURE_PATH / "突击.png",
+        "近卫": TEXTURE_PATH / "近卫.png",
+        "重装": TEXTURE_PATH / "重装.png",
+        "辅助": TEXTURE_PATH / "辅助.png",
+        "术师": TEXTURE_PATH / "术师.png",
+    }
+
+    icon_path = icon_map.get(profession_name)
     if not icon_path or not icon_path.exists():
         return ""
 
@@ -78,7 +90,12 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
 
     save_path = MAIN_PATH / "players" / uid / "card_detail.json"
     if not save_path.exists():
-        return "❌ 未找到本地卡片数据，请先发送“刷新/更新”"
+        # 自动刷新一次
+        logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
+        from . import refresh_card_data
+        success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+        if not success:
+            return error_msg
 
     try:
         async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
@@ -120,9 +137,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
             )
 
         property_value = c_data.property.value if c_data.property else ""
-        
-        # 获取属性对应的背景色
-        property_bg = PROPERTY_COLOR_MAP.get(property_value, PROPERTY_COLOR_MAP["default"])
+        profession_value = c_data.profession.value if c_data.profession else ""
 
         chars.append(
             {
@@ -132,9 +147,9 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
                 "level": char.level,
                 "potentialLevel": char.potentialLevel if hasattr(char, "potentialLevel") else 0,
                 "property": property_value,
-                "property_color": property_bg, # 新增：颜色字段
-                "profession": c_data.profession.value if c_data.profession else "",
+                "profession": profession_value,
                 "property_icon": _get_property_icon(property_value),
+                "profession_icon": _get_profession_icon(profession_value),
             }
         )
 
@@ -155,6 +170,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         "worldLevel": base.worldLevel if base else 0,
         "chars": chars,
         "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
+        "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),
     }
 
     img_bytes = await render_html(end_templates, "end_card.html", context)

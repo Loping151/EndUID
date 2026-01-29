@@ -45,7 +45,7 @@
     ]
   },
   "信息查询": {
-    "desc": "卡片与面板查询",
+    "desc": "卡片、面板与公告查询",
     "data": [
       {
         "name": "每日/体力",
@@ -78,64 +78,19 @@
         "need_ck": true,
         "need_sk": false,
         "need_admin": false
-      }
-    ]
-  },
-  "角色别名": {
-    "desc": "别名管理",
-    "data": [
+      },
+      {
+        "name": "公告",
+        "desc": "查看公告",
+        "eg": "公告/公告#1",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
       {
         "name": "别名列表",
         "desc": "查看角色别名",
         "eg": "莱万汀别名",
-        "need_ck": false,
-        "need_sk": false,
-        "need_admin": false
-      }
-    ]
-  },
-  "角色别名管理": {
-    "desc": "管理员别名管理",
-    "pm": 0,
-    "data": [
-      {
-        "name": "添加别名",
-        "desc": "为角色添加别名",
-        "eg": "添加莱万汀别名42姐",
-        "need_ck": false,
-        "need_sk": false,
-        "need_admin": true
-      },
-      {
-        "name": "删除别名",
-        "desc": "删除角色别名",
-        "eg": "删除莱万汀别名42姐",
-        "need_ck": false,
-        "need_sk": false,
-        "need_admin": true
-      }
-    ]
-  },
-  "个人设置": {
-    "desc": "个人配置项",
-    "data": [
-      {
-        "name": "设置体力背景",
-        "desc": "设置体力背景，空参数清除",
-        "eg": "设置体力背景 莱万汀",
-        "need_ck": false,
-        "need_sk": false,
-        "need_admin": false
-      }
-    ]
-  },
-  "工具": {
-    "desc": "环境检测",
-    "data": [
-      {
-        "name": "检查Node",
-        "desc": "检查 Node.js 是否安装",
-        "eg": "检查node",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -171,14 +126,65 @@
       }
     ]
   },
-  "签到管理": {
-    "desc": "管理员签到任务",
+  "个人设置": {
+    "desc": "个人配置项",
+    "data": [
+      {
+        "name": "设置体力背景",
+        "desc": "设置体力背景，空参数清除",
+        "eg": "设置体力背景 莱万汀",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
+  "群管理员功能": {
+    "pm": 3,
+    "desc": "群管理员功能",
+    "data": [
+      {
+        "name": "订阅公告",
+        "desc": "订阅终末地公告推送",
+        "eg": "订阅公告",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "取消订阅公告",
+        "desc": "取消订阅终末地公告推送",
+        "eg": "取消订阅公告",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      }
+    ]
+  },
+  "bot主人功能": {
     "pm": 0,
+    "desc": "bot主人功能",
     "data": [
       {
         "name": "全部签到",
         "desc": "执行全部签到任务",
         "eg": "全部签到",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "添加/删除别名",
+        "desc": "添加或删除角色别名",
+        "eg": "添加莱万汀别名42姐",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
+      },
+      {
+        "name": "清理缓存",
+        "desc": "清理30天前的公告缓存文件",
+        "eg": "end清理缓存",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true

@@ -182,9 +182,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            opacity: 0.3;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
         }
-        
+
         .card-auth {
             grid-column: 4 / 5;
         }
@@ -268,35 +271,10 @@
             z-index: 2;
         }
 
-        .profession-tag {
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-            background: rgba(0,0,0,0.7);
-            padding: 3px 6px;
-            border-radius: 2px;
-            text-align: center;
-            backdrop-filter: blur(2px);
-            max-width: 60px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .prop-icon-box {
+        .char-icon {
             width: 36px;
             height: 36px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 2px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        .type-icon {
-            width: 28px;
-            height: 28px;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
         }
 
         .potential-badge {
@@ -304,23 +282,20 @@
             top: 6px;
             right: 6px;
             z-index: 2;
-            width: 24px;
-            height: 24px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(2px);
+            background: rgba(0, 0, 0, 0.75);
+            border-left: 3px solid var(--c-accent);
+            padding: 2px 8px;
+            transform: skewX(-10deg);
+            backdrop-filter: blur(4px);
         }
 
         .potential-num {
             font-family: 'Oswald', sans-serif;
             font-size: 14px;
             font-weight: 700;
-            color: #ffe600; 
+            color: var(--c-accent);
             line-height: 1;
+            transform: skewX(10deg);
         }
 
         
@@ -384,7 +359,9 @@
         .r-3 { background: var(--r-3); }
         
         .ef-logo {
-            width: 60px; height: 60px; fill: #fff; opacity: 0.2;
+            width: 150px;
+            height: 140px;
+            object-fit: contain;
         }
 
     </style>
@@ -437,9 +414,9 @@
             </div>
 
             <div class="dash-card card-logo">
-                <svg class="ef-logo" viewBox="0 0 24 24">
-                    <path d="M12 2L2 22h20L12 2zm0 4l6 14H6l6-14z"/>
-                </svg>
+                {% if end_logo %}
+                <img class="ef-logo" src="{{ end_logo }}">
+                {% endif %}
             </div>
 
             <div class="dash-card card-auth">
@@ -484,20 +461,18 @@
                     {% endif %}
 
                     <div class="char-left-info">
-                        {% if char.profession %}
-                        <div class="profession-tag">{{ char.profession }}</div>
+                        {% if char.profession_icon %}
+                        <img class="char-icon" src="{{ char.profession_icon }}">
                         {% endif %}
 
                         {% if char.property_icon %}
-                        <div class="prop-icon-box" style="background-color: {{ char.property_color }};">
-                            <img class="type-icon" src="{{ char.property_icon }}">
-                        </div>
+                        <img class="char-icon" src="{{ char.property_icon }}">
                         {% endif %}
                     </div>
 
                     {% if char.potentialLevel > 0 %}
                     <div class="potential-badge">
-                        <span class="potential-num">{{ char.potentialLevel }}</span>
+                        <span class="potential-num">P{{ char.potentialLevel }}</span>
                     </div>
                     {% endif %}
 

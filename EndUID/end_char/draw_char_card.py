@@ -53,7 +53,12 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
 
     save_path = MAIN_PATH / "players" / uid / "card_detail.json"
     if not save_path.exists():
-        return "❌ 未找到本地卡片数据，请先发送“刷新/更新”"
+        # 自动刷新一次
+        logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
+        from . import refresh_card_data
+        success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+        if not success:
+            return error_msg
 
     try:
         async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
@@ -114,7 +119,8 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     profession = c_data.profession.value if c_data.profession else "未知"
     property_val = c_data.property.value if c_data.property else "无"
     weapon_type = c_data.weaponType.value if c_data.weaponType else "未知"
-    
+    char_tags = c_data.tags or []
+
     # 技能
     skills_list = []
     user_skills = target.userSkills or {}
@@ -222,6 +228,17 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     if base_info and base_info.avatarUrl:
         user_avatar = await get_image_b64_with_cache(base_info.avatarUrl, AVATAR_CACHE_PATH)
 
+    # 加载属性和职业图标
+    property_icon = ""
+    property_icon_path = TEXTURE_PATH / f"{property_val}.png"
+    if property_icon_path.exists():
+        property_icon = image_to_base64(property_icon_path)
+
+    profession_icon = ""
+    profession_icon_path = TEXTURE_PATH / f"{profession}.png"
+    if profession_icon_path.exists():
+        profession_icon = image_to_base64(profession_icon_path)
+
     # 5. 渲染图片
     context = {
         "bg_url": bg_url_b64,
@@ -232,6 +249,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         "profession": profession,
         "property": property_val,
         "weapon_type": weapon_type,
+        "char_tags": char_tags,
         "level": target.level,
         "evolve_phase": target.evolvePhase,
         "potential": target.potentialLevel,
@@ -239,6 +257,10 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         "weapon": weapon_info,
         "body_equip": body_equip_info,
         "equip_slots": equip_slots,
+
+        # 图标
+        "property_icon": property_icon,
+        "profession_icon": profession_icon,
 
         # 用户信息
         "user_name": base_info.name if base_info and base_info.name else uid,

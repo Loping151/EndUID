@@ -750,5 +750,270 @@ class EndApi:
         return user.cookie
 
 
+    # ===================== 公告相关方法 =====================
+
+    ann_list_data: list = []
+    ann_list_cache_time: float = 0  # 公告列表缓存时间戳
+    ann_map: dict = {}
+
+    ANN_LIST_CACHE_DURATION = 600  # 公告列表缓存有效期：10分钟（600秒）
+
+    async def get_ann_list(self, is_cache: bool = False, page_size: int = 18) -> list:
+        """获取森空岛公告列表（使用 Playwright 绕过签名验证）
+
+        Args:
+            is_cache: 是否使用缓存
+            page_size: 每页数量
+
+        Returns:
+            公告列表
+        """
+        from .api import (
+            SKLAND_GAME_ID_ENDFIELD,
+            SKLAND_CATE_ID_ENDFIELD,
+        )
+
+        # 检查缓存是否有效（10分钟内）
+        current_time = time.time()
+        cache_valid = (
+            self.ann_list_data
+            and (current_time - self.ann_list_cache_time) < self.ANN_LIST_CACHE_DURATION
+        )
+
+        if is_cache and cache_valid:
+            logger.debug(
+                f"[EndUID][Ann] 使用缓存的公告列表（距上次请求 "
+                f"{int(current_time - self.ann_list_cache_time)} 秒）"
+            )
+            return self.ann_list_data
+
+        try:
+            from playwright.async_api import async_playwright
+
+            api_responses = {}
+
+            async def handle_response(response):
+                url = response.url
+                if 'home/index' in url and f'gameId={SKLAND_GAME_ID_ENDFIELD}' in url:
+                    try:
+                        body = await response.json()
+                        api_responses[url] = body
+                    except Exception:
+                        pass
+
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page()
+                page.on('response', handle_response)
+
+                try:
+                    await page.goto(
+                        f'https://www.skland.com/game/endfield?cateId={SKLAND_CATE_ID_ENDFIELD}',
+                        timeout=30000
+                    )
+                    await page.wait_for_timeout(3000)
+
+                    # 滚动页面多次以加载更多公告（确保获取18条以上）
+                    for _ in range(6):
+                        await page.evaluate("window.scrollBy(0, 1000)")
+                        await page.wait_for_timeout(1200)
+
+                except Exception as e:
+                    logger.warning(f"[EndUID][Ann] 页面加载异常: {e}")
+
+                await browser.close()
+
+            # 处理获取到的数据
+            self.ann_list_data = []
+            for url, res in api_responses.items():
+                if res.get("code") != 0:
+                    continue
+
+                data = res.get("data", {})
+                items = data.get("list", [])
+
+                for entry in items:
+                    item = entry.get("item", {})
+                    user = entry.get("user", {})
+                    if not item.get("id"):
+                        continue
+
+                    # 获取封面图
+                    cover_url = ""
+                    if item.get("imageCover"):
+                        cover_url = item["imageCover"].get("url", "")
+                    elif item.get("imageListSlice"):
+                        cover_url = item["imageListSlice"][0].get("url", "")
+                    elif item.get("videoListSlice"):
+                        video = item["videoListSlice"][0]
+                        cover_url = video.get("cover", {}).get("url", "")
+
+                    # 尝试多种可能的时间戳字段
+                    created_ts = (
+                        item.get("createdAtTs")
+                        or item.get("ts")
+                        or item.get("createTs")
+                        or item.get("createdAt")
+                        or item.get("publishTs")
+                        or 0
+                    )
+
+                    if not self.ann_list_data:
+                        logger.debug(
+                            f"[EndUID][Ann] 首条公告 item keys: {list(item.keys())}"
+                        )
+                        logger.debug(
+                            f"[EndUID][Ann] 首条公告 user keys: {list(user.keys())}"
+                        )
+
+                    self.ann_list_data.append({
+                        "id": item.get("id"),
+                        "title": item.get("title", ""),
+                        "coverUrl": cover_url,
+                        "createdAtTs": created_ts,
+                        "userName": user.get("nickname", ""),
+                        "userAvatar": user.get("avatar", ""),
+                        "userIpLocation": user.get("latestIpLocation", ""),
+                        "viewKind": item.get("viewKind"),
+                        "gameId": item.get("gameId"),
+                        "cateId": item.get("cateId"),
+                    })
+
+            # 去重并限制数量
+            seen_ids = set()
+            unique_list = []
+            for item in self.ann_list_data:
+                if item["id"] not in seen_ids:
+                    seen_ids.add(item["id"])
+                    unique_list.append(item)
+            self.ann_list_data = unique_list[:page_size]
+
+            # 更新缓存时间
+            self.ann_list_cache_time = time.time()
+
+            logger.info(f"[EndUID][Ann] 获取到 {len(self.ann_list_data)} 条公告")
+            return self.ann_list_data
+
+        except ImportError:
+            logger.error("[EndUID][Ann] Playwright 未安装，无法获取公告列表")
+            return []
+        except Exception as e:
+            logger.error(f"[EndUID][Ann] 获取公告列表异常: {e}")
+            return []
+
+    async def get_ann_detail(self, post_id: str) -> Optional[dict]:
+        """获取公告详情（使用 Playwright 绕过签名验证）
+
+        Args:
+            post_id: 公告 ID
+
+        Returns:
+            公告详情
+        """
+        if post_id in self.ann_map:
+            return self.ann_map[post_id]
+
+        try:
+            from playwright.async_api import async_playwright
+
+            api_responses = {}
+
+            async def handle_response(response):
+                url = response.url
+                if 'item' in url and f'id={post_id}' in url:
+                    try:
+                        body = await response.json()
+                        api_responses[url] = body
+                    except Exception:
+                        pass
+
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                page = await browser.new_page()
+                page.on('response', handle_response)
+
+                try:
+                    await page.goto(
+                        f'https://www.skland.com/article?id={post_id}',
+                        timeout=30000
+                    )
+                    await page.wait_for_timeout(5000)
+                except Exception as e:
+                    logger.warning(f"[EndUID][Ann] 页面加载异常: {e}")
+
+                await browser.close()
+
+            # 处理获取到的数据
+            for url, res in api_responses.items():
+                if res.get("code") != 0:
+                    continue
+
+                data = res.get("data", {})
+                item = data.get("item", {})
+                user = data.get("user", {})
+
+                # 处理图片列表
+                images = []
+                for img in item.get("imageListSlice", []):
+                    images.append({
+                        "url": img.get("url", ""),
+                        "width": img.get("width", 0),
+                        "height": img.get("height", 0),
+                    })
+
+                # 处理视频列表
+                videos = []
+                for video in item.get("videoListSlice", []):
+                    videos.append({
+                        "url": video.get("url", ""),
+                        "coverUrl": video.get("cover", {}).get("url", ""),
+                    })
+
+                # 处理文本内容
+                text_content = []
+                for text in item.get("textSlice", []):
+                    text_content.append(text.get("c", ""))
+
+                # 尝试多种可能的时间戳字段
+                created_ts = (
+                    item.get("createdAtTs")
+                    or item.get("ts")
+                    or item.get("createTs")
+                    or item.get("createdAt")
+                    or item.get("publishTs")
+                    or 0
+                )
+
+                logger.debug(
+                    f"[EndUID][Ann] 详情 item keys: {list(item.keys())}, "
+                    f"createdAtTs={created_ts}"
+                )
+
+                result = {
+                    "id": item.get("id"),
+                    "title": item.get("title", ""),
+                    "createdAtTs": created_ts,
+                    "userName": user.get("nickname", ""),
+                    "userAvatar": user.get("avatar", ""),
+                    "userIpLocation": user.get("latestIpLocation", ""),
+                    "images": images,
+                    "videos": videos,
+                    "textContent": text_content,
+                    "format": item.get("format", ""),
+                }
+
+                self.ann_map[post_id] = result
+                return result
+
+            return None
+
+        except ImportError:
+            logger.error("[EndUID][Ann] Playwright 未安装，无法获取公告详情")
+            return None
+        except Exception as e:
+            logger.error(f"[EndUID][Ann] 获取公告详情异常: {e}")
+            return None
+
+
 # 创建全局实例
 end_api = EndApi()

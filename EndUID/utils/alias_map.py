@@ -3,7 +3,7 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 
 from gsuid_core.logger import logger
 
-from .path import MAP_PATH
+from .path import MAP_PATH, TEMPLATE_MAP_PATH
 
 
 AliasEntry = Dict[str, Any]
@@ -14,12 +14,82 @@ def _normalize(text: str) -> str:
     return text.strip().lower()
 
 
+def _merge_alias_maps(map1: AliasMap, map2: AliasMap) -> AliasMap:
+    """合并两个别名映射
+
+    Args:
+        map1: 第一个映射（通常是模板）
+        map2: 第二个映射（通常是数据文件）
+
+    Returns:
+        合并后的映射，保留双方的 key，只合并 alias 字段
+    """
+    all_keys = set(map1.keys()) | set(map2.keys())
+    result = {}
+
+    for key in all_keys:
+        entry1 = map1.get(key, {})
+        entry2 = map2.get(key, {})
+
+        # 优先使用 map2 的完整数据，只合并 alias
+        if isinstance(entry2, dict):
+            result[key] = entry2.copy()
+        elif isinstance(entry1, dict):
+            result[key] = entry1.copy()
+        else:
+            result[key] = {}
+
+        # 合并 alias 字段（去重）
+        alias1 = _get_alias_list(entry1) if isinstance(entry1, dict) else []
+        alias2 = _get_alias_list(entry2) if isinstance(entry2, dict) else []
+        merged_alias = list(dict.fromkeys(alias1 + alias2))  # 保持顺序并去重
+
+        if merged_alias:
+            result[key]["alias"] = merged_alias
+        elif "alias" not in result[key]:
+            result[key]["alias"] = []
+
+    return result
+
+
 def _ensure_map_file():
-    if MAP_PATH.exists():
-        return
+    """确保 map.json 存在，并与模板文件合并"""
     try:
         MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
-        MAP_PATH.write_text("{}", encoding="utf-8")
+
+        # 读取模板文件
+        template_data = {}
+        if TEMPLATE_MAP_PATH.exists():
+            try:
+                template_raw = TEMPLATE_MAP_PATH.read_text(encoding="utf-8")
+                template_data = json.loads(template_raw or "{}")
+                if not isinstance(template_data, dict):
+                    template_data = {}
+            except Exception as e:
+                logger.warning(f"[EndUID] 读取模板 map.json 失败: {e}")
+                template_data = {}
+
+        # 读取现有的数据文件
+        data_map = {}
+        if MAP_PATH.exists():
+            try:
+                data_raw = MAP_PATH.read_text(encoding="utf-8")
+                data_map = json.loads(data_raw or "{}")
+                if not isinstance(data_map, dict):
+                    data_map = {}
+            except Exception as e:
+                logger.warning(f"[EndUID] 读取 map.json 失败: {e}")
+                data_map = {}
+
+        # 合并模板和数据
+        merged_data = _merge_alias_maps(template_data, data_map)
+
+        # 保存合并后的数据
+        MAP_PATH.write_text(
+            json.dumps(merged_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        logger.info(f"[EndUID] map.json 已合并更新")
     except Exception as e:
         logger.warning(f"[EndUID] 初始化 map.json 失败: {e}")
 
@@ -112,8 +182,9 @@ def update_alias_map_from_chars(chars: Iterable[Any]) -> None:
                 changed = True
 
         alias_list = _get_alias_list(entry)
-        if char_id and char_id not in alias_list:
-            alias_list.append(char_id)
+        # 将原名作为 alias，而不是 ID
+        if char_name and char_name not in alias_list:
+            alias_list.append(char_name)
             changed = True
 
         _set_alias_list(entry, alias_list)

@@ -9,6 +9,10 @@ sys.path.append(str(MAIN_PATH))
 CONFIG_PATH = MAIN_PATH / "config.json"
 MAP_PATH = MAIN_PATH / "map.json"
 AVATAR_CACHE_PATH = MAIN_PATH / "cache" / "avatar"
+ANN_CACHE_PATH = MAIN_PATH / "cache" / "ann"
+
+# 模板文件路径
+TEMPLATE_MAP_PATH = Path(__file__).parent / "map.json"
 
 TEMP_PATH = Path(__file__).parents[1] / "templates"
 
@@ -18,6 +22,7 @@ def init_dir():
         MAIN_PATH,
         MAIN_PATH / "cache",
         AVATAR_CACHE_PATH,
+        ANN_CACHE_PATH,
     ]:
         p.mkdir(parents=True, exist_ok=True)
 

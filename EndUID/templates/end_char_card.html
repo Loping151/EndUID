@@ -121,10 +121,16 @@
     }
 
     .rarity {
-        color: var(--c-accent);
-        font-size: 28px;
-        letter-spacing: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         margin: 10px 0 20px 5px;
+    }
+
+    .rarity-star {
+        width: 24px;
+        height: 24px;
+        display: inline-block;
     }
 
     .tags {
@@ -140,6 +146,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 8px;
         transform: skewX(-20deg);
         box-shadow: 5px 5px 15px rgba(0,0,0,0.4);
         backdrop-filter: blur(5px);
@@ -159,6 +166,13 @@
         border: none;
         color: white;
     }
+
+    .tag-icon {
+        width: 20px;
+        height: 20px;
+        transform: skewX(20deg);
+    }
+
 
     .header-right {
         text-align: right;
@@ -349,10 +363,16 @@
     }
     
     .weapon-stars {
-        font-size: 18px;
-        color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        gap: 4px;
         margin-top: 2px;
-        letter-spacing: 2px;
+    }
+
+    .weapon-star {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
     }
 
     .weapon-img-wrap {
@@ -606,18 +626,29 @@
             <div class="header-left">
                 <div class="char-name">{{ name }}</div>
                 <div class="rarity">
-                    {% for _ in range(rarity|int) %}★{% endfor %}
+                    {% for _ in range(rarity|int) %}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                    {% endfor %}
                 </div>
                 <div class="tags">
                     <div class="tag-box element">
+                        {% if property_icon %}<img src="{{ property_icon }}" class="tag-icon">{% endif %}
                         <span>{{ property }}</span>
                     </div>
                     <div class="tag-box">
+                        {% if profession_icon %}<img src="{{ profession_icon }}" class="tag-icon">{% endif %}
                         <span>{{ profession }}</span>
                     </div>
+                </div>
+                <div class="tags">
                     <div class="tag-box">
                         <span>{{ weapon_type }}</span>
                     </div>
+                    {% for tag in char_tags %}
+                    <div class="tag-box">
+                        <span>{{ tag }}</span>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
@@ -657,7 +688,9 @@
                         <div class="weapon-info">
                             <div class="weapon-level">{{ weapon.level }}<small>Lv</small></div>
                             <div class="weapon-stars">
-                                {% for _ in range(weapon.rarity|int) %}★{% endfor %}
+                                {% for _ in range(weapon.rarity|int) %}
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="weapon-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__weapon_{{ loop.index }}" clip-rule="evenodd"><path fill="#333333" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#444444" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#555555" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__weapon_{{ loop.index }}"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                                {% endfor %}
                             </div>
                             <div class="weapon-name-text">{{ weapon.name }}</div>
                         </div>
