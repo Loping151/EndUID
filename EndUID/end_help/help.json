@@ -94,6 +94,14 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "更新记录",
+        "desc": "查看插件更新日志",
+        "eg": "更新记录/log",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": true
       }
     ]
   },
