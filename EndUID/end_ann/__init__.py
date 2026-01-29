@@ -12,6 +12,7 @@ from gsuid_core.subscribe import gs_subscribe
 
 from .ann_card import ann_list_card, ann_detail_card
 from ..utils.api.requests import end_api
+from ..utils.database.models import EndSubscribe
 from ..end_config import EndConfig
 from ..utils.path import ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH
 from .utils.ann_config import get_ann_new_ids, set_ann_new_ids
@@ -66,6 +67,9 @@ async def sub_ann_(bot: Bot, ev: Event):
     logger.info(
         f"[终末地公告] 群 {ev.group_id} 订阅公告，bot_id={ev.bot_id}, bot_self_id={ev.bot_self_id}"
     )
+
+    if ev.group_id:
+        await EndSubscribe.check_and_update_bot(ev.group_id, ev.bot_self_id)
 
     data = await gs_subscribe.get_subscribe(task_name_ann)
     is_resubscribe = False

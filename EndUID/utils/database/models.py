@@ -14,6 +14,7 @@ from gsuid_core.utils.database.base_models import (
     BaseBotIDModel,
     with_session,
 )
+from gsuid_core.utils.database.models import Subscribe
 from gsuid_core.webconsole.mount_app import site, GsAdminModel, PageSchema
 
 
@@ -368,57 +369,67 @@ class EndSubscribe(BaseModel, table=True):
         group_id: str,
         bot_self_id: str,
     ) -> bool:
-        """检查并更新群组的 bot_self_id"""
+        """检查并更新群组的 bot_self_id
+
+        只要 Subscribe 表中该群的 bot_self_id 与当前不一致就更新
+        """
         from gsuid_core.logger import logger
 
         current_time = int(time.time())
 
-        logger.debug(
-            f"[EndSubscribe] check_and_update_bot 被调用: group_id={group_id}, bot_self_id={bot_self_id}"
+        # 更新 Subscribe 表：该群所有 bot_self_id 不一致的订阅记录
+        update_sql = (
+            update(Subscribe)
+            .where(
+                and_(
+                    col(Subscribe.group_id) == group_id,
+                    col(Subscribe.bot_self_id) != bot_self_id,
+                )
+            )
+            .values(bot_self_id=bot_self_id)
         )
+        update_result = await session.execute(update_sql)
+        changed = update_result.rowcount > 0
 
+        if changed:
+            logger.info(
+                f"[EndUID订阅] 群 {group_id} 更新 {update_result.rowcount} 条订阅的bot_self_id -> {bot_self_id}"
+            )
+
+        # 更新 EndSubscribe 记录
         sql = select(cls).where(cls.group_id == group_id)
         result = await session.execute(sql)
         existing = result.scalars().first()
 
         if existing:
             if existing.bot_self_id != bot_self_id:
-                old_bot_self_id = existing.bot_self_id
-                logger.info(
-                    f"[EndUID订阅] 检测到群 {group_id} 的bot变更: {old_bot_self_id} -> {bot_self_id}"
-                )
-
-                update_sql = (
-                    update(EndSubscribe)
-                    .where(
-                        and_(
-                            col(EndSubscribe.group_id) == group_id,
-                            col(EndSubscribe.bot_self_id) == old_bot_self_id,
-                        )
-                    )
-                    .values(bot_self_id=bot_self_id)
-                )
-                await session.execute(update_sql)
-
                 existing.bot_self_id = bot_self_id
-                existing.updated_at = current_time
-                session.add(existing)
-                return True
-
             existing.updated_at = current_time
             session.add(existing)
-            return False
+        else:
+            new_record = cls(
+                bot_id="onebot",
+                user_id="",
+                group_id=group_id,
+                bot_self_id=bot_self_id,
+                updated_at=current_time,
+            )
+            session.add(new_record)
 
-        new_record = cls(
-            bot_id="onebot",
-            user_id="",
-            group_id=group_id,
-            bot_self_id=bot_self_id,
-            updated_at=current_time,
-        )
-        session.add(new_record)
-        logger.debug(f"[EndUID订阅] 首次记录群 {group_id} 的bot: {bot_self_id}")
-        return False
+        return changed
+
+    @classmethod
+    @with_session
+    async def get_group_bot(
+        cls,
+        session: AsyncSession,
+        group_id: str,
+    ) -> Optional[str]:
+        """获取群组当前的bot_self_id"""
+        sql = select(cls).where(cls.group_id == group_id)
+        result = await session.execute(sql)
+        record = result.scalars().first()
+        return record.bot_self_id if record else None
 
 
 class EndUserActivity(BaseBotIDModel, table=True):

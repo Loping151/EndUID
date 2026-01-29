@@ -350,34 +350,28 @@ async def send_sign_report(private_msgs: Dict, group_msgs: Dict) -> None:
         private_msgs: 私聊消息字典 {user_id: {bot_id: [messages]}}
         group_msgs: 群消息字典 {group_id: {bot_id: [messages]}}
     """
-    from gsuid_core.global_val import get_active_bots
+    from gsuid_core.gss import gss
 
-    active_bots = get_active_bots()
-
-    # 发送私聊消息
     for user_id, bot_data in private_msgs.items():
         for bot_id, messages in bot_data.items():
-            if bot_id not in active_bots:
-                continue
+            for active_id in gss.active_bot:
+                try:
+                    for msg in messages:
+                        await gss.active_bot[active_id].target_send(
+                            msg, "direct", user_id, bot_id, "", ""
+                        )
+                        await asyncio.sleep(0.5 + random.uniform(1, 3))
+                except Exception as e:
+                    logger.error(f"[EndUID] 私聊推送失败 ({user_id}): {e}")
 
-            try:
-                bot = active_bots[bot_id]
-                for msg in messages:
-                    await bot.target_send(msg, "direct", user_id, bot_id, "", "")
-                    await asyncio.sleep(0.5 + random.uniform(1, 3))
-            except Exception as e:
-                logger.error(f"[EndUID] 私聊推送失败 ({user_id}): {e}")
-
-    # 发送群消息
     for group_id, bot_data in group_msgs.items():
         for bot_id, messages in bot_data.items():
-            if bot_id not in active_bots:
-                continue
-
-            try:
-                bot = active_bots[bot_id]
-                for msg in messages:
-                    await bot.target_send(msg, "group", group_id, bot_id, "", "")
-                    await asyncio.sleep(0.5 + random.uniform(1, 3))
-            except Exception as e:
-                logger.error(f"[EndUID] 群推送失败 ({group_id}): {e}")
+            for active_id in gss.active_bot:
+                try:
+                    for msg in messages:
+                        await gss.active_bot[active_id].target_send(
+                            msg, "group", group_id, bot_id, "", ""
+                        )
+                        await asyncio.sleep(0.5 + random.uniform(1, 3))
+                except Exception as e:
+                    logger.error(f"[EndUID] 群推送失败 ({group_id}): {e}")
