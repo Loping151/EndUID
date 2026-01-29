@@ -18,7 +18,6 @@ from .request_util import (
     get_device_id,
     get_endfield_web_headers,
     get_skland_app_headers,
-    get_skland_app_security_headers,
     ANDROID_USER_AGENT,
     SKLAND_APP_USER_AGENT,
     SKLAND_APP_VNAME,
@@ -367,7 +366,6 @@ class EndApi:
             effective_user_agent = SKLAND_APP_USER_AGENT
 
         headers = get_skland_app_headers(user_agent=effective_user_agent)
-        headers.update(get_skland_app_security_headers())
         if extra_headers:
             headers.update(extra_headers)
 

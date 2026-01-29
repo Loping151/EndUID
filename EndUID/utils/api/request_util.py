@@ -1,15 +1,10 @@
 """HTTP 请求工具和常量"""
-import json
 import os
 import subprocess
 import time
 from enum import IntEnum
 from pathlib import Path
 from typing import Optional
-
-from ..path import MAIN_PATH
-
-
 
 class RespCode(IntEnum):
     """森空岛 API 响应码"""
@@ -56,48 +51,6 @@ SKLAND_APP_OS = "32"
 SKLAND_APP_NID = "1"
 SKLAND_APP_CHANNEL = "OF"
 SKLAND_APP_MANUFACTURER = "Samsung"
-
-_SKLAND_APP_DATA_FILENAME = "skland_app.json"
-_SKLAND_APP_DATA_PATH = MAIN_PATH / _SKLAND_APP_DATA_FILENAME
-_SKLAND_APP_DATA_DEFAULT = {
-    "ali_sign_whash": "",
-    "wToken": "",
-}
-
-
-def _ensure_skland_app_data_file() -> None:
-    try:
-        if _SKLAND_APP_DATA_PATH.exists():
-            return
-        _SKLAND_APP_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _SKLAND_APP_DATA_PATH.write_text(
-            json.dumps(_SKLAND_APP_DATA_DEFAULT, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-    except Exception:
-        return None
-
-
-def _load_skland_app_data() -> dict:
-    _ensure_skland_app_data_file()
-    try:
-        if _SKLAND_APP_DATA_PATH.exists():
-            return json.loads(_SKLAND_APP_DATA_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return dict(_SKLAND_APP_DATA_DEFAULT)
-
-
-def get_skland_app_security_headers() -> dict:
-    data = _load_skland_app_data()
-    return {
-        "ali_sign_whash": data.get("ali_sign_whash", ""),
-        "wToken": data.get("wToken", ""),
-    }
-
-
-# 确保启动时存在空配置文件
-_ensure_skland_app_data_file()
 
 
 def get_device_id(
