@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EndUID 更新记录</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-grid: rgba(255, 255, 255, 0.03);
+            --c-card-bg: rgba(255, 255, 255, 0.06);
+            --c-card-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 800px;
+            min-height: 400px;
+            background-color: var(--c-bg);
+            font-family: 'Noto Sans SC', 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            overflow-x: hidden;
+        }
+
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(var(--c-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 40px 40px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* 头部 */
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-logo {
+            width: 260px;
+            height: auto;
+            filter: drop-shadow(0 4px 20px rgba(255, 230, 0, 0.15));
+        }
+
+        .header-name {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--c-text);
+            letter-spacing: 2px;
+        }
+
+        .header-title {
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--c-subtext);
+            letter-spacing: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 日志列表 */
+        .log-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 20px;
+            background: var(--c-card-bg);
+            border: 1px solid var(--c-card-border);
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .log-emoji {
+            font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+            font-size: 28px;
+            flex-shrink: 0;
+            width: 50px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .log-text {
+            font-size: 28px;
+            font-weight: 500;
+            color: #e0e0e0;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .log-index {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--c-accent);
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer"></div>
+    <div class="grid-deco"></div>
+
+    <div class="container">
+
+        <div class="header">
+            {% if icon_b64 %}
+            <img class="header-logo" src="{{ icon_b64 }}" alt="EndUID">
+            {% endif %}
+            <div class="header-name">EndUID</div>
+            <div class="header-title">UPDATE LOG</div>
+        </div>
+
+        <div class="log-list">
+            {% for item in logs %}
+            <div class="log-item">
+                <span class="log-emoji">{{ item.emoji }}</span>
+                <span class="log-text">{{ item.text }}</span>
+                <span class="log-index">#{{ item.index }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</body>
+</html>

@@ -3,17 +3,16 @@ import unicodedata
 from typing import List, Tuple, Union
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
-
 from gsuid_core.logger import logger
-from gsuid_core.utils.image.convert import convert_img
-from gsuid_core.utils.image.image_tools import crop_center_img
 
+from ..utils.render_utils import render_html, image_to_base64
 
-def _get_end_bg(w: int = 0, h: int = 0) -> Image.Image:
-    """获取 EndUID 背景图"""
-    img = Image.open(TEXT_PATH / "bg.png").convert("RGBA")
-    return crop_center_img(img, w, h) if w and h else img
+from jinja2 import Environment, FileSystemLoader
+
+TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
+ICON_PATH = Path(__file__).parents[2] / "ICON.png"
+
+end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 
 
 def _get_git_logs() -> List[str]:
@@ -30,12 +29,11 @@ def _get_git_logs() -> List[str]:
             return []
         commits = stdout.decode("utf-8", errors="ignore").split("\n")
 
-        # 只返回有 emoji 开头的提交记录
         filtered_commits = []
         for commit in commits:
             if commit:
                 emojis, _ = _extract_leading_emojis(commit)
-                if emojis:  # 只要有 emoji 就保留
+                if emojis:
                     filtered_commits.append(commit)
                     if len(filtered_commits) >= 18:
                         break
@@ -65,118 +63,39 @@ def _extract_leading_emojis(message: str) -> Tuple[List[str], str]:
     return emojis, message[i:].lstrip()
 
 
-def _get_emoji_font(size: int = 109) -> ImageFont.FreeTypeFont:
-    """获取 emoji 字体"""
-    # 尝试使用 XutheringWavesUID 的 emoji 字体
-    emoji_font_path = Path(__file__).parents[3] / "XutheringWavesUID/XutheringWavesUID/utils/fonts/NotoColorEmoji.ttf"
-    if emoji_font_path.exists():
-        return ImageFont.truetype(str(emoji_font_path), size=size)
-
-    # 如果找不到，尝试系统字体
-    try:
-        return ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", size=size)
-    except Exception:
-        # 最后使用默认字体
-        logger.warning("Could not load emoji font, using default")
-        return ImageFont.load_default()
-
-
-def _get_text_font(size: int = 30) -> ImageFont.FreeTypeFont:
-    """获取文本字体"""
-    # 尝试使用 XutheringWavesUID 的字体
-    font_path = Path(__file__).parents[3] / "XutheringWavesUID/XutheringWavesUID/utils/fonts/arial-unicode-ms-bold.ttf"
-    if font_path.exists():
-        return ImageFont.truetype(str(font_path), size=size)
-
-    # 尝试系统字体
-    try:
-        return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size=size)
-    except Exception:
-        logger.warning("Could not load text font, using default")
-        return ImageFont.load_default()
-
-
-def _render_emoji_sprite(emoji: str, target_size: int = 56) -> Image.Image:
-    """渲染单个 emoji 为图像，并缩放到目标大小。"""
-    emoji_font = _get_emoji_font(109)
-    d = ImageDraw.Draw(Image.new("RGBA", (218, 218), (0, 0, 0, 0)))
-    bbox = d.textbbox((0, 0), emoji, font=emoji_font, anchor="lt")
-    w, h = int(max(1, bbox[2] - bbox[0])), int(max(1, bbox[3] - bbox[1]))
-    canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    dc = ImageDraw.Draw(canvas)
-    try:
-        dc.text((-bbox[0], -bbox[1]), emoji, font=emoji_font, embedded_color=True)
-    except TypeError:
-        dc.text((-bbox[0], -bbox[1]), emoji, font=emoji_font, fill=(0, 0, 0, 255))
-
-    # 缩放到目标大小，保持宽高比
-    if w > h:
-        new_w = target_size
-        new_h = int(h * target_size / w)
-    else:
-        new_h = target_size
-        new_w = int(w * target_size / h)
-
-    return canvas.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-
-# 模块导入时初始化缓存
+# 模块导入时缓存 git 日志
 _CACHED_LOGS = _get_git_logs()
-TEXT_PATH = Path(__file__).parent / "texture2d"
 
 
 async def draw_update_log_img() -> Union[bytes, str]:
     if not _CACHED_LOGS:
         return "获取失败"
 
-    gs_font_30 = _get_text_font(30)
-    gs_font_40 = _get_text_font(40)
+    icon_b64 = image_to_base64(ICON_PATH)
 
-    img = _get_end_bg(950, 20 + 150 + 80 * len(_CACHED_LOGS) + 50)
-    img_draw = ImageDraw.Draw(img)
-
-    # 绘制标题
-    img_draw.text((475, 100), "EndUID 更新记录", "white", gs_font_40, "mm")
-
+    logs = []
     for index, raw_log in enumerate(_CACHED_LOGS):
         emojis, text = _extract_leading_emojis(raw_log)
-
-        # 跳过没有 emoji 的记录（理论上已在获取时过滤，但保险起见）
         if not emojis:
             continue
 
-        # 清理文本
         if ")" in text:
             text = text.split(")")[0] + ")"
         text = text.replace("`", "")
 
-        base_y = 150 + 80 * index
+        logs.append({
+            "emoji": "".join(emojis[:4]),
+            "text": text,
+            "index": index + 1,
+        })
 
-        # 绘制居中的圆角半透明灰色背景条
-        bg_width = 850
-        bg_height = 65
-        bg_x = (950 - bg_width) // 2  # 居中计算
-        bg_y = base_y + 7
+    context = {
+        "icon_b64": icon_b64,
+        "logs": logs,
+    }
 
-        rounded_bg = Image.new("RGBA", (bg_width, bg_height), (0, 0, 0, 0))
-        rounded_bg_draw = ImageDraw.Draw(rounded_bg)
-        rounded_bg_draw.rounded_rectangle(
-            [(0, 0), (bg_width, bg_height)],
-            radius=15,
-            fill=(128, 128, 128, 100),
-        )
-        img.paste(rounded_bg, (bg_x, bg_y), rounded_bg)
+    img_bytes = await render_html(end_templates, "update_log.html", context)
 
-        x = 70
-        # 绘制前缀 emoji
-        for e in emojis[:4]:
-            sprite = _render_emoji_sprite(e, target_size=48)
-            paste_y = base_y + max(0, (80 - sprite.height) // 2)
-            img.paste(sprite, (x, paste_y), sprite)
-            x += sprite.width + 12
-
-        # 绘制文本
-        text_x = max(x, 160)
-        img_draw.text((text_x, base_y + 40), text, "white", gs_font_30, "lm")
-
-    return await convert_img(img)
+    if img_bytes:
+        return img_bytes
+    return "渲染更新记录失败"

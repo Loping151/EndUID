@@ -45,3 +45,10 @@
   font-display: swap;
   src: url('/end/fonts/SourceHanSansCN-Bold.ttc') format('truetype');
 }
+
+@font-face {
+  font-family: 'Noto Color Emoji';
+  font-style: normal;
+  font-display: swap;
+  src: url('/end/fonts/NotoColorEmoji.ttf') format('truetype');
+}

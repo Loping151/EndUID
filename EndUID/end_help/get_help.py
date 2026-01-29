@@ -39,6 +39,7 @@ async def get_help(pm: int):
         cag_bg=Image.open(TEXT_PATH / "cag_bg.png").convert("RGBA"),
         item_bg=Image.open(TEXT_PATH / "item.png").convert("RGBA"),
         icon_path=ICON_PATH,
+        footer=Image.new("RGBA", (1, 1), (0, 0, 0, 0)),
         enable_cache=False,
         pm=pm,
     )

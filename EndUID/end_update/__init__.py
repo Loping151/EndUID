@@ -7,7 +7,7 @@ from .draw_update_log import draw_update_log_img
 sv_end_update_history = SV("end更新记录", pm=1, priority=4)
 
 
-@sv_end_update_history.on_fullmatch(("更新记录", "更新日志", "log"))
+@sv_end_update_history.on_fullmatch(("更新记录", "更新日志", "log"), block=True)
 async def send_end_update_log_msg(bot: Bot, ev: Event):
     im = await draw_update_log_img()
     await bot.send(im)
