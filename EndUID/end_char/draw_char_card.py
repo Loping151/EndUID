@@ -19,12 +19,17 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
-from ..utils.path import MAIN_PATH, AVATAR_CACHE_PATH
+from ..utils.path import (
+    AVATAR_CACHE_PATH,
+    CHAR_CACHE_PATH,
+    SKILL_CACHE_PATH,
+    EQUIP_CACHE_PATH,
+    PLAYER_PATH,
+)
 
 # 资源路径
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
 TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
-CACHE_PATH = MAIN_PATH / "cache" / "end_char"
 
 # Jinja2 环境
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
@@ -51,7 +56,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     # 3. 读取本地数据（由刷新指令写入）
     logger.info(f"[EndUID] 正在查询角色: {real_name} (ID: {char_id})")
 
-    save_path = MAIN_PATH / "players" / uid / "card_detail.json"
+    save_path = PLAYER_PATH / uid / "card_detail.json"
     if not save_path.exists():
         # 自动刷新一次
         logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
@@ -103,16 +108,10 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     name = c_data.name or real_name
     
     # 异步下载并缓存图片
-    CACHE_PATH.mkdir(parents=True, exist_ok=True)
-    (CACHE_PATH / "chars").mkdir(exist_ok=True)
-    (CACHE_PATH / "skills").mkdir(exist_ok=True)
-    (CACHE_PATH / "equips").mkdir(exist_ok=True)
-    (CACHE_PATH / "avatar").mkdir(exist_ok=True)
-
     raw_url = c_data.illustrationUrl or c_data.avatarRtUrl or c_data.avatarSqUrl
     char_url_b64 = ""
     if raw_url:
-        char_url_b64 = await get_image_b64_with_cache(raw_url, CACHE_PATH / "chars")
+        char_url_b64 = await get_image_b64_with_cache(raw_url, CHAR_CACHE_PATH)
 
     # 属性映射
     rarity = c_data.rarity.value if c_data.rarity else "1"
@@ -134,7 +133,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         icon_url = sk.iconUrl
         icon_b64 = ""
         if icon_url:
-             icon_b64 = await get_image_b64_with_cache(icon_url, CACHE_PATH / "skills")
+             icon_b64 = await get_image_b64_with_cache(icon_url, SKILL_CACHE_PATH)
 
         skills_list.append({
             "name": sk.name,
@@ -151,7 +150,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
             wp_icon_url = wp_detail.iconUrl
             wp_icon_b64 = ""
             if wp_icon_url:
-                wp_icon_b64 = await get_image_b64_with_cache(wp_icon_url, CACHE_PATH / "equips")
+                wp_icon_b64 = await get_image_b64_with_cache(wp_icon_url, EQUIP_CACHE_PATH)
             
             weapon_info = {
                 "name": wp_detail.name,
@@ -169,7 +168,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
              be_icon_url = be_detail.iconUrl
              be_icon_b64 = ""
              if be_icon_url:
-                 be_icon_b64 = await get_image_b64_with_cache(be_icon_url, CACHE_PATH / "equips")
+                 be_icon_b64 = await get_image_b64_with_cache(be_icon_url, EQUIP_CACHE_PATH)
                  
              body_equip_info = {
                 "name": be_detail.name,
@@ -188,7 +187,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         level_val = detail.level.value if detail.level and detail.level.value else ""
         icon_b64 = ""
         if detail.iconUrl:
-            icon_b64 = await get_image_b64_with_cache(detail.iconUrl, CACHE_PATH / "equips")
+            icon_b64 = await get_image_b64_with_cache(detail.iconUrl, EQUIP_CACHE_PATH)
         equip_slots.append(
             {
                 "slot": slot_key,
@@ -210,7 +209,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         t_detail = target.tacticalItem.tacticalItemData
         icon_b64 = ""
         if t_detail.iconUrl:
-            icon_b64 = await get_image_b64_with_cache(t_detail.iconUrl, CACHE_PATH / "equips")
+            icon_b64 = await get_image_b64_with_cache(t_detail.iconUrl, EQUIP_CACHE_PATH)
         equip_slots.append(
             {
                 "slot": "tactical",

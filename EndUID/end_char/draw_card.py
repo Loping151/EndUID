@@ -18,12 +18,11 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
-from ..utils.path import MAIN_PATH, AVATAR_CACHE_PATH
+from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
 from .draw_char_card import end_templates
 
 # 资源路径
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
-CACHE_PATH = MAIN_PATH / "cache" / "end_card"
 
 
 def _get_property_icon(property_name: str) -> str:
@@ -88,7 +87,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
     if not uid:
         return "❌ 未绑定终末地账号，请先绑定"
 
-    save_path = MAIN_PATH / "players" / uid / "card_detail.json"
+    save_path = PLAYER_PATH / uid / "card_detail.json"
     if not save_path.exists():
         # 自动刷新一次
         logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
@@ -117,7 +116,6 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
 
     base = detail.base
 
-    CACHE_PATH.mkdir(parents=True, exist_ok=True)
     base_avatar_b64 = ""
     if base and base.avatarUrl:
         base_avatar_b64 = await get_image_b64_with_cache(

@@ -17,7 +17,7 @@ from ..utils.alias_map import (
     set_alias_list,
 )
 from ..utils.render_utils import render_html, get_image_b64_with_cache, image_to_base64
-from ..utils.path import MAIN_PATH, AVATAR_CACHE_PATH
+from ..utils.path import AVATAR_CACHE_PATH
 
 
 sv_add_alias = SV("End角色别名", pm=0)
@@ -125,11 +125,11 @@ async def handle_list_alias(bot: Bot, ev: Event):
 
     resolved = resolve_alias_entry(char_name)
     if not resolved:
-        return await bot.send("❌ 未找到角色，请先刷新数据")
+        return await bot.send("❌ 未找到角色")
 
     key, entry = resolved
     if not isinstance(entry, dict):
-        return await bot.send("❌ 角色数据异常，请先刷新数据")
+        return await bot.send("❌ 角色数据异常")
 
     alias_list = _format_alias_list(key, entry)
     img_bytes = await _render_alias_card(key, entry, alias_list)

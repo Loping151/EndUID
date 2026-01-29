@@ -1,5 +1,6 @@
 import io
 import json
+import time
 from typing import List, Union, Optional
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +11,7 @@ from gsuid_core.logger import logger
 from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.api.requests import end_api
-from ..utils.path import ANN_CACHE_PATH
+from ..utils.path import ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH
 from ..utils.render_utils import (
     PLAYWRIGHT_AVAILABLE,
     render_html,
@@ -74,6 +75,16 @@ def format_date_short(ts) -> str:
 async def ann_list_card() -> Union[bytes, str]:
     """生成公告列表卡片"""
     try:
+        cache_file = ANN_RENDER_CACHE_PATH / "list.jpg"
+        api_cache_valid = (
+            end_api.ann_list_data
+            and (time.time() - end_api.ann_list_cache_time)
+            < end_api.ANN_LIST_CACHE_DURATION
+        )
+        if api_cache_valid and cache_file.exists():
+            logger.debug("[End] 命中公告列表渲染缓存")
+            return cache_file.read_bytes()
+
         logger.debug("[End] 正在获取公告列表...")
 
         ann_list = await end_api.get_ann_list()
@@ -133,6 +144,8 @@ async def ann_list_card() -> Union[bytes, str]:
         img_bytes = await render_html(end_templates, "ann_card.html", context)
 
         if img_bytes:
+            cache_file.write_bytes(img_bytes)
+            logger.debug("[End] 公告列表渲染缓存已保存")
             return img_bytes
         else:
             return "公告列表渲染失败"
@@ -160,14 +173,32 @@ async def ann_detail_card(
 
         # 如果是序号，转换为实际 ID
         actual_id = str(ann_id)
+        is_real_id = True
         if isinstance(ann_id, int) or (isinstance(ann_id, str) and ann_id.isdigit()):
             idx = int(ann_id)
             if 1 <= idx <= 18:
-                # 可能是序号
+                is_real_id = False
                 ann_list = await end_api.get_ann_list(is_cache=True)
                 if ann_list and idx <= len(ann_list):
                     actual_id = ann_list[idx - 1].get("id", str(ann_id))
+                    is_real_id = True
                     logger.debug(f"[End] 序号 {idx} 对应公告 ID: {actual_id}")
+
+        cache_file = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}.jpg"
+        if is_real_id and not is_check_time and cache_file.exists():
+            logger.debug(f"[End] 命中公告详情渲染缓存: {actual_id}")
+            cached_bytes = cache_file.read_bytes()
+            # 检查是否有长图缓存
+            long_cache = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}_long.json"
+            if long_cache.exists():
+                long_paths = json.loads(long_cache.read_text())
+                result_images = [cached_bytes]
+                for lp in long_paths:
+                    p = Path(lp)
+                    if p.exists():
+                        result_images.append(await convert_img(Image.open(p)))
+                return result_images
+            return cached_bytes
 
         detail = await end_api.get_ann_detail(actual_id)
         if not detail:
@@ -178,7 +209,6 @@ async def ann_detail_card(
             created_ts = detail.get("createdAtTs", 0)
             if created_ts > 10000000000:
                 created_ts = created_ts // 1000
-            import time
             now_time = int(time.time())
             if created_ts < now_time - 86400:
                 return "该公告已过期"
@@ -194,7 +224,6 @@ async def ann_detail_card(
             url = img.get("url", "")
 
             if width > 0 and height / width > 5:
-                # 长图单独发送
                 long_images.append(url)
             else:
                 img_b64 = await get_image_b64_with_cache(
@@ -245,6 +274,7 @@ async def ann_detail_card(
         img_bytes = await render_html(end_templates, "ann_card.html", context)
 
         result_images = []
+        long_local_paths = []
 
         # 处理长图
         if long_images:
@@ -254,12 +284,21 @@ async def ann_detail_card(
             for img_url in long_images:
                 try:
                     img = await pic_download_from_url(ANN_CACHE_PATH, img_url)
+                    local_path = ANN_CACHE_PATH / img_url.split("/")[-1]
+                    if local_path.exists():
+                        long_local_paths.append(str(local_path))
                     img_bytes_long = await convert_img(img)
                     result_images.append(img_bytes_long)
                 except Exception as e:
                     logger.warning(f"[End] 下载超长图片失败: {img_url}, {e}")
 
         if img_bytes:
+            cache_file.write_bytes(img_bytes)
+            if long_local_paths:
+                long_cache = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}_long.json"
+                long_cache.write_text(json.dumps(long_local_paths))
+            logger.debug(f"[End] 公告详情渲染缓存已保存: {actual_id}")
+
             if result_images:
                 result_images = [img_bytes] + result_images
                 return result_images

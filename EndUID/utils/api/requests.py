@@ -848,13 +848,9 @@ class EndApi:
                         video = item["videoListSlice"][0]
                         cover_url = video.get("cover", {}).get("url", "")
 
-                    # 尝试多种可能的时间戳字段
                     created_ts = (
-                        item.get("createdAtTs")
-                        or item.get("ts")
-                        or item.get("createTs")
-                        or item.get("createdAt")
-                        or item.get("publishTs")
+                        item.get("publishedAtTs")
+                        or item.get("timestamp")
                         or 0
                     )
 
@@ -974,13 +970,9 @@ class EndApi:
                 for text in item.get("textSlice", []):
                     text_content.append(text.get("c", ""))
 
-                # 尝试多种可能的时间戳字段
                 created_ts = (
-                    item.get("createdAtTs")
-                    or item.get("ts")
-                    or item.get("createTs")
-                    or item.get("createdAt")
-                    or item.get("publishTs")
+                    item.get("publishedAtTs")
+                    or item.get("timestamp")
                     or 0
                 )
 

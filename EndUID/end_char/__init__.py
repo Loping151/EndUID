@@ -14,7 +14,7 @@ from ..utils.api.requests import end_api
 from ..utils.api.model import CardDetailResponse
 from ..utils.alias_map import update_alias_map_from_chars
 from ..utils.database.models import EndBind, EndUser
-from ..utils.path import MAIN_PATH
+from ..utils.path import PLAYER_PATH
 
 
 async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
@@ -55,7 +55,7 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
         return False, f"❌ 刷新失败: {message}"
 
     try:
-        player_dir = MAIN_PATH / "players" / uid
+        player_dir = PLAYER_PATH / uid
         player_dir.mkdir(parents=True, exist_ok=True)
         save_path = player_dir / "card_detail.json"
         async with aiofiles.open(save_path, "w", encoding="utf-8") as f:

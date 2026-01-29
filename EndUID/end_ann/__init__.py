@@ -13,7 +13,7 @@ from gsuid_core.subscribe import gs_subscribe
 from .ann_card import ann_list_card, ann_detail_card
 from ..utils.api.requests import end_api
 from ..end_config import EndConfig
-from ..utils.path import ANN_CACHE_PATH
+from ..utils.path import ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH
 from .utils.ann_config import get_ann_new_ids, set_ann_new_ids
 
 sv_ann = SV("终末地公告")
@@ -215,6 +215,11 @@ async def clean_cache_directories(days: int) -> str:
     if ann_count > 0:
         total_count += ann_count
         total_space += ann_space
+
+    r_count, r_space = clean_old_cache_files(ANN_RENDER_CACHE_PATH, days)
+    if r_count > 0:
+        total_count += r_count
+        total_space += r_space
 
     if total_count == 0:
         return f"[终末地] 没有找到需要清理的缓存文件(保留{days}天内的文件)"

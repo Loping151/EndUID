@@ -156,26 +156,6 @@
             background-color: rgba(255,255,255,0.06);
         }
 
-        .mission-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #ddd;
-        }
-        
-        .mission-title span {
-            display: block;
-            font-size: 14px;
-            color: var(--c-subtext);
-            font-weight: 400;
-            margin-top: 2px;
-        }
-
-        .mission-val {
-            font-family: 'Source Han Sans CN', sans-serif;
-            font-size: 18px;
-            color: var(--c-subtext);
-            margin-top: auto;
-        }
 
         .card-logo {
             grid-column: 3 / 4;
@@ -201,9 +181,9 @@
         }
         
         .stat-label {
-            font-size: 16px;
+            font-size: 22px;
             color: var(--c-subtext);
-            margin-top: 5px;
+            margin-top: 10px;
         }
 
         
@@ -289,11 +269,17 @@
             backdrop-filter: blur(4px);
         }
 
+        .potential-badge.p-1 { border-left-color: #8c8c8c; color: #8c8c8c; }
+        .potential-badge.p-2 { border-left-color: #4D9CFF; color: #4D9CFF; }
+        .potential-badge.p-3 { border-left-color: #a366ff; color: #a366ff; }
+        .potential-badge.p-4 { border-left-color: #ffc900; color: #ffc900; }
+        .potential-badge.p-5 { border-left-color: #ff4e20; color: #ff4e20; }
+
         .potential-num {
             font-family: 'Oswald', sans-serif;
             font-size: 14px;
             font-weight: 700;
-            color: var(--c-accent);
+            color: inherit;
             line-height: 1;
             transform: skewX(10deg);
         }
@@ -400,17 +386,8 @@
 
         <div class="dashboard-grid">
             <div class="dash-card card-mission">
-                <div class="mission-title">
-                    底护之所
-                    <span>使命纪事</span>
-                </div>
-                <div class="mission-val">
-                    {% if mainMission.id %}
-                        {{ mainMission.description if mainMission.description else mainMission.id }}
-                    {% else %}
-                        暂无记录
-                    {% endif %}
-                </div>
+                <div class="stat-num" style="font-size: 48px;">{{ mainMission.description if mainMission.description else '暂无记录' }}</div>
+                <div class="stat-label">使命纪事</div>
             </div>
 
             <div class="dash-card card-logo">
@@ -471,7 +448,7 @@
                     </div>
 
                     {% if char.potentialLevel > 0 %}
-                    <div class="potential-badge">
+                    <div class="potential-badge p-{{ char.potentialLevel }}">
                         <span class="potential-num">P{{ char.potentialLevel }}</span>
                     </div>
                     {% endif %}

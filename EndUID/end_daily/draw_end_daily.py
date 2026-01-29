@@ -23,14 +23,12 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..utils.alias_map import get_alias_url, update_alias_map_from_chars
-from ..utils.path import MAIN_PATH, AVATAR_CACHE_PATH
+from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
-CACHE_PATH = MAIN_PATH / "cache" / "end_daily"
-PLAYER_PATH = MAIN_PATH / "players"
 
 URGENT_COLOR = "#ff4d4f"
 COLOR_YELLOW = "#FFCB3B"
@@ -124,7 +122,6 @@ async def draw_end_daily_img(ev: Event, uid: str):
     if detail.chars:
         update_alias_map_from_chars(detail.chars)
 
-    CACHE_PATH.mkdir(parents=True, exist_ok=True)
 
     base = detail.base
     dungeon = detail.dungeon
@@ -142,7 +139,7 @@ async def draw_end_daily_img(ev: Event, uid: str):
         alias_url = get_alias_url(user_record.stamina_bg_value)
         if alias_url:
             try:
-                pile_url = await get_image_b64_with_cache(alias_url, CACHE_PATH / "pile")
+                pile_url = await get_image_b64_with_cache(alias_url, PILE_CACHE_PATH)
             except Exception as e:
                 logger.warning(f"[EndUID] 体力背景读取失败: {e}")
                 pile_url = ""
@@ -150,7 +147,7 @@ async def draw_end_daily_img(ev: Event, uid: str):
     if not pile_url and detail.chars:
         char = random.choice(detail.chars).charData
         if char and char.avatarRtUrl:
-            pile_url = await get_image_b64_with_cache(char.avatarRtUrl, CACHE_PATH / "pile")
+            pile_url = await get_image_b64_with_cache(char.avatarRtUrl, PILE_CACHE_PATH)
 
     bg_url = _local_b64("bg.png")
     logo_url = _local_b64("logo.png")
