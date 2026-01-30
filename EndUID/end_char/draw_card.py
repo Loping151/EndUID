@@ -18,6 +18,7 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
+from ..end_config import PREFIX
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
 from .draw_char_card import end_templates
 
@@ -85,7 +86,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
     """绘制终末地卡片（本地数据）"""
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return "❌ 未绑定终末地账号，请先绑定"
+        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
     if not save_path.exists():
@@ -102,7 +103,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         data_res = json.loads(raw)
     except Exception as e:
         logger.warning(f"[EndUID] 本地卡片数据读取失败: {e}")
-        return "❌ 本地卡片数据读取失败，请先发送“刷新/更新”"
+        return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
 
     if data_res.get("code") != 0:
         msg = data_res.get("message", "未知错误")
@@ -115,6 +116,20 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         return "❌ 角色数据解析失败"
 
     base = detail.base
+
+    achieve_count = detail.achieve.count if detail.achieve else 0
+
+    ether_total = 0
+    trchest_total = 0
+    piece_total = 0
+    domain_level = 0
+    for d in detail.domain:
+        if d.level > domain_level:
+            domain_level = d.level
+        for c in d.collections:
+            ether_total += c.puzzleCount
+            trchest_total += c.trchestCount
+            piece_total += c.pieceCount
 
     base_avatar_b64 = ""
     if base and base.avatarUrl:
@@ -166,6 +181,11 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         "docNum": base.docNum if base else 0,
         "level": base.level if base else 0,
         "worldLevel": base.worldLevel if base else 0,
+        "achieveCount": achieve_count,
+        "etherTotal": ether_total,
+        "trchestTotal": trchest_total,
+        "pieceTotal": piece_total,
+        "domainLevel": domain_level,
         "chars": chars,
         "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
         "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),

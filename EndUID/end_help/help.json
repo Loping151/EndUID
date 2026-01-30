@@ -64,6 +64,14 @@
         "need_admin": false
       },
       {
+        "name": "建设",
+        "desc": "查看地区建设与基建信息",
+        "eg": "建设",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
         "name": "刷新数据",
         "desc": "刷新卡片详情并保存",
         "eg": "刷新/更新",

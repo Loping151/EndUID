@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endfield Build Card</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-panel: rgba(255, 255, 255, 0.03);
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 1000px;
+            min-height: 800px;
+            background-color: var(--c-bg);
+            font-family: 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            padding-bottom: 50px;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* 背景装饰 */
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+
+        /* 头部用户信息 */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: #111;
+            border: 1px solid var(--c-accent);
+            flex-shrink: 0;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .name-row {
+            display: flex;
+            align-items: baseline;
+            gap: 15px;
+        }
+
+        .user-name {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .user-uid {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: var(--c-subtext);
+            background: rgba(255,255,255,0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .info-tags {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+        }
+
+        .tag {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            color: #ccc;
+            background: var(--c-panel);
+            padding: 4px 12px;
+            border: 1px solid var(--c-border);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag strong {
+            color: var(--c-accent);
+            font-size: 18px;
+        }
+
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #eee;
+            border-left: 4px solid var(--c-accent);
+            padding-left: 12px;
+        }
+
+        .section-title span {
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            color: var(--c-subtext);
+            font-weight: 400;
+            opacity: 0.6;
+        }
+
+        /* 帝江号区域 */
+        .spaceship-section {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+            border: 1px solid var(--c-border);
+            padding: 20px;
+        }
+
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .room-card {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--c-border);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+            margin-bottom: 2px;
+        }
+
+        .room-type {
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            color: #ddd;
+            font-weight: 700;
+        }
+
+        .room-lvl {
+            font-family: 'Oswald';
+            color: var(--c-accent);
+            font-size: 16px;
+        }
+
+        /* 区域建设 */
+        .domain-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 2列布局更宽敞，或者3列 */
+            gap: 20px;
+        }
+        
+        @media (min-width: 1000px) {
+            .domain-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .domain-card {
+            background: var(--c-panel);
+            border: 1px solid var(--c-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .domain-header {
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .domain-name {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .settlement-list {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .settlement-item {
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-left: 2px solid #555;
+        }
+
+        .st-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .st-name {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .st-lvl {
+            font-family: 'Oswald';
+            font-size: 14px;
+            color: var(--c-subtext);
+        }
+
+        /* 头像列表通用样式 */
+        .char-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .mini-avatar {
+            width: 36px;
+            height: 36px;
+            background: #222;
+            border: 1px solid #444;
+            overflow: hidden;
+        }
+
+        .mini-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .empty-slot {
+            width: 36px;
+            height: 36px;
+            border: 1px dashed #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #444;
+            font-size: 12px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* 底部Logo */
+        .footer-logo {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            opacity: 0.3;
+            width: 120px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-layer">
+        {% if bg %}
+        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.1; mix-blend-mode: overlay;">
+        {% endif %}
+    </div>
+    <div class="grid-deco"></div>
+
+    <div class="container">
+        
+        <div class="header">
+            <div class="avatar">
+                {% if avatar %}
+                <img src="{{ avatar }}">
+                {% else %}
+                <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#555;">?</div>
+                {% endif %}
+            </div>
+            <div class="user-details">
+                <div class="name-row">
+                    <div class="user-name">{{ name }}</div>
+                    {% if roleId %}
+                    <div class="user-uid">UID {{ roleId }}</div>
+                    {% endif %}
+                </div>
+                <div class="info-tags">
+                    <div class="tag">LEVEL <strong>{{ level }}</strong></div>
+                    <div class="tag">WORLD <strong>{{ worldLevel }}</strong></div>
+                    <div class="tag" style="font-family: 'Source Han Sans CN', sans-serif;">苏醒日 <strong>{{ createTime.split(' ')[0] if createTime else 'N/A' }}</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                帝江号 <span>SPACESHIP</span>
+            </div>
+            <div class="spaceship-section">
+                <div class="room-grid">
+                    {% for room in spaceShip.rooms %}
+                    <div class="room-card">
+                        <div class="room-header">
+                            <span class="room-type">TYPE-{{ room.type }}</span>
+                            <span class="room-lvl">Lv.{{ room.level }}</span>
+                        </div>
+                        <div class="char-list">
+                            {% for char in room.chars %}
+                                {% if char.avatar %}
+                                <div class="mini-avatar">
+                                    <img src="{{ char.avatar }}">
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                            {% if not room.chars %}
+                                <div class="empty-slot">-</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not spaceShip.rooms %}
+                    <div style="grid-column: 1/-1; padding: 20px; text-align: center; color: #666;">暂无舱室数据</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                区域建设 <span>DOMAINS</span>
+            </div>
+            <div class="domain-grid">
+                {% for domain in domains %}
+                <div class="domain-card">
+                    <div class="domain-header">
+                        <div class="domain-name">{{ domain.name }}</div>
+                        <div class="tag" style="padding: 2px 8px; font-size:12px;">Lv.<strong>{{ domain.level }}</strong></div>
+                    </div>
+                    <div class="settlement-list">
+                        {% for st in domain.settlements %}
+                        <div class="settlement-item">
+                            <div class="st-info">
+                                <span class="st-name">{{ st.name }}</span>
+                                <span class="st-lvl">Lv.{{ st.level }}</span>
+                            </div>
+                            <div class="char-list">
+                                {% for off in st.officers %}
+                                    {% if off.avatar %}
+                                    <div class="mini-avatar">
+                                        <img src="{{ off.avatar }}">
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if not st.officers %}
+                                    <div class="empty-slot" style="width:30px; height:30px; border-color:#444;"></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if not domain.settlements %}
+                        <div style="text-align:center; color:#666; font-size:12px;">暂无据点</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if end_logo %}
+        <img src="{{ end_logo }}" class="footer-logo">
+        {% endif %}
+
+    </div>
+</body>
+</html>

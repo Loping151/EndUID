@@ -17,13 +17,13 @@ from ..utils.alias_map import (
     set_alias_list,
 )
 from ..utils.render_utils import render_html, get_image_b64_with_cache, image_to_base64
+from ..end_config import PREFIX
+from ..utils import CHAR_NAME_PATTERN
 from ..utils.path import AVATAR_CACHE_PATH
 
 
 sv_add_alias = SV("End角色别名", pm=0)
 sv_list_alias = SV("End角色别名列表")
-
-PATTERN = r"[\u4e00-\u9fa5a-zA-Z0-9\U0001F300-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF\U00003200-\U000032FF-—·()（）]{1,15}"
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
@@ -68,7 +68,7 @@ async def _render_alias_card(key: str, entry: dict, alias_list: list[str]) -> Op
     return await render_html(end_templates, "end_alias_card.html", context)
 
 
-@sv_add_alias.on_regex(rf"^(?P<action>添加|删除)(?P<name>{PATTERN})别名(?P<new_alias>{PATTERN})$", block=True)
+@sv_add_alias.on_regex(rf"^(?P<action>添加|删除)(?P<name>{CHAR_NAME_PATTERN})别名(?P<new_alias>{CHAR_NAME_PATTERN})$", block=True)
 async def handle_add_alias(bot: Bot, ev: Event):
     action = ev.regex_dict.get("action")
     char_name = ev.regex_dict.get("name")
@@ -79,13 +79,13 @@ async def handle_add_alias(bot: Bot, ev: Event):
 
     resolved = resolve_alias_entry(char_name)
     if not resolved:
-        return await bot.send("❌ 未找到角色，请先刷新数据")
+        return await bot.send(f"❌ 未找到角色，请先「{PREFIX}刷新」数据")
 
     key, _ = resolved
     data = load_alias_map()
     entry = data.get(key)
     if not isinstance(entry, dict):
-        return await bot.send("❌ 角色数据异常，请先刷新数据")
+        return await bot.send(f"❌ 角色数据异常，请先「{PREFIX}刷新」数据")
 
     display_name = str(entry.get("name", "")).strip() or key
     entry_id = str(entry.get("id", "")).strip()
@@ -117,7 +117,7 @@ async def handle_add_alias(bot: Bot, ev: Event):
         return await bot.send(f"✅ 成功为角色【{display_name}】删除别名【{new_alias}】")
 
 
-@sv_list_alias.on_regex(rf"^(?P<name>{PATTERN})别名(列表)?$", block=True)
+@sv_list_alias.on_regex(rf"^(?P<name>{CHAR_NAME_PATTERN})别名(列表)?$", block=True)
 async def handle_list_alias(bot: Bot, ev: Event):
     char_name = ev.regex_dict.get("name")
     if not char_name:

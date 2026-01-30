@@ -129,7 +129,7 @@
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: 140px 140px;
+            grid-auto-rows: 140px;
             gap: 15px;
         }
 
@@ -186,7 +186,6 @@
             margin-top: 10px;
         }
 
-        
         .char-section {
             display: flex;
             flex-direction: column;
@@ -416,6 +415,26 @@
             <div class="dash-card">
                 <div class="stat-num">{{ docNum }}</div>
                 <div class="stat-label">档案</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ achieveCount }}</div>
+                <div class="stat-label">光荣之路</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ etherTotal }}</div>
+                <div class="stat-label">醚质</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ trchestTotal }}</div>
+                <div class="stat-label">储存箱</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ pieceTotal }}</div>
+                <div class="stat-label">维修灵感点</div>
+            </div>
+            <div class="dash-card">
+                <div class="stat-num">{{ domainLevel }}</div>
+                <div class="stat-label">总控中枢等级</div>
             </div>
         </div>
 

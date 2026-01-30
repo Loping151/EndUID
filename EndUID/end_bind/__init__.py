@@ -78,7 +78,7 @@ async def send_end_login_msg(bot: Bot, ev: Event):
             return await check_token(bot, ev, credential)
         if kind == "cred":
             return await check_cred(bot, ev, credential)
-        msg = f"{GAME_TITLE} 登录参数错误，请使用【{PREFIX}登录】扫码或【{PREFIX}绑定】绑定"
+        msg = f"{GAME_TITLE} 登录参数错误，请使用「{PREFIX}登录」扫码或「{PREFIX}绑定」绑定"
         return await _send_text(bot, ev, msg)
 
     at_sender = True if ev.group_id else False
@@ -312,7 +312,7 @@ async def my_token(bot: Bot, ev: Event):
 async def del_bind(bot: Bot, ev: Event):
     target_uid = ''.join(filter(str.isdigit, ev.text.strip()))
     if not target_uid:
-        msg = f"{GAME_TITLE} 该命令需要带上正确的uid!\n例如【{PREFIX}删除123456789】"
+        msg = f"{GAME_TITLE} 该命令需要带上正确的uid!\n例如「{PREFIX}删除123456789」"
         return await _send_text(bot, ev, msg)
 
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)

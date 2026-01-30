@@ -42,7 +42,7 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
 
     resolved = resolve_alias_entry(value)
     if not resolved:
-        return f"{GAME_TITLE} 未找到对应角色，请先获取卡片详情更新别名"
+        return f"{GAME_TITLE} 未找到对应角色，请先「{PREFIX}刷新」更新别名"
 
     key, entry = resolved
     name = str(entry.get("name", "")).strip() if isinstance(entry, dict) else ""
@@ -82,7 +82,7 @@ async def handle_end_user_config(bot: Bot, ev: Event):
 
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        msg = f"{GAME_TITLE} 未绑定终末地账号，请先使用【{PREFIX}绑定】"
+        msg = f"{GAME_TITLE} 未绑定终末地账号，请先使用「{PREFIX}绑定」"
         return await _send_text(bot, ev, msg)
 
     msg = await _set_end_user_value(ev, func, uid, value)

@@ -19,6 +19,7 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
+from ..end_config import PREFIX
 from ..utils.path import (
     AVATAR_CACHE_PATH,
     CHAR_CACHE_PATH,
@@ -51,7 +52,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     # 2. 获取用户绑定信息
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return "❌ 未绑定终末地账号，请先绑定"
+        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
 
     # 3. 读取本地数据（由刷新指令写入）
     logger.info(f"[EndUID] 正在查询角色: {real_name} (ID: {char_id})")
@@ -71,7 +72,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         data_res = json.loads(raw)
     except Exception as e:
         logger.warning(f"[EndUID] 本地卡片数据读取失败: {e}")
-        return "❌ 本地卡片数据读取失败，请先发送“刷新/更新”"
+        return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
          
     if data_res.get("code") != 0:
         msg = data_res.get("message", "未知错误")

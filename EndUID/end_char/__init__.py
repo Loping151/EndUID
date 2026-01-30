@@ -14,6 +14,8 @@ from ..utils.api.requests import end_api
 from ..utils.api.model import CardDetailResponse
 from ..utils.alias_map import update_alias_map_from_chars
 from ..utils.database.models import EndBind, EndUser
+from ..end_config import PREFIX
+from ..utils import CHAR_NAME_PATTERN
 from ..utils.path import PLAYER_PATH
 
 
@@ -29,11 +31,11 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
     """
     uid = await EndBind.get_bound_uid(user_id, bot_id)
     if not uid:
-        return False, "❌ 未绑定终末地账号，请先绑定"
+        return False, f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
 
     _, cred = await end_api.get_ck_result(uid, user_id, bot_id)
     if not cred:
-        return False, "❌ 未找到可用凭证，请重新绑定"
+        return False, f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
 
     user_record = await EndUser.select_end_user(uid, user_id, bot_id)
     skland_user_id = user_record.skland_user_id if user_record and user_record.skland_user_id else None
@@ -75,16 +77,13 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
 
 sv = SV("End角色")
 
-# 用户提供的正则
-PATTERN = r"[\u4e00-\u9fa5a-zA-Z0-9\U0001F300-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF\U00003200-\U000032FF-—·()（）]{1,15}"
-
-@sv.on_regex(f"^查询\s*({PATTERN})$|^({PATTERN})面板$")
+@sv.on_regex(f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$|^({CHAR_NAME_PATTERN})mb$")
 async def send_char_card_handler(bot: Bot, ev: Event):
     char_name = ""
     if getattr(ev, "regex_group", None):
         char_name = ev.regex_group[0] or ev.regex_group[1] or ""
     if not char_name:
-        match = re.search(f"^查询\s*({PATTERN})$|^({PATTERN})面板$", ev.raw_text)
+        match = re.search(f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$", ev.raw_text)
         if match:
             char_name = match.group(1) or match.group(2) or ""
 
@@ -98,7 +97,7 @@ async def send_char_card_handler(bot: Bot, ev: Event):
     await bot.send(im)
 
 
-@sv.on_command(("刷新", "更新", "刷新数据", "刷新面板", "更新数据"), block=True)
+@sv.on_command(("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"), block=True)
 async def refresh_card_detail_handler(bot: Bot, ev: Event):
     success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
     if not success:
@@ -106,7 +105,7 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
     return await bot.send("✅ 刷新成功")
 
 
-@sv.on_command(("卡片",), block=True)
+@sv.on_command(("卡片", "kp", "card"), block=True)
 async def send_card_handler(bot: Bot, ev: Event):
     im = await draw_card(ev)
     await bot.send(im)

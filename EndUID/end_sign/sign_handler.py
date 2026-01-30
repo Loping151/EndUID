@@ -12,7 +12,7 @@ from gsuid_core.segment import MessageSegment
 from ..utils.api.requests import end_api
 from ..utils.database.models import EndBind, EndUser, EndSignRecord
 from ..utils.status_store import record_fail, record_success
-from ..end_config import EndConfig
+from ..end_config import EndConfig, PREFIX
 
 
 async def end_sign_handler(bot: Bot, ev: Event) -> str:
@@ -28,12 +28,12 @@ async def end_sign_handler(bot: Bot, ev: Event) -> str:
     # 1. 获取绑定 UID
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return "❌ 未绑定终末地账号，请先绑定"
+        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
 
     # 2. 获取用户信息
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
     if not user or not user.cookie:
-        return "❌ 未找到 cred 信息，请重新绑定账号"
+        return f"❌ 未找到 cred 信息，请使用「{PREFIX}登录」重新绑定"
 
     # 3. 执行签到
     nickname = user.nickname or uid
@@ -79,7 +79,6 @@ async def do_sign_in(uid: str, cred: str, nickname: str) -> str:
 
     # 今日已签到
     elif code == 10001:
-        record_success()
         return f"ℹ️ [{nickname}] 今天已经签到过了"
 
     # 其他错误
@@ -178,7 +177,7 @@ async def end_auto_sign() -> str:
 
     logger.info(summary)
 
-    record_success(success_count + signed_count)
+    record_success(success_count)
     record_fail(fail_count)
 
     # 构建推送消息

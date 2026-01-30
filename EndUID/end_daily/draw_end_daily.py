@@ -23,6 +23,7 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..utils.alias_map import get_alias_url, update_alias_map_from_chars
+from ..end_config import PREFIX
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
@@ -84,7 +85,7 @@ def _format_recovery_time(
 async def draw_end_daily_img(ev: Event, uid: str):
     _, cred = await end_api.get_ck_result(uid, ev.user_id, ev.bot_id)
     if not cred:
-        return "❌ 未找到可用凭证，请重新绑定"
+        return f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
 
     user_record = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
     server_id = user_record.server_id if user_record and user_record.server_id else "1"

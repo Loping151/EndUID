@@ -201,14 +201,21 @@ class SpaceShip(BaseModel):
 
 
 class Settlement(BaseModel):
-    """据点结算"""
-    settlementId: str = ""
+    """据点"""
+    id: str = ""
     level: int = 0
+    remainMoney: str = "0"
+    officerCharIds: str = ""
+    name: str = ""
 
 
 class Collection(BaseModel):
     """收藏品"""
-    collectionId: str = ""
+    levelId: str = ""
+    puzzleCount: int = 0
+    trchestCount: int = 0
+    pieceCount: int = 0
+    blackboxCount: int = 0
 
 
 class Domain(BaseModel):
