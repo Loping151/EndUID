@@ -16,30 +16,22 @@ from ..end_config import EndConfig, PREFIX
 
 
 async def end_sign_handler(bot: Bot, ev: Event) -> str:
-    """单用户签到处理
-
-    Args:
-        bot: Bot 实例
-        ev: 事件对象
-
-    Returns:
-        签到结果消息
-    """
-    # 1. 获取绑定 UID
-    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
-    if not uid:
+    """用户签到处理（签到该用户绑定的所有 UID）"""
+    uids = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
+    if not uids:
         return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
 
-    # 2. 获取用户信息
-    user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-    if not user or not user.cookie:
-        return f"❌ 未找到 cred 信息，请使用「{PREFIX}登录」重新绑定"
+    results = []
+    for uid in uids:
+        user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
+        if not user or not user.cookie:
+            results.append(f"❌ [{uid}] 未找到 cred 信息")
+            continue
+        nickname = user.nickname or uid
+        result = await do_sign_in(uid, user.cookie, nickname)
+        results.append(result)
 
-    # 3. 执行签到
-    nickname = user.nickname or uid
-    result = await do_sign_in(uid, user.cookie, nickname)
-
-    return result
+    return "\n".join(results)
 
 
 async def do_sign_in(uid: str, cred: str, nickname: str) -> str:

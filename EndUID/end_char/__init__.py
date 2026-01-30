@@ -75,9 +75,11 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
 
     return True, ""
 
-sv = SV("End角色")
+sv_char_query = SV("End角色查询")
+sv_refresh = SV("End数据刷新")
+sv_card = SV("End卡片")
 
-@sv.on_regex(f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$|^({CHAR_NAME_PATTERN})mb$")
+@sv_char_query.on_regex(f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$|^({CHAR_NAME_PATTERN})mb$")
 async def send_char_card_handler(bot: Bot, ev: Event):
     char_name = ""
     if getattr(ev, "regex_group", None):
@@ -97,7 +99,7 @@ async def send_char_card_handler(bot: Bot, ev: Event):
     await bot.send(im)
 
 
-@sv.on_command(("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"), block=True)
+@sv_refresh.on_command(("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"), block=True)
 async def refresh_card_detail_handler(bot: Bot, ev: Event):
     success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
     if not success:
@@ -105,7 +107,7 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
     return await bot.send("✅ 刷新成功")
 
 
-@sv.on_command(("卡片", "kp", "card"), block=True)
+@sv_card.on_command(("卡片", "kp", "card"), block=True)
 async def send_card_handler(bot: Bot, ev: Event):
     im = await draw_card(ev)
     await bot.send(im)
