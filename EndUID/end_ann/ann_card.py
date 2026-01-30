@@ -141,6 +141,7 @@ async def ann_list_card() -> Union[bytes, str]:
         img_bytes = await render_html(end_templates, "ann_card.html", context)
 
         if img_bytes:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_bytes(img_bytes)
             logger.debug("[End] 公告列表渲染缓存已保存")
             return img_bytes
@@ -293,6 +294,7 @@ async def ann_detail_card(
                     logger.warning(f"[End] 下载超长图片失败: {img_url}, {e}")
 
         if img_bytes:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_bytes(img_bytes)
             if long_local_paths:
                 long_cache = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}_long.json"
