@@ -308,9 +308,9 @@ async def my_token(bot: Bot, ev: Event):
     return await _send_text(bot, ev, user.token)
 
 
-@EndBindUID.on_fullmatch(("删除绑定", "解绑", "删除"))
+@EndBindUID.on_command(("删除", "解绑"))
 async def del_bind(bot: Bot, ev: Event):
-    target_uid = ''.join(filter(str.isdigit, ev.text.strip()))
+    target_uid = ''.join(filter(str.isdigit, ev.text.rstrip("uid").rstrip("UID").strip()))
     if not target_uid:
         msg = f"{GAME_TITLE} 该命令需要带上正确的uid!\n例如「{PREFIX}删除123456789」"
         return await _send_text(bot, ev, msg)
@@ -333,8 +333,6 @@ async def del_bind(bot: Bot, ev: Event):
 @EndBindUID.on_command(("切换", "查看"), block=True)
 async def switch_or_view_uid(bot: Bot, ev: Event):
     """切换或查看绑定的 UID"""
-    at_sender = True if ev.group_id else False
-
     if "切换" in ev.command:
         target_uid = ''.join(filter(str.isdigit, ev.text.strip()))
         retcode = await EndBind.switch_uid_by_game(

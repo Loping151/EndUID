@@ -76,14 +76,11 @@ async def ann_list_card() -> Union[bytes, str]:
     """生成公告列表卡片"""
     try:
         cache_file = ANN_RENDER_CACHE_PATH / "list.jpg"
-        api_cache_valid = (
-            end_api.ann_list_data
-            and (time.time() - end_api.ann_list_cache_time)
-            < end_api.ANN_LIST_CACHE_DURATION
-        )
-        if api_cache_valid and cache_file.exists():
-            logger.debug("[End] 命中公告列表渲染缓存")
-            return cache_file.read_bytes()
+        if cache_file.exists():
+            file_age = time.time() - cache_file.stat().st_mtime
+            if file_age < end_api.ANN_LIST_CACHE_DURATION:
+                logger.debug("[End] 命中公告列表渲染缓存")
+                return cache_file.read_bytes()
 
         logger.debug("[End] 正在获取公告列表...")
 
@@ -213,7 +210,21 @@ async def ann_detail_card(
             if created_ts < now_time - 86400:
                 return "该公告已过期"
 
-        # 处理图片
+        videos = detail.get("videos", [])
+        video_cover_urls = set()
+        video_covers = []
+        for video in videos:
+            cover_url = video.get("coverUrl", "")
+            if cover_url:
+                video_cover_urls.add(cover_url)
+                cover_b64 = await get_image_b64_with_cache(
+                    cover_url, ANN_CACHE_PATH, quality=75
+                )
+                video_covers.append({
+                    "coverUrl": cover_url,
+                    "coverB64": cover_b64,
+                })
+
         images = detail.get("images", [])
         long_images = []
         normal_images = []
@@ -222,6 +233,9 @@ async def ann_detail_card(
             width = img.get("width", 0)
             height = img.get("height", 0)
             url = img.get("url", "")
+
+            if url in video_cover_urls:
+                continue
 
             if width > 0 and height / width > 5:
                 long_images.append(url)
@@ -234,20 +248,6 @@ async def ann_detail_card(
                     "urlB64": img_b64,
                     "width": width,
                     "height": height,
-                })
-
-        # 处理视频封面
-        videos = detail.get("videos", [])
-        video_covers = []
-        for video in videos:
-            cover_url = video.get("coverUrl", "")
-            if cover_url:
-                cover_b64 = await get_image_b64_with_cache(
-                    cover_url, ANN_CACHE_PATH, quality=75
-                )
-                video_covers.append({
-                    "coverUrl": cover_url,
-                    "coverB64": cover_b64,
                 })
 
         # 用户头像
