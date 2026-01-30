@@ -11,6 +11,7 @@ end_build_sv = SV("End基建")
     "基建",
     "建设",
     "地区建设",
+    "击剑",
     "jj",
 ))
 async def send_build_info(bot: Bot, ev: Event):
