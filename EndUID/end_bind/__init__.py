@@ -117,10 +117,14 @@ async def send_end_login_msg(bot: Bot, ev: Event):
     if not scan_code:
         return await _send_text(bot, ev, f"{GAME_TITLE} 二维码已超时，请重新获取并扫码")
 
-    token = await end_api.get_token_by_scan_code(scan_code)
-    if not token:
+    token_data = await end_api.get_token_by_scan_code(scan_code)
+    if not token_data or not token_data.get("token"):
         return await _send_text(bot, ev, f"{GAME_TITLE} 获取 token 失败，请重试")
 
+    token = token_data["token"]
+    device_token = token_data.get("device_token", "")
+
+    gacha_grant_token = await end_api.get_gacha_grant_token(token, device_token)
     cred_info = await end_api.get_cred_info_by_token(token)
     if cred_info == "405":
         return await _send_text(bot, ev, f"{GAME_TITLE} 当前服务无法使用token登录，请尝试使用cred")
@@ -132,7 +136,9 @@ async def send_end_login_msg(bot: Bot, ev: Event):
         ev,
         cred_info["cred"],
         used_token=token,
+        used_device_token=device_token,
         skland_user_id=cred_info.get("skland_user_id"),
+        gacha_grant_token=gacha_grant_token,
     )
 
 
@@ -141,7 +147,9 @@ async def check_cred(
     ev: Event,
     cred: str,
     used_token: str = None,
+    used_device_token: str = "",
     skland_user_id: str = None,
+    gacha_grant_token: str = None,
 ):
     if not skland_user_id:
         try:
@@ -259,10 +267,33 @@ async def check_cred(
         f"服务器: {channel}\n"
         f"UID: {endfield_uid}"
     )
-    return await _send_text(bot, ev, msg)
+    await _send_text(bot, ev, msg)
+
+    if gacha_grant_token and record_uid:
+        try:
+            u8_token = await end_api.get_u8_token_by_grant(
+                gacha_grant_token, record_uid
+            )
+            if u8_token:
+                from ..end_gacha.get_gachalogs import get_new_gachalog
+
+                success, gacha_msg, _ = await get_new_gachalog(
+                    uid=endfield_uid,
+                    u8_token=u8_token,
+                    server_id=server_id,
+                )
+                if success:
+                    await _send_text(bot, ev, f"已同步抽卡记录: {gacha_msg}")
+                else:
+                    logger.warning(f"[EndUID] 自动同步抽卡记录失败: {gacha_msg}")
+            else:
+                logger.warning("[EndUID] 登录时获取 u8_token 失败，跳过抽卡同步")
+        except Exception as e:
+            logger.warning(f"[EndUID] 登录时自动同步抽卡记录异常: {e}")
 
 
 async def check_token(bot: Bot, ev: Event, token: str):
+    gacha_grant_token = await end_api.get_gacha_grant_token(token)
     cred_info = await end_api.get_cred_info_by_token(token)
     if cred_info == "405":
         return await _send_text(bot, ev, f"{GAME_TITLE} 当前服务无法使用token登录，请尝试使用cred")
@@ -274,6 +305,7 @@ async def check_token(bot: Bot, ev: Event, token: str):
         cred_info["cred"],
         used_token=token,
         skland_user_id=cred_info.get("skland_user_id"),
+        gacha_grant_token=gacha_grant_token,
     )
 
 

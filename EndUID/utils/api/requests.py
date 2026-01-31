@@ -494,7 +494,7 @@ class EndApi:
     async def get_scan_id(self) -> Optional[str]:
         """获取扫码登录的 scanId"""
         headers = get_oauth_header()
-        body = {"appCode": APP_CODE}
+        body = {}
 
         session = await self.get_session()
 
@@ -555,8 +555,14 @@ class EndApi:
             logger.debug(f"[EndUID][检查扫码状态] {e}")
             return None
 
-    async def get_token_by_scan_code(self, scan_code: str) -> Optional[str]:
-        """通过 scanCode 获取 token"""
+    async def get_token_by_scan_code(
+        self, scan_code: str
+    ) -> Optional[dict]:
+        """通过 scanCode 获取 token 和 deviceToken
+
+        Returns:
+            {"token": str, "device_token": str} 或 None
+        """
         headers = get_oauth_header()
         body = {"scanCode": scan_code}
 
@@ -580,9 +586,14 @@ class EndApi:
                     logger.error(f"[EndUID][获取Token] {res}")
                     return None
 
-                token = res["data"]["token"]
-                logger.info(f"[EndUID] 获取到Token（长度: {len(token)}）")
-                return token
+                data = res.get("data", {})
+                token = data.get("token", "")
+                device_token = data.get("deviceToken", "")
+                logger.info(
+                    f"[EndUID] 获取到Token（长度: {len(token)}）"
+                    f", deviceToken={'有' if device_token else '无'}"
+                )
+                return {"token": token, "device_token": device_token}
         except Exception as e:
             logger.error(f"[EndUID][获取Token] {e}")
             return None
@@ -750,7 +761,107 @@ class EndApi:
         return user.cookie
 
 
-    # ===================== 抽卡记录相关方法 =====================
+
+    @staticmethod
+    def _get_proxy() -> Optional[str]:
+        from ...end_config.config_default import EndConfig
+        url = EndConfig.get_config("LocalProxyUrl").data
+        return url if url else None
+
+    async def get_gacha_grant_token(
+        self, login_token: str, device_token: str = ""
+    ) -> Optional[str]:
+        """通过 login token 获取抽卡 grant token"""
+        session = await self.get_session()
+        proxy = self._get_proxy()
+        try:
+            grant_body = {
+                "type": 1,
+                "appCode": "be36d44aa36bfb5b",
+                "token": login_token,
+            }
+            if device_token:
+                grant_body["deviceToken"] = device_token
+            async with session.post(
+                "https://as.hypergryph.com/user/oauth2/v2/grant",
+                json=grant_body,
+                proxy=proxy,
+            ) as resp:
+                grant_res = await resp.json()
+
+            logger.debug(f"[EndUID][Gacha] grant response: {grant_res}")
+
+            grant_status = grant_res.get("status")
+            if grant_status != 0:
+                msg = grant_res.get("msg", "未知错误")
+                logger.warning(
+                    f"[EndUID][Gacha] OAuth grant 失败: "
+                    f"status={grant_status}, msg={msg}"
+                )
+                return None
+
+            grant_data = grant_res.get("data") or {}
+            grant_token = grant_data.get("token")
+            if not grant_token:
+                logger.error(
+                    f"[EndUID][Gacha] grant 响应缺少 token: {grant_res}"
+                )
+                return None
+
+            logger.debug(
+                f"[EndUID][Gacha] grant_token={grant_token[:8]}..."
+            )
+            return grant_token
+
+        except Exception as e:
+            logger.warning(
+                f"[EndUID][Gacha] 获取 gacha grant token 异常: {e}"
+            )
+            return None
+
+    async def get_u8_token_by_grant(
+        self, grant_token: str, binding_uid: str
+    ) -> Optional[str]:
+        """通过已获取的 grant token + binding uid 获取 u8_token"""
+        session = await self.get_session()
+        proxy = self._get_proxy()
+        try:
+            async with session.post(
+                "https://binding-api-account-prod.hypergryph.com"
+                "/account/binding/v1/u8_token_by_uid",
+                json={"uid": binding_uid, "token": grant_token},
+                proxy=proxy,
+            ) as resp:
+                u8_res = await resp.json()
+
+            logger.debug(
+                f"[EndUID][Gacha] u8_token_by_uid response: {u8_res}"
+            )
+
+            u8_data = u8_res.get("data") or {}
+            u8_token = u8_data.get("token")
+            if not u8_token:
+                msg = u8_res.get("msg", "未知错误")
+                logger.error(f"[EndUID][Gacha] 获取 u8_token 失败: {msg}")
+                return None
+
+            logger.info(
+                f"[EndUID][Gacha] 获取 u8_token 成功: {u8_token[:8]}..."
+            )
+            return u8_token
+
+        except Exception as e:
+            logger.error(f"[EndUID][Gacha] 获取 u8_token 异常: {e}")
+            return None
+
+    async def get_u8_token(
+        self, token: str, uid: str, device_token: str = ""
+    ) -> Optional[str]:
+        """通过 login token 获取 u8_token（便捷方法）"""
+        grant_token = await self.get_gacha_grant_token(token, device_token)
+        if not grant_token:
+            return None
+        return await self.get_u8_token_by_grant(grant_token, uid)
 
     async def _gacha_request(
         self,
@@ -767,15 +878,13 @@ class EndApi:
             JSON 响应或 None
         """
         session = await self.get_session()
-
-        query_string = "&".join(f"{k}={v}" for k, v in params.items())
-        full_url = f"{url}?{query_string}"
+        proxy = self._get_proxy()
 
         try:
             logger.debug(
-                f"[EndUID][Gacha] GET {full_url}"
+                f"[EndUID][Gacha] GET {url} params={list(params.keys())}"
             )
-            async with session.get(full_url) as resp:
+            async with session.get(url, params=params, proxy=proxy) as resp:
                 if resp.content_type and "json" in resp.content_type:
                     res = await resp.json()
                 else:
@@ -800,10 +909,8 @@ class EndApi:
         self,
         u8_token: str,
         server_id: str = "1",
-        pool_type: int = 0,
+        pool_type: str = "E_CharacterGachaPoolType_Special",
         seq_id: Optional[str] = None,
-        channel: str = "1",
-        sub_channel: str = "1",
         lang: str = "zh-cn",
     ) -> Optional[dict]:
         """获取角色寻访记录
@@ -811,25 +918,21 @@ class EndApi:
         Args:
             u8_token: 游戏内抽卡页面的 u8_token
             server_id: 服务器 ID
-            pool_type: 池类型 (0=特许寻访, 1=基础寻访, 2=启程寻访)
+            pool_type: 池类型枚举字符串
             seq_id: 分页用序列 ID（传入上一页最后一条的 seqId）
-            channel: 渠道
-            sub_channel: 子渠道
             lang: 语言
 
         Returns:
             角色寻访记录
         """
         params = {
-            "u8Token": u8_token,
-            "serverId": server_id,
-            "poolType": str(pool_type),
-            "channel": channel,
-            "subChannel": sub_channel,
+            "token": u8_token,
+            "server_id": server_id,
+            "pool_type": pool_type,
             "lang": lang,
         }
         if seq_id:
-            params["seqId"] = seq_id
+            params["seq_id"] = seq_id
 
         return await self._gacha_request(
             url=GACHA_CHAR_RECORD_URL,
@@ -840,8 +943,6 @@ class EndApi:
         self,
         u8_token: str,
         server_id: str = "1",
-        channel: str = "1",
-        sub_channel: str = "1",
         lang: str = "zh-cn",
     ) -> Optional[dict]:
         """获取武器寻访池列表
@@ -849,18 +950,14 @@ class EndApi:
         Args:
             u8_token: 游戏内抽卡页面的 u8_token
             server_id: 服务器 ID
-            channel: 渠道
-            sub_channel: 子渠道
             lang: 语言
 
         Returns:
             武器池列表
         """
         params = {
-            "u8Token": u8_token,
-            "serverId": server_id,
-            "channel": channel,
-            "subChannel": sub_channel,
+            "token": u8_token,
+            "server_id": server_id,
             "lang": lang,
         }
 
@@ -875,8 +972,6 @@ class EndApi:
         server_id: str = "1",
         pool_id: str = "",
         seq_id: Optional[str] = None,
-        channel: str = "1",
-        sub_channel: str = "1",
         lang: str = "zh-cn",
     ) -> Optional[dict]:
         """获取武器寻访记录
@@ -886,23 +981,19 @@ class EndApi:
             server_id: 服务器 ID
             pool_id: 武器池 ID
             seq_id: 分页用序列 ID
-            channel: 渠道
-            sub_channel: 子渠道
             lang: 语言
 
         Returns:
             武器寻访记录
         """
         params = {
-            "u8Token": u8_token,
-            "serverId": server_id,
-            "poolId": pool_id,
-            "channel": channel,
-            "subChannel": sub_channel,
+            "token": u8_token,
+            "server_id": server_id,
+            "pool_id": pool_id,
             "lang": lang,
         }
         if seq_id:
-            params["seqId"] = seq_id
+            params["seq_id"] = seq_id
 
         return await self._gacha_request(
             url=GACHA_WEAPON_RECORD_URL,

@@ -81,6 +81,13 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         max_value=60,
     ),
 
+    # ==================== 抽卡配置 ====================
+    "GachaToolUrl": GsStrConfig(
+        "抽卡工具下载链接",
+        "用于提取抽卡链接的小工具下载地址",
+        "https://github.com/Loping151/EndUID/raw/main/EndUID/end_gacha/EndUIDGacha.exe",
+    ),
+
     # ==================== 渲染配置 ====================
     "UseHtmlRender": GsBoolConfig(
         "使用HTML渲染",

@@ -19,12 +19,11 @@
             --r-4: #a366ff;
             --r-3: #0091ff;
 
-            /* Luck Colors matching Endfield rarity palette roughly */
-            --luck-0: #ff4e20; /* Extremely Lucky */
-            --luck-1: #ffc900; /* Lucky */
-            --luck-2: #ffffff; /* Normal */
-            --luck-3: #a366ff; /* Unlucky */
-            --luck-4: #8b8b8b; /* Terrible */
+            --luck-0: #ff4e20;
+            --luck-1: #ffc900;
+            --luck-2: #ffffff;
+            --luck-3: #a366ff;
+            --luck-4: #8b8b8b;
         }
 
         * {
@@ -52,7 +51,6 @@
             gap: 40px;
         }
 
-        /* Background Layers */
         .bg-layer {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -71,7 +69,6 @@
             mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
         }
 
-        /* Illustration Layer */
         .illustration-layer {
             position: fixed;
             top: 0;
@@ -81,11 +78,9 @@
             z-index: 0;
             pointer-events: none;
             opacity: 0.6;
-            /* Mask to fade out left and bottom */
             mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%),
                         linear-gradient(to left, black 0%, transparent 100%);
             -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
-            mix-blend-mode: normal;
         }
 
         .illustration-layer img {
@@ -96,7 +91,6 @@
             filter: drop-shadow(-10px 0 20px rgba(0,0,0,0.5));
         }
 
-        /* Header Section */
         .header-section {
             display: flex;
             gap: 25px;
@@ -164,13 +158,12 @@
             align-items: center;
             gap: 8px;
         }
-        
+
         .data-time::before {
             content: '//';
             color: var(--c-accent);
         }
 
-        /* Pool Section */
         .pool-section {
             display: flex;
             flex-direction: column;
@@ -211,7 +204,6 @@
             color: var(--c-subtext);
         }
 
-        /* Stats Grid */
         .stats-bar {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -237,80 +229,128 @@
         }
 
         .stat-label {
-            font-size: 14px;
+            font-size: 12px;
             color: var(--c-subtext);
             margin-top: 5px;
-            text-transform: uppercase;
             letter-spacing: 1px;
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Dynamic Colors for Stats */
-        .color-6 { color: var(--r-6); }
-        .luck-0 { color: var(--luck-0); }
-        .luck-1 { color: var(--luck-1); }
-        .luck-2 { color: var(--luck-2); }
-        .luck-3 { color: var(--luck-3); }
-        .luck-4 { color: var(--luck-4); }
+        .pull-unlucky { color: #e63a3a; }
+        .pull-normal { color: #ffffff; }
+        .pull-lucky { color: #2bd22b; }
 
-        /* Six Star Items */
         .six-star-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-top: 10px;
+            gap: 12px;
+            margin-top: 15px;
         }
 
         .six-star-item {
-            background: linear-gradient(135deg, rgba(255, 78, 32, 0.15) 0%, rgba(255, 78, 32, 0.05) 100%);
-            border: 1px solid rgba(255, 78, 32, 0.3);
-            padding: 10px;
+            position: relative;
+            background: rgba(0,0,0,0.6);
+            border-top: 3px solid var(--r-6);
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 88% 100%, 0 100%);
+            transition: transform 0.2s;
+        }
+
+        .six-star-img-box {
+            width: 100%;
+            aspect-ratio: 1/1;
             position: relative;
+            background: rgba(255,255,255,0.05);
             overflow: hidden;
         }
-        
-        /* Diagonal accent for 6-star */
-        .six-star-item::after {
+
+        .six-star-img-box img:not(.up-tag) {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .six-star-img-box::after {
             content: '';
             position: absolute;
-            bottom: -10px; right: -10px;
-            width: 20px; height: 20px;
-            background: var(--r-6);
-            transform: rotate(45deg);
+            bottom: 0; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            z-index: 1;
+        }
+
+        .six-star-empty {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: rgba(255,255,255,0.1);
+            font-family: 'Oswald', sans-serif;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255,255,255,0.03),
+                rgba(255,255,255,0.03) 10px,
+                rgba(255,255,255,0.01) 10px,
+                rgba(255,255,255,0.01) 20px
+            );
+        }
+
+        .six-star-img-box img.up-tag {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            z-index: 3;
+            height: 60px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+        }
+
+        .pull-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            z-index: 2;
+            text-align: right;
+            line-height: 1;
+        }
+
+        .pull-num {
+            font-family: 'Oswald', sans-serif;
+            font-size: 38px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,1);
+        }
+
+        .pull-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #aaa;
+            display: block;
+            margin-top: -2px;
+        }
+
+        .six-star-info {
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            background: rgba(255,255,255,0.02);
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
 
         .six-star-name {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
-            color: #fff;
+            color: #eee;
             text-align: center;
-            width: 100%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .six-star-pulls {
-            font-family: 'Oswald', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--r-6);
-            line-height: 1;
-            margin-top: 4px;
-            z-index: 1;
-        }
-
-        .six-star-pulls span {
-            font-size: 12px;
-            color: rgba(255,255,255,0.6);
-            margin-left: 2px;
-            font-weight: 400;
+            width: 100%;
         }
 
         .pool-empty {
@@ -322,7 +362,6 @@
             border: 1px dashed rgba(255,255,255,0.1);
         }
 
-        /* Footer */
         .footer {
             margin-top: auto;
             display: flex;
@@ -400,19 +439,19 @@
             <div class="stats-bar">
                 <div class="stat-card">
                     <div class="stat-num">{{ pool.total }}</div>
-                    <div class="stat-label">Total Pulls</div>
+                    <div class="stat-label">总抽数</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-num color-6">{{ pool.six_star_count }}</div>
-                    <div class="stat-label">6-Star Count</div>
+                    <div class="stat-num">{{ pool.six_star_count }}</div>
+                    <div class="stat-label">六星数</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-num">{{ pool.avg_pulls }}</div>
-                    <div class="stat-label">Average</div>
+                    <div class="stat-label">平均抽数</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-num luck-{{ pool.level }}">{{ pool.level_tag }}</div>
-                    <div class="stat-label" style="font-size:12px; margin-top:0;">Pity: {{ pool.remain }}</div>
+                    <div class="stat-num {% if pool.remain >= 80 %}pull-unlucky{% elif pool.remain >= 30 %}pull-normal{% else %}pull-lucky{% endif %}">{{ pool.remain }}</div>
+                    <div class="stat-label">未出UP</div>
                 </div>
             </div>
 
@@ -420,8 +459,25 @@
             <div class="six-star-grid">
                 {% for item in pool.six_star_items %}
                 <div class="six-star-item">
-                    <div class="six-star-name">{{ item.name }}</div>
-                    <div class="six-star-pulls">{{ item.pull_count }}<span>PULLS</span></div>
+                    <div class="six-star-img-box">
+                        {% if item.avatar %}
+                        <img src="{{ item.avatar }}">
+                        {% else %}
+                        <div class="six-star-empty">NO IMG</div>
+                        {% endif %}
+
+                        {% if item.is_up and up_tag %}
+                        <img class="up-tag" src="{{ up_tag }}">
+                        {% endif %}
+
+                        <div class="pull-badge">
+                            <div class="pull-num {% if pool.pool_type == 'weapon' %}{% if not item.is_up %}pull-normal{% elif item.color_pulls >= 50 %}pull-unlucky{% elif item.color_pulls >= 20 %}pull-normal{% else %}pull-lucky{% endif %}{% else %}{% if item.color_pulls >= 80 %}pull-unlucky{% elif item.color_pulls >= 50 %}pull-normal{% else %}pull-lucky{% endif %}{% endif %}">{{ item.pull_count }}</div>
+                        </div>
+                    </div>
+
+                    <div class="six-star-info">
+                        <div class="six-star-name">{{ item.name }}</div>
+                    </div>
                 </div>
                 {% endfor %}
             </div>

@@ -1,4 +1,5 @@
 """抽卡记录获取、存储、合并、导出、删除"""
+import asyncio
 import json
 import shutil
 from datetime import datetime
@@ -11,11 +12,10 @@ from ..utils.api.requests import end_api
 from ..utils.path import PLAYER_PATH
 
 
-# 角色池类型映射: pool_type -> 显示名
 CHAR_POOL_TYPE_MAP = {
-    0: "特许寻访",
-    1: "基础寻访",
-    2: "启程寻访",
+    "E_CharacterGachaPoolType_Special": "特许寻访",
+    "E_CharacterGachaPoolType_Standard": "基础寻访",
+    "E_CharacterGachaPoolType_Beginner": "启程寻访",
 }
 
 
@@ -46,19 +46,25 @@ async def save_gachalogs(uid: str, gacha_data: dict):
         logger.error(f"[EndUID][Gacha] 保存抽卡记录失败: {e}")
 
 
-def _merge_records(old_list: list, new_list: list) -> list:
-    """合并记录列表，按 seqId 去重，按 gachaTs 降序排序"""
-    seen = set()
-    merged = []
-    for record in old_list + new_list:
-        seq_id = record.get("seqId", "")
-        if seq_id and seq_id in seen:
-            continue
-        if seq_id:
-            seen.add(seq_id)
-        merged.append(record)
+def _seq_id_sort_key(record: dict) -> tuple:
+    """按 seqId 降序排序键 (兼容纯数字和字符串 seqId)"""
+    sid = record.get("seqId", "")
+    try:
+        return (1, int(sid))
+    except (ValueError, TypeError):
+        return (0, sid)
 
-    merged.sort(key=lambda x: x.get("gachaTs", ""), reverse=True)
+
+def _merge_records(old_list: list, new_list: list) -> list:
+    """合并记录列表，按 seqId 去重，按 seqId 降序排序"""
+    existing_ids = {r.get("seqId") for r in old_list if r.get("seqId")}
+    unique_new = [r for r in new_list if r.get("seqId") and r["seqId"] not in existing_ids]
+
+    if not unique_new:
+        return old_list
+
+    merged = old_list + unique_new
+    merged.sort(key=_seq_id_sort_key, reverse=True)
     return merged
 
 
@@ -66,8 +72,6 @@ async def get_new_gachalog(
     uid: str,
     u8_token: str,
     server_id: str = "1",
-    channel: str = "1",
-    sub_channel: str = "1",
 ) -> tuple[bool, str, dict]:
     """拉取全部抽卡记录并与本地合并
 
@@ -79,21 +83,19 @@ async def get_new_gachalog(
 
     new_pool_data = {}
     total_new = 0
+    first_error = ""
 
-    # 1. 拉取角色池（特许/基础/启程）
     for pool_type, pool_name in CHAR_POOL_TYPE_MAP.items():
-        logger.info(f"[EndUID][Gacha] 拉取 {pool_name} (poolType={pool_type})")
+        logger.info(f"[EndUID][Gacha] 拉取 {pool_name} (pool_type={pool_type})")
         records = []
         seq_id = None
 
-        for page in range(100):  # 安全上限
+        for page in range(100):
             res = await end_api.get_gacha_char_record(
                 u8_token=u8_token,
                 server_id=server_id,
                 pool_type=pool_type,
                 seq_id=seq_id,
-                channel=channel,
-                sub_channel=sub_channel,
             )
             if not res:
                 logger.warning(f"[EndUID][Gacha] {pool_name} 请求失败")
@@ -102,11 +104,13 @@ async def get_new_gachalog(
             code = res.get("code")
             if code is not None and code != 0:
                 msg = res.get("msg") or res.get("message") or "未知错误"
-                if page == 0:
-                    return False, f"请求失败: {msg} (code={code})", {}
+                if not first_error:
+                    first_error = f"{pool_name}: {msg} (code={code})"
+                logger.warning(f"[EndUID][Gacha] {pool_name} 错误: {msg}")
                 break
 
-            data_list = res.get("data", {}).get("list", [])
+            data = res.get("data", {})
+            data_list = data.get("list", [])
             if not data_list:
                 break
 
@@ -115,10 +119,14 @@ async def get_new_gachalog(
                 f"[EndUID][Gacha] {pool_name} 第{page+1}页: {len(data_list)}条"
             )
 
-            # 分页: 取最后一条的 seqId
+            if not data.get("hasMore", False):
+                break
+
             seq_id = data_list[-1].get("seqId")
             if not seq_id:
                 break
+
+            await asyncio.sleep(0.2)  # 避免请求过快
 
         if records:
             old_list = old_pool_data.get(pool_name, [])
@@ -133,17 +141,18 @@ async def get_new_gachalog(
         elif pool_name in old_pool_data:
             new_pool_data[pool_name] = old_pool_data[pool_name]
 
-    # 2. 拉取武器池
     weapon_pools_res = await end_api.get_gacha_weapon_pools(
         u8_token=u8_token,
         server_id=server_id,
-        channel=channel,
-        sub_channel=sub_channel,
     )
 
     weapon_pool_list = []
     if weapon_pools_res and weapon_pools_res.get("code", 0) == 0:
-        weapon_pool_list = weapon_pools_res.get("data", {}).get("list", [])
+        wp_data = weapon_pools_res.get("data")
+        if isinstance(wp_data, list):
+            weapon_pool_list = wp_data
+        elif isinstance(wp_data, dict):
+            weapon_pool_list = wp_data.get("list", [])
 
     for pool_info in weapon_pool_list:
         pool_id = pool_info.get("poolId", "")
@@ -160,8 +169,6 @@ async def get_new_gachalog(
                 server_id=server_id,
                 pool_id=pool_id,
                 seq_id=seq_id,
-                channel=channel,
-                sub_channel=sub_channel,
             )
             if not res:
                 break
@@ -170,14 +177,21 @@ async def get_new_gachalog(
             if code is not None and code != 0:
                 break
 
-            data_list = res.get("data", {}).get("list", [])
+            data = res.get("data", {})
+            data_list = data.get("list", [])
             if not data_list:
                 break
 
             records.extend(data_list)
+
+            if not data.get("hasMore", False):
+                break
+
             seq_id = data_list[-1].get("seqId")
             if not seq_id:
                 break
+
+            await asyncio.sleep(0.5)
 
         if records:
             old_list = old_pool_data.get(display_name, [])
@@ -192,7 +206,6 @@ async def get_new_gachalog(
         elif display_name in old_pool_data:
             new_pool_data[display_name] = old_pool_data[display_name]
 
-    # 保留旧数据中存在但本次未拉到的池
     for key, val in old_pool_data.items():
         if key not in new_pool_data:
             new_pool_data[key] = val
@@ -203,19 +216,85 @@ async def get_new_gachalog(
         "data": new_pool_data,
     }
 
-    await save_gachalogs(uid, result)
+    if not new_pool_data:
+        err = first_error or "所有池均无数据"
+        return False, f"请求失败: {err}", {}
+
+    if total_new > 0:
+        await save_gachalogs(uid, result)
 
     total_records = sum(len(v) for v in new_pool_data.values())
     msg = f"导入完成！新增 {total_new} 条，共 {total_records} 条记录"
+    if first_error:
+        msg += f"\n（部分池请求失败: {first_error}）"
     return True, msg, result
 
 
-async def export_gachalogs(uid: str) -> Optional[str]:
-    """导出抽卡记录为 JSON 字符串"""
+async def import_from_json(uid: str, raw_json: str) -> tuple[bool, str]:
+    """从 JSON 字符串导入抽卡记录 (支持 gacha_logs.json 源文件格式)
+
+    Returns:
+        (成功, 消息)
+    """
+    try:
+        incoming = json.loads(raw_json)
+    except json.JSONDecodeError as e:
+        return False, f"JSON 解析失败: {e}"
+
+    if "data" in incoming and isinstance(incoming["data"], dict):
+        import_pool_data = incoming["data"]
+    elif all(isinstance(v, list) for v in incoming.values()):
+        import_pool_data = incoming
+    else:
+        return False, "无法识别的 JSON 格式，需包含 data 字段或直接为池数据"
+
+    if not import_pool_data:
+        return False, "JSON 中无抽卡记录数据"
+
+    old_data = await load_gachalogs(uid) or {}
+    old_pool_data = old_data.get("data", {})
+
+    total_new = 0
+    merged_pool_data = dict(old_pool_data)
+
+    for pool_name, records in import_pool_data.items():
+        if not isinstance(records, list):
+            continue
+        old_list = merged_pool_data.get(pool_name, [])
+        merged = _merge_records(old_list, records)
+        new_count = len(merged) - len(old_list)
+        total_new += max(0, new_count)
+        merged_pool_data[pool_name] = merged
+
+    if total_new > 0:
+        result = {
+            "uid": uid,
+            "data_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "data": merged_pool_data,
+        }
+        await save_gachalogs(uid, result)
+
+    total_records = sum(len(v) for v in merged_pool_data.values())
+    return True, f"导入完成！新增 {total_new} 条，共 {total_records} 条记录"
+
+
+async def export_gachalogs(uid: str) -> Optional[dict]:
+    """导出抽卡记录为文件并返回文件信息"""
     data = await load_gachalogs(uid)
     if not data:
         return None
-    return json.dumps(data, ensure_ascii=False, indent=2)
+
+    path = PLAYER_PATH / uid
+    path.mkdir(parents=True, exist_ok=True)
+    export_path = path / f"export_{uid}.json"
+
+    async with aiofiles.open(export_path, "w", encoding="UTF-8") as f:
+        await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+
+    return {
+        "name": f"EndUID_gacha_{uid}.json",
+        "url": str(export_path.absolute()),
+    }
 
 
 async def delete_gachalogs(uid: str) -> bool:

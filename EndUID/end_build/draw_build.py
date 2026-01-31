@@ -148,6 +148,8 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
             "totalBlackbox": total_blackbox,
         })
 
+    domains.sort(key=lambda x: x.get("domainId", ""))
+
     rooms: List[Dict] = []
     for room in detail.spaceShip.rooms:
         room_chars = []

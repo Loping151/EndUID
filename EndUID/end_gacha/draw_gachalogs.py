@@ -1,6 +1,7 @@
 """抽卡记录渲染上下文构建"""
 import io
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -20,7 +21,12 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..end_config import PREFIX
-from ..utils.path import AVATAR_CACHE_PATH, CHAR_CACHE_PATH, PLAYER_PATH
+from ..utils.path import (
+    AVATAR_CACHE_PATH,
+    CHAR_CACHE_PATH,
+    EQUIP_CACHE_PATH,
+    PLAYER_PATH,
+)
 from .get_gachalogs import load_gachalogs
 
 
@@ -34,6 +40,33 @@ LUCK_LEVELS = ["非到极致", "运气不好", "平稳保底", "小欧一把", "
 
 # 角色池保底
 CHAR_PITY = 80
+
+# 常驻角色 ID（不算 UP）
+STANDARD_CHAR_IDS = {
+    "chr_0025_ardelia",
+    "chr_0015_lifeng",
+}
+
+# 常驻武器 ID（不算 UP）
+STANDARD_WEAPON_IDS = {
+    "wpn_pistol_0009",
+    "wpn_pistol_0008",
+    "wpn_claym_0006",
+}
+
+
+def _format_gacha_ts(ts: str) -> str:
+    """将 gachaTs 转换为可读日期 (支持 Unix 时间戳和 ISO 格式)"""
+    if not ts:
+        return ""
+    try:
+        ts_num = int(ts)
+        if ts_num > 1e12:  # 毫秒
+            ts_num = ts_num // 1000
+        return datetime.fromtimestamp(ts_num).strftime("%Y.%m.%d")
+    except (ValueError, OSError):
+        pass
+    return ts[:10].replace("-", ".")
 
 
 def _calc_pool_stats(pool_name: str, records: list) -> dict:
@@ -87,18 +120,29 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
 
             if is_weapon:
                 name = record.get("weaponName", "???")
+                item_id = record.get("weaponId", "")
+                is_up = item_id not in STANDARD_WEAPON_IDS
             else:
                 name = record.get("charName", "???")
+                item_id = record.get("charId", "")
+                is_up = item_id not in STANDARD_CHAR_IDS
 
             six_star_items.append({
                 "name": name,
                 "pull_count": pull_counter,
                 "type": pool_type,
+                "item_id": item_id,
+                "avatar": "",
+                "is_up": is_up,
             })
             pull_counter = 0
 
-    # 距离上次六星的抽数（保底计数）
+    # 距离上次 UP 的抽数（跨过中间的常驻六星）
     remain = pull_counter
+    for item in reversed(six_star_items):
+        if item["is_up"]:
+            break
+        remain += item["pull_count"]
 
     # 六星平均抽数
     six_star_count = len(six_star_pull_counts)
@@ -128,11 +172,23 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
     timestamps = [r.get("gachaTs", "") for r in records if r.get("gachaTs")]
     if timestamps:
         timestamps.sort()
-        earliest = timestamps[0][:10].replace("-", ".")
-        latest = timestamps[-1][:10].replace("-", ".")
+        earliest = _format_gacha_ts(timestamps[0])
+        latest = _format_gacha_ts(timestamps[-1])
         time_range = f"{earliest} - {latest}"
     else:
         time_range = ""
+
+    # UP 角色/武器的颜色抽数: 累加前面连续常驻的抽数
+    for i, item in enumerate(six_star_items):
+        if item["is_up"]:
+            color_pulls = item["pull_count"]
+            j = i - 1
+            while j >= 0 and not six_star_items[j]["is_up"]:
+                color_pulls += six_star_items[j]["pull_count"]
+                j -= 1
+            item["color_pulls"] = color_pulls
+        else:
+            item["color_pulls"] = item["pull_count"]
 
     # 六星列表反转，最新的在前
     six_star_items.reverse()
@@ -165,11 +221,14 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     if not pool_data:
         return "抽卡记录为空"
 
-    # 读取玩家基础信息 + UP 角色立绘
+    # 读取玩家基础信息 + UP 角色立绘 + 角色/武器头像映射
     name = uid
     level = 0
     avatar_b64 = ""
     illustration_b64 = ""
+    # name -> avatarUrl 映射（角色和武器）
+    char_avatar_map: dict[str, str] = {}
+    weapon_icon_map: dict[str, str] = {}
 
     card_path = PLAYER_PATH / uid / "card_detail.json"
     if card_path.exists():
@@ -188,12 +247,20 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
                             base.avatarUrl, AVATAR_CACHE_PATH
                         )
 
-                # 查找最后一个 UP 角色的立绘
+                # 查找最后一个 UP 角色的立绘 + 构建头像映射
                 last_up_illustration = ""
                 for char in detail.chars:
                     cd = char.charData
-                    if cd and cd.labelType == "label_type_up" and cd.illustrationUrl:
-                        last_up_illustration = cd.illustrationUrl
+                    if cd:
+                        if cd.name and cd.avatarSqUrl:
+                            char_avatar_map[cd.name] = cd.avatarSqUrl
+                        if cd.labelType == "label_type_up" and cd.illustrationUrl:
+                            last_up_illustration = cd.illustrationUrl
+
+                    # 武器头像映射
+                    wd = char.weapon.weaponData if char.weapon else None
+                    if wd and wd.name and wd.iconUrl:
+                        weapon_icon_map[wd.name] = wd.iconUrl
 
                 if last_up_illustration:
                     illustration_b64 = await get_image_b64_with_cache(
@@ -220,6 +287,29 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
         if pn not in [p["pool_name"] for p in pools]:
             pools.append(_calc_pool_stats(pn, pool_data[pn]))
 
+    # 为六星角色/武器解析头像
+    for pool in pools:
+        for item in pool.get("six_star_items", []):
+            item_name = item.get("name", "")
+            url = ""
+            if item.get("type") == "weapon":
+                url = weapon_icon_map.get(item_name, "")
+            else:
+                url = char_avatar_map.get(item_name, "")
+
+            if url:
+                try:
+                    cache_path = (
+                        EQUIP_CACHE_PATH
+                        if item.get("type") == "weapon"
+                        else AVATAR_CACHE_PATH
+                    )
+                    item["avatar"] = await get_image_b64_with_cache(
+                        url, cache_path
+                    )
+                except Exception:
+                    pass
+
     context = {
         "name": name,
         "uid": uid,
@@ -230,6 +320,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
         "illustration": illustration_b64,
         "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
         "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),
+        "up_tag": image_to_base64(TEXTURE_PATH / "up_tag.png"),
     }
 
     img_bytes = await render_html(end_templates, "end_gacha_card.html", context)

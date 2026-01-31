@@ -24,7 +24,7 @@
 
         body {
             width: 1000px;
-            min-height: 600px;
+            min-height: 500px; 
             background-color: var(--c-bg);
             font-family: 'Source Han Sans CN', sans-serif;
             color: var(--c-text);
@@ -34,10 +34,10 @@
         .container {
             position: relative;
             width: 100%;
-            padding: 50px;
+            padding: 40px; 
             display: flex;
             flex-direction: column;
-            gap: 40px;
+            gap: 20px; 
         }
 
         .bg-layer {
@@ -62,19 +62,19 @@
         .title-box {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
+            gap: 12px;
+            margin-bottom: 5px;
         }
 
         .title-accent {
-            width: 8px;
-            height: 50px;
+            width: 6px;
+            height: 40px;
             background: var(--c-accent);
             transform: skewX(-20deg);
         }
 
         .title-text {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 700;
             text-transform: uppercase;
             line-height: 1;
@@ -87,81 +87,168 @@
             color: var(--c-subtext);
             margin-left: 10px;
             letter-spacing: 1px;
+            margin-top: 6px;
         }
 
-        /* Section Layout */
+        /* Common Section Styling */
         .section {
             background: rgba(255,255,255,0.03);
             border: 1px solid var(--c-border);
-            padding: 30px;
+            padding: 20px 25px;
             position: relative;
             backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
         
-        /* Corner decoration */
         .section::after {
             content: '';
             position: absolute;
             top: 0; right: 0;
-            width: 20px; height: 20px;
+            width: 15px; height: 15px;
             border-top: 2px solid var(--c-accent);
             border-right: 2px solid var(--c-accent);
         }
 
         .section-header {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             color: var(--c-accent);
-            margin-bottom: 25px;
+            margin-bottom: 5px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+        
+        .section-header::before {
+            content: '>>';
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: rgba(255,255,255,0.3);
         }
 
-        /* Steps */
-        .step-list {
+        /* --- PLATFORM CONTAINER START --- */
+        .platform-group {
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .platform-tab {
+            display: inline-block;
+            background: var(--c-text);
+            color: #000;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 12px;
+            margin-bottom: 15px;
+            transform: skewX(-10deg);
+            margin-left: -5px;
+        }
+
+        .platform-tab span {
+            display: inline-block;
+            transform: skewX(10deg);
+        }
+
+        /* Layouts */
+        .full-width-method {
+            background: rgba(255, 230, 0, 0.05); /* Slight tint for recommended */
+            border: 1px solid rgba(255, 230, 0, 0.2);
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 8px;
         }
 
-        .step {
+        .split-layout {
+            display: grid;
+            /* 40% 60% ratio */
+            grid-template-columns: 2fr 3fr; 
+            gap: 15px;
+        }
+
+        .method-col {
+            background: rgba(255,255,255,0.02);
+            border: 1px dashed rgba(255,255,255,0.1);
+            padding: 15px;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .method-title {
+            font-family: 'Source Han Sans CN', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        
+        .method-title span {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--c-subtext);
+            font-size: 12px;
+            font-weight: 400;
+        }
+        
+        /* Highlight for Recommended */
+        .full-width-method .method-title {
+            color: var(--c-accent);
+            border-bottom-color: rgba(255, 230, 0, 0.2);
+        }
+
+        /* Substeps */
+        .substep {
+            display: flex;
+            gap: 10px;
             align-items: flex-start;
         }
 
-        .step-num {
-            font-family: 'Oswald', sans-serif;
-            font-weight: 700;
-            font-size: 32px;
-            color: rgba(255,255,255,0.2);
-            line-height: 0.8;
-            min-width: 40px;
-        }
-        
-        .step:hover .step-num {
+        .substep-idx {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
             color: var(--c-accent);
-            transition: color 0.3s;
+            background: rgba(255, 230, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 2px;
+            flex-shrink: 0;
         }
 
-        .step-content {
-            flex: 1;
-            font-size: 16px;
+        .substep-content {
+            font-size: 14px;
             line-height: 1.5;
-            color: #ddd;
+            color: #ccc;
+            word-break: break-all;
+        }
+        /* --- PLATFORM CONTAINER END --- */
+
+        /* Main Import Step (Step 02) */
+        .import-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
+        /* Code Block */
         .code-block {
             background: #000;
             border: 1px solid #333;
             border-left: 3px solid var(--c-accent);
-            padding: 12px 15px;
+            padding: 6px 10px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            color: #ccc;
-            margin-top: 10px;
+            font-size: 13px;
+            color: #ddd;
+            margin-top: 4px;
             word-break: break-all;
+            display: block;
         }
 
         .highlight {
@@ -178,7 +265,7 @@
 
         .cmd-table th {
             text-align: left;
-            padding: 12px 15px;
+            padding: 8px 12px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 14px;
             color: var(--c-subtext);
@@ -186,29 +273,34 @@
         }
 
         .cmd-table td {
-            padding: 15px;
+            padding: 10px 12px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 16px;
+            font-size: 15px; 
+            color: #eee;
         }
 
         .cmd-name {
             font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
+            font-weight: 600;
             color: #fff;
         }
 
         .cmd-desc {
-            color: #bbb;
+            color: #aaa;
+            font-size: 14px !important;
         }
 
-        /* Footer Note */
+        /* Note & Footer */
         .note {
             font-size: 14px;
             color: var(--c-subtext);
             background: rgba(255, 230, 0, 0.05);
             border-left: 3px solid var(--c-subtext);
-            padding: 15px;
-            line-height: 1.6;
+            padding: 10px 15px;
+            line-height: 1.5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .footer {
@@ -217,7 +309,7 @@
             justify-content: flex-end;
             align-items: center;
             gap: 15px;
-            padding-top: 20px;
+            padding-top: 10px;
             border-top: 1px solid rgba(255,255,255,0.1);
         }
 
@@ -229,8 +321,8 @@
         }
 
         .ef-logo {
-            height: 36px;
-            opacity: 0.8;
+            height: 24px;
+            opacity: 0.6;
         }
     </style>
 </head>
@@ -252,47 +344,85 @@
         </div>
 
         <div class="section">
-            <div class="section-header">
-                如何获取抽卡链接 (PC)
+            <div class="section-header">STEP 01: 获取数据</div>
+
+            <div class="platform-group">
+                <div class="platform-tab"><span>PLATFORM :: GENERAL</span></div>
+                
+                <div style="padding: 0 15px 15px 15px;">
+                    <div class="full-width-method">
+                        <div class="method-title">方式一：自动获取 <span>// LOGGED-IN USERS</span></div>
+                        <div style="font-size: 14px; color: #ddd; padding: 5px 0;">
+                            如果已登录，无需提取链接，直接发送指令即可：
+                            <div class="code-block" style="font-size: 15px;">{{ prefix }}导入抽卡记录</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="step-list">
-                <div class="step">
-                    <div class="step-num">01</div>
-                    <div class="step-content">
-                        在游戏内打开抽卡记录页面（寻访 → 历史记录）。
+            <div class="platform-group">
+                <div class="platform-tab"><span>PLATFORM :: PC</span></div>
+                
+                <div style="padding: 0 15px 15px 15px;">
+                    <div class="split-layout">
+                        
+                        <div class="method-col">
+                            <div class="method-title">方式二：使用工具 <span>// TOOL</span></div>
+                            
+                            <div class="substep">
+                                <div class="substep-idx">01</div>
+                                <div class="substep-content">
+                                    发送 <span class="highlight">{{ prefix }}抽卡工具</span> 获取工具。
+                                </div>
+                            </div>
+                            <div class="substep">
+                                <div class="substep-idx">02</div>
+                                <div class="substep-content">
+                                    游戏内打开 <b>寻访记录</b>，运行工具自动复制链接。
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="method-col">
+                            <div class="method-title">方式三：手动获取 <span>// MANUAL</span></div>
+                            
+                            <div class="substep">
+                                <div class="substep-idx">01</div>
+                                <div class="substep-content">
+                                    游戏内打开 <b>寻访记录</b> 页面。
+                                </div>
+                            </div>
+                            <div class="substep">
+                                <div class="substep-idx">02</div>
+                                <div class="substep-content">
+                                    打开日志：<span class="highlight">%USERPROFILE%\AppData\LocalLow\Hypergryph\Endfield\sdklogs\HGWebview.log</span>
+                                </div>
+                            </div>
+                            <div class="substep">
+                                <div class="substep-idx">03</div>
+                                <div class="substep-content">
+                                    搜索 <span class="highlight">gacha_char</span> 并复制整条链接。
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+            
+        </div>
 
-                <div class="step">
-                    <div class="step-num">02</div>
-                    <div class="step-content">
-                        打开以下日志文件路径：
-                        <div class="code-block">%USERPROFILE%\AppData\LocalLow\Hypergryph\Endfield\sdklogs\HGWebview.log</div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-num">03</div>
-                    <div class="step-content">
-                        使用 Ctrl+F 搜索 <span class="highlight">ef-webview.hypergryph.com/page/gacha_char</span>，复制包含该内容的整条 URL 链接。
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-num">04</div>
-                    <div class="step-content">
-                        发送以下命令进行导入：
-                        <div class="code-block">{{ prefix }}导入抽卡记录 &lt;复制的链接&gt;</div>
-                    </div>
+        <div class="section" style="border-left: 3px solid var(--c-accent);">
+            <div class="section-header" style="margin-bottom: 0;">STEP 02: 执行导入</div>
+            <div class="import-step">
+                <div style="margin-left: 20px; flex: 1;">
+                    <div style="margin-top: 5px; color: #ccc; font-size: 14px;">获得链接后（方式二/三），发送以下命令进行同步：</div>
+                    <div class="code-block" style="font-size: 16px; margin-top: 8px;">{{ prefix }}导入抽卡记录 &lt;粘贴链接&gt;</div>
                 </div>
             </div>
         </div>
 
         <div class="section">
-            <div class="section-header">
-                系统指令列表
-            </div>
+            <div class="section-header">指令列表</div>
             <table class="cmd-table">
                 <thead>
                     <tr>
@@ -306,35 +436,35 @@
                         <td class="cmd-desc">查看此帮助页面</td>
                     </tr>
                     <tr>
-                        <td class="cmd-name">{{ prefix }}导入抽卡记录 &lt;链接&gt;</td>
-                        <td class="cmd-desc">上传并同步您的抽卡数据</td>
+                        <td class="cmd-name">{{ prefix }}导入抽卡记录 [链接]</td>
+                        <td class="cmd-desc">同步抽卡数据</td>
                     </tr>
                     <tr>
                         <td class="cmd-name">{{ prefix }}抽卡记录</td>
-                        <td class="cmd-desc">生成抽卡统计分析卡片</td>
+                        <td class="cmd-desc">生成统计分析卡片</td>
                     </tr>
                     <tr>
-                        <td class="cmd-name">{{ prefix }}导出抽卡记录</td>
-                        <td class="cmd-desc">导出记录为 JSON 格式文件</td>
+                        <td class="cmd-name">{{ prefix }}导出/删除抽卡记录</td>
+                        <td class="cmd-desc">导出 JSON 或 清空记录</td>
                     </tr>
                     <tr>
-                        <td class="cmd-name">{{ prefix }}删除抽卡记录</td>
-                        <td class="cmd-desc">清空云端存储的记录</td>
+                        <td class="cmd-name">{{ prefix }}抽卡工具</td>
+                        <td class="cmd-desc">获取 Windows 链接提取工具</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="note">
-            <strong>NOTICE:</strong> u8_token 具有时效性。如果长时间未操作，请重新在游戏内打开历史记录页面以刷新链接。<br>
-            每次导入操作会自动与现有数据进行合并，不会导致旧数据丢失。
+            <div>
+                <strong>TIP:</strong> 提取的抽卡链接具有时效性，超时请重新打开游戏记录页刷新。<br>
+                每次导入操作会自动与现有数据进行合并，不会导致旧数据丢失。
+            </div>
+            {% if end_logo %}<img class="ef-logo" src="{{ end_logo }}">{% endif %}
         </div>
 
         <div class="footer">
-            <span>Endfield Gacha System // Help Module</span>
-            {% if end_logo %}
-            <img class="ef-logo" src="{{ end_logo }}">
-            {% endif %}
+            <span>Endfield Gacha Record // Help Module</span>
         </div>
 
     </div>

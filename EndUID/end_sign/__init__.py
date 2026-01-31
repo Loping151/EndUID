@@ -163,7 +163,7 @@ async def clear_end_sign_record():
 
 # ===================== 重启续签 =====================
 
-async def check_and_resume_signing():
+async def check_and_resume_end_signing():
     """启动时检查状态文件，如果有未完成的签到则继续执行"""
     if not signing_state.should_resume():
         return
@@ -191,7 +191,7 @@ async def check_and_resume_signing():
 
 startup_time = datetime.now() + timedelta(seconds=10)
 scheduler.add_job(
-    check_and_resume_signing,
+    check_and_resume_end_signing,
     "date",
     run_date=startup_time,
     id="end_resume_signing_on_startup",
