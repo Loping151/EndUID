@@ -42,18 +42,39 @@ LUCK_LEVELS = ["非到极致", "运气不好", "平稳保底", "小欧一把", "
 CHAR_PITY = 80
 
 # 常驻角色 ID（不算 UP）
-STANDARD_CHAR_IDS = {
-    "chr_0025_ardelia",
-    "chr_0015_lifeng",
-    "chr_0009_azrila",
+# 常驻角色名（使用 charName 判断）
+STANDARD_CHAR_NAMES = {
+    "艾尔黛拉",
+    "别礼",
+    "余烬",
+    "黎风",
+    "骏卫",
 }
 
-# 常驻武器 ID（不算 UP）
-STANDARD_WEAPON_IDS = {
-    "wpn_pistol_0009",
-    "wpn_pistol_0008",
-    "wpn_claym_0006",
-    "wpn_sword_0014",
+# 常驻武器名（使用 weaponName 判断）
+STANDARD_WEAPON_NAMES = {
+    "扶摇",
+    "热熔切割器",
+    "宏愿",
+    "显赫声名",
+    "不知归",
+    "白夜新星",
+    "大雷斑",
+    "赫拉芬格",
+    "典范",
+    "昔日精品",
+    "破碎君王",
+    "负山",
+    "骁勇",
+    "J.E.T.",
+    "同类相食",
+    "领航者",
+    "楔子",
+    "沧溟星梦",
+    "爆破单元",
+    "遗忘",
+    "骑士精神",
+    "作品：蚀迹",
 }
 
 
@@ -123,11 +144,11 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
             if is_weapon:
                 name = record.get("weaponName", "???")
                 item_id = record.get("weaponId", "")
-                is_up = item_id not in STANDARD_WEAPON_IDS
+                is_up = name not in STANDARD_WEAPON_NAMES
             else:
                 name = record.get("charName", "???")
                 item_id = record.get("charId", "")
-                is_up = item_id not in STANDARD_CHAR_IDS
+                is_up = name not in STANDARD_CHAR_NAMES
 
             six_star_items.append({
                 "name": name,
