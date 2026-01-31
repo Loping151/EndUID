@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{{ title }}</title>
+<style>
+    {% include '_wiki_base_css.html' %}
+
+    .group-section {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .group-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+        padding-bottom: 10px;
+    }
+
+    .group-title {
+        font-size: 30px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .group-title::before {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 24px;
+        background: var(--c-accent);
+        transform: skewX(-20deg);
+    }
+
+    .group-count {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 22px;
+        color: var(--c-subtext);
+        margin-left: 8px;
+    }
+
+    .item-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+    }
+
+    .item-card {
+        position: relative;
+        aspect-ratio: 160 / 220;
+        background: #1a1a1f;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .item-img {
+        width: 100%;
+        height: 78%;
+        object-fit: cover;
+        object-position: top center;
+        background: #222;
+    }
+
+    .item-left-info {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        z-index: 2;
+    }
+
+    .item-icon {
+        width: 36px;
+        height: 36px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+
+    .name-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 22%;
+        background: #e6e6e6;
+        display: flex;
+        align-items: center;
+        padding: 0 8px;
+        z-index: 2;
+    }
+
+    .item-name {
+        color: #1a1a1a;
+        font-weight: 800;
+        font-size: 24px;
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+    }
+
+    .name-bar .rarity-line {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        margin-top: 0;
+    }
+
+    .no-img {
+        width: 100%;
+        height: 78%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #444;
+        font-size: 14px;
+        background: #1e1e23;
+    }
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+    {% if bg %}
+    <img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.1;mix-blend-mode:overlay;">
+    {% endif %}
+</div>
+<div class="grid-deco"></div>
+
+<div class="container">
+
+    <div>
+        <div class="page-title">{{ title }}</div>
+        <div class="page-subtitle">TOTAL {{ total }}</div>
+    </div>
+
+    {% for group_name, items in groups.items() %}
+    <div class="group-section">
+        <div class="group-header">
+            <div class="group-title">
+                {{ group_name }}
+                <span class="group-count">{{ items|length }}</span>
+            </div>
+        </div>
+
+        <div class="item-grid">
+            {% for item in items %}
+            <div class="item-card">
+                {% if list_type == "char" %}
+                    {% if item.avatar %}
+                    <img class="item-img" src="{{ item.avatar }}">
+                    {% else %}
+                    <div class="no-img">{{ item.name[:2] }}</div>
+                    {% endif %}
+                    <div class="item-left-info">
+                        {% if item.profession_icon %}
+                        <img class="item-icon" src="{{ item.profession_icon }}">
+                        {% endif %}
+                        {% if item.property_icon %}
+                        <img class="item-icon" src="{{ item.property_icon }}">
+                        {% endif %}
+                    </div>
+                {% else %}
+                    {% if item.icon %}
+                    <img class="item-img" src="{{ item.icon }}">
+                    {% else %}
+                    <div class="no-img">{{ item.name[:2] }}</div>
+                    {% endif %}
+                {% endif %}
+
+                <div class="name-bar">
+                    <div class="item-name">{{ item.name }}</div>
+                    <div class="rarity-line r-{{ item.rarity }}"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="wiki-footer">
+        {% if end_logo %}
+        <img src="{{ end_logo }}" class="footer-logo">
+        {% endif %}
+        <div class="footer-text">ENDFIELD WIKI</div>
+    </div>
+
+</div>
+</body>
+</html>

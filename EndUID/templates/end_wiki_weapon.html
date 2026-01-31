@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Weapon Wiki</title>
+<style>
+    {% include '_wiki_base_css.html' %}
+
+    .wiki-header {
+        flex-direction: row !important;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .weapon-name {
+        font-size: 72px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -2px;
+    }
+
+    .weapon-portrait {
+        flex-shrink: 0;
+        width: 240px;
+        height: 240px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .weapon-portrait img {
+        width: 90%;
+        height: 90%;
+        object-fit: contain;
+    }
+
+    .info-item {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 14px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 10px;
+    }
+
+    .info-label {
+        font-size: 13px;
+        color: var(--c-subtext);
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: 500;
+        color: #ccc;
+        line-height: 1.5;
+    }
+
+    .stats-compare {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .stats-col {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 20px;
+    }
+
+    .stats-col-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--c-accent);
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255,230,0,0.2);
+        letter-spacing: 2px;
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .stat-name {
+        font-size: 15px;
+        color: var(--c-subtext);
+    }
+
+    .stat-value {
+        font-family: 'Oswald', sans-serif;
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--c-text);
+    }
+
+    .passive-block {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-left: 4px solid var(--c-accent);
+        padding: 20px;
+        margin-bottom: 12px;
+    }
+
+    .passive-name {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--c-accent);
+    }
+
+    .passive-desc {
+        font-size: 15px;
+        line-height: 1.7;
+        color: #ccc;
+    }
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+    {% if bg %}
+    <img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.1;mix-blend-mode:overlay;">
+    {% endif %}
+</div>
+<div class="grid-deco"></div>
+
+<div class="container">
+
+    <div class="wiki-header">
+        <div class="header-text">
+            <div class="rarity">
+                {% for _ in range(wiki.rarity) %}
+                <span class="rarity-star">★</span>
+                {% endfor %}
+            </div>
+            <div class="weapon-name">{{ wiki.name }}</div>
+            <div class="rarity-line r-{{ wiki.rarity }}"></div>
+            <div class="tags">
+                <div class="tag-box"><span>{{ wiki.weapon_type }}</span></div>
+            </div>
+        </div>
+        {% if weapon_img %}
+        <div class="weapon-portrait">
+            <img src="{{ weapon_img }}">
+        </div>
+        {% endif %}
+    </div>
+
+    {% if wiki.description %}
+    <div class="info-item">
+        <div class="info-label">描述</div>
+        <div class="info-value">{{ wiki.description }}</div>
+    </div>
+    {% endif %}
+
+    {% if wiki.acquisition %}
+    <div class="info-item">
+        <div class="info-label">获取方式</div>
+        <div class="info-value">{{ wiki.acquisition }}</div>
+    </div>
+    {% endif %}
+
+    <div>
+        <div class="section-title">属性 <span class="en">ATTRIBUTES</span></div>
+        <div class="stats-compare">
+            <div class="stats-col">
+                <div class="stats-col-title">INITIAL</div>
+                <div class="stat-row">
+                    <div class="stat-name">基础攻击力</div>
+                    <div class="stat-value">{{ wiki.base_attack }}</div>
+                </div>
+                {% for b in wiki.stat_bonuses %}
+                <div class="stat-row">
+                    <div class="stat-name">{{ b.name }}</div>
+                    <div class="stat-value">{{ b.value }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="stats-col">
+                <div class="stats-col-title">MAX LEVEL</div>
+                <div class="stat-row">
+                    <div class="stat-name">基础攻击力</div>
+                    <div class="stat-value">{{ wiki.base_attack_max }}</div>
+                </div>
+                {% for b in wiki.stat_bonuses_max %}
+                <div class="stat-row">
+                    <div class="stat-name">{{ b.name }}</div>
+                    <div class="stat-value">{{ b.value }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if wiki.passive or wiki.passive_max %}
+    <div>
+        <div class="section-title">附术 <span class="en">PASSIVE</span></div>
+        {% if wiki.passive %}
+        <div class="passive-block">
+            <div class="passive-name">{{ wiki.passive.name }} (初始)</div>
+            <div class="passive-desc">{{ wiki.passive.description }}</div>
+        </div>
+        {% endif %}
+        {% if wiki.passive_max %}
+        <div class="passive-block">
+            <div class="passive-name">{{ wiki.passive_max.name }} (满级)</div>
+            <div class="passive-desc">{{ wiki.passive_max.description }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="wiki-footer">
+        {% if end_logo %}
+        <img src="{{ end_logo }}" class="footer-logo">
+        {% endif %}
+        <div class="footer-text">ENDFIELD WIKI</div>
+    </div>
+
+</div>
+</body>
+</html>

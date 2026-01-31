@@ -3,7 +3,11 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 
 from gsuid_core.logger import logger
 
+from pathlib import Path
+
 from .path import MAP_PATH, TEMPLATE_MAP_PATH
+
+WEAPON_MAP_PATH = Path(__file__).parent / "map_weapon.json"
 
 
 AliasEntry = Dict[str, Any]
@@ -189,10 +193,6 @@ def update_alias_map_from_chars(chars: Iterable[Any]) -> None:
 
         _set_alias_list(entry, alias_list)
 
-        if entry.get("name") != char_name:
-            entry["name"] = char_name
-            changed = True
-
         if char_id and entry.get("id") != char_id:
             entry["id"] = char_id
             changed = True
@@ -209,11 +209,6 @@ def update_alias_map_from_chars(chars: Iterable[Any]) -> None:
             entry["illustrationUrl"] = illustration_url
             changed = True
 
-        preferred_url = avatar_rt or illustration_url or avatar_sq
-        if preferred_url and entry.get("url") != preferred_url:
-            entry["url"] = preferred_url
-            changed = True
-
     if changed:
         _save_alias_map(data)
 
@@ -228,27 +223,21 @@ def resolve_alias_entry(value: str) -> Optional[Tuple[str, AliasEntry]]:
 
     normalized = _normalize(value)
 
+    # Exact ID match
     for key, entry in data.items():
-        aliases = [key] + _get_alias_list(entry)
-        name = str(entry.get("name", "")).strip()
-        if name:
-            aliases.append(name)
         entry_id = str(entry.get("id", "")).strip()
-        if entry_id:
-            aliases.append(entry_id)
-        for alias in aliases:
+        if entry_id and value == entry_id:
+            return key, entry
+
+    # Exact alias match (normalized)
+    for key, entry in data.items():
+        for alias in [key] + _get_alias_list(entry):
             if normalized == _normalize(alias):
                 return key, entry
 
+    # Partial alias match (substring)
     for key, entry in data.items():
-        aliases = [key] + _get_alias_list(entry)
-        name = str(entry.get("name", "")).strip()
-        if name:
-            aliases.append(name)
-        entry_id = str(entry.get("id", "")).strip()
-        if entry_id:
-            aliases.append(entry_id)
-        for alias in aliases:
+        for alias in [key] + _get_alias_list(entry):
             alias_norm = _normalize(alias)
             if alias_norm and (normalized in alias_norm or alias_norm in normalized):
                 return key, entry
@@ -261,7 +250,7 @@ def get_alias_url(value: str) -> Optional[str]:
     if not resolved:
         return None
     _, entry = resolved
-    url = entry.get("avatarRtUrl") or entry.get("illustrationUrl") or entry.get("url") or entry.get("avatarSqUrl")
+    url = entry.get("avatarRtUrl") or entry.get("illustrationUrl") or entry.get("avatarSqUrl")
     return str(url).strip() if url else None
 
 
@@ -269,8 +258,54 @@ def get_alias_display_name(value: str) -> Optional[str]:
     resolved = resolve_alias_entry(value)
     if not resolved:
         return None
-    key, entry = resolved
-    name = str(entry.get("name", "")).strip()
-    if name:
-        return name
+    key, _ = resolved
     return key
+
+
+def _load_weapon_map() -> dict:
+    if not WEAPON_MAP_PATH.exists():
+        return {}
+    try:
+        raw = WEAPON_MAP_PATH.read_text(encoding="utf-8")
+        data = json.loads(raw or "{}")
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def resolve_weapon_alias(value: str) -> Optional[str]:
+    """Resolve weapon alias to weapon name.
+
+    E.g., "莱万汀专武" → "熔铸火焰"
+    """
+    if not value:
+        return None
+
+    data = _load_weapon_map()
+    if not data:
+        return None
+
+    # Direct key match
+    if value in data:
+        return value
+
+    normalized = _normalize(value)
+
+    # Exact alias match
+    for key, entry in data.items():
+        aliases = entry.get("alias", [])
+        for alias in [key] + aliases:
+            if _normalize(alias) == normalized:
+                return key
+
+    # Partial match
+    for key, entry in data.items():
+        aliases = entry.get("alias", [])
+        for alias in [key] + aliases:
+            alias_norm = _normalize(alias)
+            if alias_norm and (
+                normalized in alias_norm or alias_norm in normalized
+            ):
+                return key
+
+    return None

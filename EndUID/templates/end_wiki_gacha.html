@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>卡池信息</title>
+<style>
+    {% include '_wiki_base_css.html' %}
+
+    .banner-card {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 25px 30px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .banner-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        background: var(--c-accent);
+    }
+
+    .banner-icon {
+        width: 120px;
+        height: 120px;
+        flex-shrink: 0;
+        border: 2px solid rgba(255,255,255,0.15);
+        background: #111;
+        overflow: hidden;
+    }
+
+    .banner-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .banner-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .banner-type {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--c-accent);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    .banner-name {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .banner-target {
+        font-size: 18px;
+        color: #ccc;
+    }
+
+    .banner-events {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    .event-tag {
+        font-size: 13px;
+        color: #aaa;
+        background: rgba(255,255,255,0.06);
+        padding: 4px 12px;
+        border-radius: 2px;
+    }
+
+    .no-banners {
+        text-align: center;
+        color: #666;
+        padding: 40px 0;
+        font-size: 18px;
+    }
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+    {% if bg %}
+    <img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.1;mix-blend-mode:overlay;">
+    {% endif %}
+</div>
+<div class="grid-deco"></div>
+
+<div class="container">
+
+    <div>
+        <div class="page-title">当前卡池</div>
+        <div class="page-subtitle">CURRENT BANNERS</div>
+    </div>
+
+    {% for banner in banners %}
+    <div class="banner-card">
+        <div class="banner-icon">
+            {% if banner.target_icon %}
+            <img src="{{ banner.target_icon }}">
+            {% else %}
+            <div style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;color:#333;font-size:24px;">?</div>
+            {% endif %}
+        </div>
+        <div class="banner-info">
+            <div class="banner-type">
+                {{ "角色寻访" if banner.banner_type == "character" else "武器寻访" }}
+            </div>
+            <div class="banner-name">{{ banner.banner_name or "未知卡池" }}</div>
+            {% if banner.target_name %}
+            <div class="banner-target">UP: {{ banner.target_name }}</div>
+            {% endif %}
+            {% if banner.events %}
+            <div class="banner-events">
+                {% for ev in banner.events %}
+                <div class="event-tag">{{ ev }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not banners %}
+    <div class="no-banners">暂无卡池信息</div>
+    {% endif %}
+
+    <div class="wiki-footer">
+        {% if end_logo %}
+        <img src="{{ end_logo }}" class="footer-logo">
+        {% endif %}
+        <div class="footer-text">ENDFIELD WIKI</div>
+    </div>
+
+</div>
+</body>
+</html>

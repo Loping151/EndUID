@@ -58,7 +58,7 @@ async def _render_alias_card(key: str, entry: dict, alias_list: list[str]) -> Op
         logger.warning(f"[EndUID] 别名卡片图片获取失败: {e}")
 
     context = {
-        "char_name": entry.get("name") or key,
+        "char_name": key,
         "alias_list": alias_list,
         "avatar_url": avatar_url,
         "bg_url": _local_b64("bg.png"),
