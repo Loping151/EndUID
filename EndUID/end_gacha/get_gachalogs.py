@@ -12,6 +12,9 @@ from ..utils.api.requests import end_api
 from ..utils.path import PLAYER_PATH
 
 
+_uid_locks: dict[str, asyncio.Lock] = {}
+
+
 CHAR_POOL_TYPE_MAP = {
     "E_CharacterGachaPoolType_Special": "特许寻访",
     "E_CharacterGachaPoolType_Standard": "基础寻访",
@@ -78,6 +81,22 @@ async def get_new_gachalog(
     Returns:
         (成功, 消息, 合并后数据)
     """
+    if uid not in _uid_locks:
+        _uid_locks[uid] = asyncio.Lock()
+    lock = _uid_locks[uid]
+
+    if lock.locked():
+        return False, "", {}
+
+    async with lock:
+        return await _get_new_gachalog(uid, u8_token, server_id)
+
+
+async def _get_new_gachalog(
+    uid: str,
+    u8_token: str,
+    server_id: str = "1",
+) -> tuple[bool, str, dict]:
     old_data = await load_gachalogs(uid) or {}
     old_pool_data = old_data.get("data", {})
 

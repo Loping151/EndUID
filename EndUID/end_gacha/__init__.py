@@ -143,6 +143,8 @@ async def import_gacha_record(bot: Bot, ev: Event):
         server_id="1",
     )
 
+    if not msg:
+        return
     await bot.send(msg if success else f"导入失败: {msg}")
 
 

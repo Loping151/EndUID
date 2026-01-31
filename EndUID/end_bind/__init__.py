@@ -282,9 +282,9 @@ async def check_cred(
                     u8_token=u8_token,
                     server_id=server_id,
                 )
-                if success:
+                if success and gacha_msg:
                     await _send_text(bot, ev, f"已同步抽卡记录: {gacha_msg}")
-                else:
+                elif gacha_msg:
                     logger.warning(f"[EndUID] 自动同步抽卡记录失败: {gacha_msg}")
             else:
                 logger.warning("[EndUID] 登录时获取 u8_token 失败，跳过抽卡同步")

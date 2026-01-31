@@ -45,6 +45,7 @@ CHAR_PITY = 80
 STANDARD_CHAR_IDS = {
     "chr_0025_ardelia",
     "chr_0015_lifeng",
+    "chr_0009_azrila",
 }
 
 # 常驻武器 ID（不算 UP）
@@ -52,6 +53,7 @@ STANDARD_WEAPON_IDS = {
     "wpn_pistol_0009",
     "wpn_pistol_0008",
     "wpn_claym_0006",
+    "wpn_sword_0014",
 }
 
 
@@ -293,7 +295,10 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
             item_name = item.get("name", "")
             url = ""
             if item.get("type") == "weapon":
-                url = weapon_icon_map.get(item_name, "")
+                url = weapon_icon_map.get(
+                    item_name,
+                    f"https://imgheybox.max-c.com/endfield/icon/{item_name}.png",
+                )
             else:
                 url = char_avatar_map.get(item_name, "")
 
