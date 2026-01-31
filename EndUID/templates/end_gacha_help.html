@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endfield Gacha Help</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-grid: rgba(255, 255, 255, 0.03);
+            --c-border: rgba(255, 255, 255, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 1000px;
+            min-height: 600px;
+            background-color: var(--c-bg);
+            font-family: 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(var(--c-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
+        }
+
+        /* Title Area */
+        .title-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .title-accent {
+            width: 8px;
+            height: 50px;
+            background: var(--c-accent);
+            transform: skewX(-20deg);
+        }
+
+        .title-text {
+            font-size: 48px;
+            font-weight: 700;
+            text-transform: uppercase;
+            line-height: 1;
+            color: #fff;
+        }
+
+        .title-sub {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--c-subtext);
+            margin-left: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* Section Layout */
+        .section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--c-border);
+            padding: 30px;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Corner decoration */
+        .section::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 20px; height: 20px;
+            border-top: 2px solid var(--c-accent);
+            border-right: 2px solid var(--c-accent);
+        }
+
+        .section-header {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--c-accent);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Steps */
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .step {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 32px;
+            color: rgba(255,255,255,0.2);
+            line-height: 0.8;
+            min-width: 40px;
+        }
+        
+        .step:hover .step-num {
+            color: var(--c-accent);
+            transition: color 0.3s;
+        }
+
+        .step-content {
+            flex: 1;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #ddd;
+        }
+
+        .code-block {
+            background: #000;
+            border: 1px solid #333;
+            border-left: 3px solid var(--c-accent);
+            padding: 12px 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+
+        .highlight {
+            color: var(--c-accent);
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Command Table */
+        .cmd-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cmd-table th {
+            text-align: left;
+            padding: 12px 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--c-subtext);
+            border-bottom: 2px solid var(--c-accent);
+        }
+
+        .cmd-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 16px;
+        }
+
+        .cmd-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .cmd-desc {
+            color: #bbb;
+        }
+
+        /* Footer Note */
+        .note {
+            font-size: 14px;
+            color: var(--c-subtext);
+            background: rgba(255, 230, 0, 0.05);
+            border-left: 3px solid var(--c-subtext);
+            padding: 15px;
+            line-height: 1.6;
+        }
+
+        .footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .footer span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--c-subtext);
+            letter-spacing: 1px;
+        }
+
+        .ef-logo {
+            height: 36px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer">
+        {% if bg %}
+        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.1; mix-blend-mode: overlay;">
+        {% endif %}
+    </div>
+    <div class="grid-deco"></div>
+
+    <div class="container">
+
+        <div class="title-box">
+            <div class="title-accent"></div>
+            <div class="title-text">抽卡记录帮助</div>
+            <div class="title-sub">// HELP GUIDE</div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                如何获取抽卡链接 (PC)
+            </div>
+
+            <div class="step-list">
+                <div class="step">
+                    <div class="step-num">01</div>
+                    <div class="step-content">
+                        在游戏内打开抽卡记录页面（寻访 → 历史记录）。
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">02</div>
+                    <div class="step-content">
+                        打开以下日志文件路径：
+                        <div class="code-block">%USERPROFILE%\AppData\LocalLow\Hypergryph\Endfield\sdklogs\HGWebview.log</div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">03</div>
+                    <div class="step-content">
+                        使用 Ctrl+F 搜索 <span class="highlight">ef-webview.hypergryph.com/page/gacha_char</span>，复制包含该内容的整条 URL 链接。
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">04</div>
+                    <div class="step-content">
+                        发送以下命令进行导入：
+                        <div class="code-block">{{ prefix }}导入抽卡记录 &lt;复制的链接&gt;</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                系统指令列表
+            </div>
+            <table class="cmd-table">
+                <thead>
+                    <tr>
+                        <th width="40%">COMMAND // 指令</th>
+                        <th>DESCRIPTION // 说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="cmd-name">{{ prefix }}抽卡帮助</td>
+                        <td class="cmd-desc">查看此帮助页面</td>
+                    </tr>
+                    <tr>
+                        <td class="cmd-name">{{ prefix }}导入抽卡记录 &lt;链接&gt;</td>
+                        <td class="cmd-desc">上传并同步您的抽卡数据</td>
+                    </tr>
+                    <tr>
+                        <td class="cmd-name">{{ prefix }}抽卡记录</td>
+                        <td class="cmd-desc">生成抽卡统计分析卡片</td>
+                    </tr>
+                    <tr>
+                        <td class="cmd-name">{{ prefix }}导出抽卡记录</td>
+                        <td class="cmd-desc">导出记录为 JSON 格式文件</td>
+                    </tr>
+                    <tr>
+                        <td class="cmd-name">{{ prefix }}删除抽卡记录</td>
+                        <td class="cmd-desc">清空云端存储的记录</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="note">
+            <strong>NOTICE:</strong> u8_token 具有时效性。如果长时间未操作，请重新在游戏内打开历史记录页面以刷新链接。<br>
+            每次导入操作会自动与现有数据进行合并，不会导致旧数据丢失。
+        </div>
+
+        <div class="footer">
+            <span>Endfield Gacha System // Help Module</span>
+            {% if end_logo %}
+            <img class="ef-logo" src="{{ end_logo }}">
+            {% endif %}
+        </div>
+
+    </div>
+</body>
+</html>

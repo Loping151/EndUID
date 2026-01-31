@@ -476,3 +476,38 @@ class UserInfoResponse(BaseModel):
     message: str = ""
     timestamp: str = ""
     data: UserInfoData = Field(default_factory=UserInfoData)
+
+
+# ===================== 抽卡记录模型 =====================
+
+
+class GachaCharRecord(BaseModel):
+    """角色寻访记录"""
+    charId: str = ""
+    charName: str = ""
+    gachaTs: str = ""
+    isFree: bool = False
+    isNew: bool = False
+    poolId: str = ""
+    poolName: str = ""
+    rarity: int = 0
+    seqId: str = ""
+
+
+class GachaWeaponRecord(BaseModel):
+    """武器寻访记录"""
+    poolId: str = ""
+    poolName: str = ""
+    weaponId: str = ""
+    weaponName: str = ""
+    weaponType: str = ""
+    rarity: int = 0
+    isNew: bool = False
+    gachaTs: str = ""
+    seqId: str = ""
+
+
+class GachaWeaponPool(BaseModel):
+    """武器寻访池"""
+    poolId: str = ""
+    poolName: str = ""

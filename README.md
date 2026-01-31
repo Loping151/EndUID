@@ -30,3 +30,4 @@ git clone https://github.com/Loping151/EndUID
 
 ## 致谢
 - [arknights-plugin](https://github.com/gxy12345/arknights-plugin)
+- [endfield-gacha](https://github.com/bhaoo/endfield-gacha) — Endfield 抽卡记录 API 参考

@@ -750,6 +750,165 @@ class EndApi:
         return user.cookie
 
 
+    # ===================== 抽卡记录相关方法 =====================
+
+    async def _gacha_request(
+        self,
+        url: str,
+        params: dict,
+    ) -> Optional[dict]:
+        """抽卡记录通用请求（使用复用会话，无需 Skland 签名）
+
+        Args:
+            url: 完整 API URL
+            params: 查询参数
+
+        Returns:
+            JSON 响应或 None
+        """
+        session = await self.get_session()
+
+        query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        full_url = f"{url}?{query_string}"
+
+        try:
+            logger.debug(
+                f"[EndUID][Gacha] GET {full_url}"
+            )
+            async with session.get(full_url) as resp:
+                if resp.content_type and "json" in resp.content_type:
+                    res = await resp.json()
+                else:
+                    text = await resp.text()
+                    logger.error(
+                        f"[EndUID][Gacha] 非 JSON 响应: HTTP {resp.status}, body={text[:200]}"
+                    )
+                    return None
+
+                logger.debug(f"[EndUID][Gacha] response: {res}")
+
+                if resp.status != 200:
+                    logger.error(f"[EndUID][Gacha] 请求失败: HTTP {resp.status}")
+                    return None
+
+                return res
+        except Exception as e:
+            logger.error(f"[EndUID][Gacha] 请求异常: {e}")
+            return None
+
+    async def get_gacha_char_record(
+        self,
+        u8_token: str,
+        server_id: str = "1",
+        pool_type: int = 0,
+        seq_id: Optional[str] = None,
+        channel: str = "1",
+        sub_channel: str = "1",
+        lang: str = "zh-cn",
+    ) -> Optional[dict]:
+        """获取角色寻访记录
+
+        Args:
+            u8_token: 游戏内抽卡页面的 u8_token
+            server_id: 服务器 ID
+            pool_type: 池类型 (0=特许寻访, 1=基础寻访, 2=启程寻访)
+            seq_id: 分页用序列 ID（传入上一页最后一条的 seqId）
+            channel: 渠道
+            sub_channel: 子渠道
+            lang: 语言
+
+        Returns:
+            角色寻访记录
+        """
+        params = {
+            "u8Token": u8_token,
+            "serverId": server_id,
+            "poolType": str(pool_type),
+            "channel": channel,
+            "subChannel": sub_channel,
+            "lang": lang,
+        }
+        if seq_id:
+            params["seqId"] = seq_id
+
+        return await self._gacha_request(
+            url=GACHA_CHAR_RECORD_URL,
+            params=params,
+        )
+
+    async def get_gacha_weapon_pools(
+        self,
+        u8_token: str,
+        server_id: str = "1",
+        channel: str = "1",
+        sub_channel: str = "1",
+        lang: str = "zh-cn",
+    ) -> Optional[dict]:
+        """获取武器寻访池列表
+
+        Args:
+            u8_token: 游戏内抽卡页面的 u8_token
+            server_id: 服务器 ID
+            channel: 渠道
+            sub_channel: 子渠道
+            lang: 语言
+
+        Returns:
+            武器池列表
+        """
+        params = {
+            "u8Token": u8_token,
+            "serverId": server_id,
+            "channel": channel,
+            "subChannel": sub_channel,
+            "lang": lang,
+        }
+
+        return await self._gacha_request(
+            url=GACHA_WEAPON_POOL_LIST_URL,
+            params=params,
+        )
+
+    async def get_gacha_weapon_record(
+        self,
+        u8_token: str,
+        server_id: str = "1",
+        pool_id: str = "",
+        seq_id: Optional[str] = None,
+        channel: str = "1",
+        sub_channel: str = "1",
+        lang: str = "zh-cn",
+    ) -> Optional[dict]:
+        """获取武器寻访记录
+
+        Args:
+            u8_token: 游戏内抽卡页面的 u8_token
+            server_id: 服务器 ID
+            pool_id: 武器池 ID
+            seq_id: 分页用序列 ID
+            channel: 渠道
+            sub_channel: 子渠道
+            lang: 语言
+
+        Returns:
+            武器寻访记录
+        """
+        params = {
+            "u8Token": u8_token,
+            "serverId": server_id,
+            "poolId": pool_id,
+            "channel": channel,
+            "subChannel": sub_channel,
+            "lang": lang,
+        }
+        if seq_id:
+            params["seqId"] = seq_id
+
+        return await self._gacha_request(
+            url=GACHA_WEAPON_RECORD_URL,
+            params=params,
+        )
+
     # ===================== 公告相关方法 =====================
 
     ann_list_data: list = []

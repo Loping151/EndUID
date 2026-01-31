@@ -60,6 +60,15 @@ SKLAND_ANN_DETAIL_URL = "https://zonai.skland.com/web/v1/item"
 SKLAND_GAME_ID_ENDFIELD = 3  # 终末地在森空岛的游戏 ID
 SKLAND_CATE_ID_ENDFIELD = 12  # 终末地公告分类 ID
 
+# 抽卡记录 (Gacha)
+GACHA_BASE_URL_CN = "https://ef-webview.hypergryph.com"
+GACHA_BASE_URL_GLOBAL = "https://ef-webview.gryphline.com"
+
+GACHA_CHAR_RECORD_URL = f"{GACHA_BASE_URL_CN}/api/record/char"
+GACHA_WEAPON_POOL_LIST_URL = f"{GACHA_BASE_URL_CN}/api/record/weapon/pool"
+GACHA_WEAPON_RECORD_URL = f"{GACHA_BASE_URL_CN}/api/record/weapon"
+
+
 API_MAP = {
     # 认证相关
     "oauth": OAUTH_API,
@@ -81,4 +90,9 @@ API_MAP = {
     # 终末地专属
     "endfield_attendance": ENDFIELD_ATTENDANCE_URL,
     "endfield_enums": ENDFIELD_ENUMS_URL,
+
+    # 抽卡记录
+    "gacha_char_record": GACHA_CHAR_RECORD_URL,
+    "gacha_weapon_pool_list": GACHA_WEAPON_POOL_LIST_URL,
+    "gacha_weapon_record": GACHA_WEAPON_RECORD_URL,
 }

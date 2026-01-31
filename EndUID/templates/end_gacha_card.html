@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endfield Gacha Record</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-grid: rgba(255, 255, 255, 0.03);
+
+            --r-6: #ff4e20;
+            --r-5: #ffc900;
+            --r-4: #a366ff;
+            --r-3: #0091ff;
+
+            /* Luck Colors matching Endfield rarity palette roughly */
+            --luck-0: #ff4e20; /* Extremely Lucky */
+            --luck-1: #ffc900; /* Lucky */
+            --luck-2: #ffffff; /* Normal */
+            --luck-3: #a366ff; /* Unlucky */
+            --luck-4: #8b8b8b; /* Terrible */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 1000px;
+            min-height: 600px;
+            background-color: var(--c-bg);
+            font-family: 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* Background Layers */
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(var(--c-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+
+        /* Illustration Layer */
+        .illustration-layer {
+            position: fixed;
+            top: 0;
+            right: -100px;
+            width: 700px;
+            height: 800px;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.6;
+            /* Mask to fade out left and bottom */
+            mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%),
+                        linear-gradient(to left, black 0%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
+            mix-blend-mode: normal;
+        }
+
+        .illustration-layer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            filter: drop-shadow(-10px 0 20px rgba(0,0,0,0.5));
+        }
+
+        /* Header Section */
+        .header-section {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .avatar-box {
+            width: 100px;
+            height: 100px;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: #111;
+            position: relative;
+        }
+
+        .avatar-box::after {
+            content: '';
+            position: absolute;
+            top: -5px; left: -5px;
+            width: 20px; height: 20px;
+            border-top: 3px solid var(--c-accent);
+            border-left: 3px solid var(--c-accent);
+        }
+
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .user-name {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .uid-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: var(--c-accent);
+            background: rgba(255, 230, 0, 0.1);
+            padding: 4px 8px;
+            border: 1px solid rgba(255, 230, 0, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .data-time {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--c-subtext);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .data-time::before {
+            content: '//';
+            color: var(--c-accent);
+        }
+
+        /* Pool Section */
+        .pool-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: rgba(20, 21, 24, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            position: relative;
+        }
+
+        .pool-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: var(--c-accent);
+        }
+
+        .pool-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 12px;
+            margin-bottom: 5px;
+        }
+
+        .pool-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .pool-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--c-subtext);
+        }
+
+        /* Stats Grid */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .stat-num {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 36px;
+            line-height: 1;
+            color: #fff;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--c-subtext);
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Dynamic Colors for Stats */
+        .color-6 { color: var(--r-6); }
+        .luck-0 { color: var(--luck-0); }
+        .luck-1 { color: var(--luck-1); }
+        .luck-2 { color: var(--luck-2); }
+        .luck-3 { color: var(--luck-3); }
+        .luck-4 { color: var(--luck-4); }
+
+        /* Six Star Items */
+        .six-star-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .six-star-item {
+            background: linear-gradient(135deg, rgba(255, 78, 32, 0.15) 0%, rgba(255, 78, 32, 0.05) 100%);
+            border: 1px solid rgba(255, 78, 32, 0.3);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Diagonal accent for 6-star */
+        .six-star-item::after {
+            content: '';
+            position: absolute;
+            bottom: -10px; right: -10px;
+            width: 20px; height: 20px;
+            background: var(--r-6);
+            transform: rotate(45deg);
+        }
+
+        .six-star-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .six-star-pulls {
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--r-6);
+            line-height: 1;
+            margin-top: 4px;
+            z-index: 1;
+        }
+
+        .six-star-pulls span {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            margin-left: 2px;
+            font-weight: 400;
+        }
+
+        .pool-empty {
+            color: var(--c-subtext);
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20px;
+        }
+
+        .footer-text {
+            color: var(--c-subtext);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .ef-logo {
+            height: 40px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer">
+        {% if bg %}
+        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.15; mix-blend-mode: overlay;">
+        {% endif %}
+    </div>
+    <div class="grid-deco"></div>
+
+    {% if illustration %}
+    <div class="illustration-layer">
+        <img src="{{ illustration }}">
+    </div>
+    {% endif %}
+
+    <div class="container">
+
+        <div class="header-section">
+            <div class="avatar-box">
+                {% if avatar %}
+                <img src="{{ avatar }}">
+                {% else %}
+                <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; font-size:40px; color:#333;">?</div>
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <div class="user-name">
+                    {{ name }}
+                    {% if uid %}
+                    <span class="uid-tag">UID_{{ uid }}</span>
+                    {% endif %}
+                </div>
+                <div class="data-time">
+                    {% if data_time %}
+                    LAST_UPDATE: {{ data_time }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% for pool in pools %}
+        <div class="pool-section">
+            <div class="pool-header">
+                <div class="pool-title">{{ pool.pool_name }}</div>
+                {% if pool.time_range %}
+                <div class="pool-time">{{ pool.time_range }}</div>
+                {% endif %}
+            </div>
+
+            {% if pool.total > 0 %}
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-num">{{ pool.total }}</div>
+                    <div class="stat-label">Total Pulls</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num color-6">{{ pool.six_star_count }}</div>
+                    <div class="stat-label">6-Star Count</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">{{ pool.avg_pulls }}</div>
+                    <div class="stat-label">Average</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num luck-{{ pool.level }}">{{ pool.level_tag }}</div>
+                    <div class="stat-label" style="font-size:12px; margin-top:0;">Pity: {{ pool.remain }}</div>
+                </div>
+            </div>
+
+            {% if pool.six_star_items %}
+            <div class="six-star-grid">
+                {% for item in pool.six_star_items %}
+                <div class="six-star-item">
+                    <div class="six-star-name">{{ item.name }}</div>
+                    <div class="six-star-pulls">{{ item.pull_count }}<span>PULLS</span></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="pool-empty">NO DATA RECORDED // 暂无记录</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="footer">
+            <div class="footer-text">Endfield Gacha Record Analysis Module // Ver 1.0</div>
+            {% if end_logo %}
+            <img class="ef-logo" src="{{ end_logo }}">
+            {% endif %}
+        </div>
+
+    </div>
+</body>
+</html>

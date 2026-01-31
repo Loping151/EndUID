@@ -105,6 +105,51 @@
       }
     ]
   },
+  "抽卡记录": {
+    "desc": "抽卡记录查询与管理",
+    "data": [
+      {
+        "name": "抽卡帮助",
+        "desc": "查看抽卡记录获取教程",
+        "eg": "抽卡帮助",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "导入抽卡记录",
+        "desc": "通过链接导入抽卡记录",
+        "eg": "导入抽卡记录 https://...",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "抽卡记录",
+        "desc": "查看抽卡记录统计",
+        "eg": "抽卡记录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "导出抽卡记录",
+        "desc": "导出抽卡记录为JSON",
+        "eg": "导出抽卡记录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "删除抽卡记录",
+        "desc": "删除已保存的抽卡记录",
+        "eg": "删除抽卡记录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
   "签到": {
     "desc": "每日签到",
     "data": [

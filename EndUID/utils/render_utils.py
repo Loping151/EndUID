@@ -230,7 +230,7 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
             try:
                 page = await context_obj.new_page()
                 logger.debug("[End] 加载HTML内容...")
-                await page.set_content(html_content)
+                await page.set_content(html_content, wait_until='networkidle')
 
                 logger.debug("[End] 正在计算容器尺寸...")
                 container = page.locator(".container")
@@ -251,7 +251,6 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
                             "height": max(1, int(size["height"])),
                         }
                     )
-                    await page.wait_for_timeout(50)
 
                 logger.debug("[End] 正在截图...")
                 screenshot = await container.screenshot(type='jpeg', quality=90)
