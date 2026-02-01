@@ -352,6 +352,7 @@ class EndApi:
             url=BINDING_URL,
             method="GET",
             cred=cred,
+            use_device_id=True,
         )
 
     async def get_user_info(
