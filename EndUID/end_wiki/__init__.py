@@ -95,7 +95,7 @@ async def wiki_handler(bot: Bot, ev: Event):
             result = await draw_weapon_wiki(weapon_wiki)
             return await bot.send(result)
 
-    return
+    return await bot.send("未找到相关图鉴信息")
 
 
 @sv_wiki.on_fullmatch("角色列表", block=True)
