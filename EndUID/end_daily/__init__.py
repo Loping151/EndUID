@@ -19,6 +19,6 @@ end_daily = SV("End每日")
 async def send_daily_info_pic(bot: Bot, ev: Event):
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return await bot.send(f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」")
+        return await bot.send(f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」")
 
     return await bot.send(await draw_end_daily_img(ev, uid))

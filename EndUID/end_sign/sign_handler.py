@@ -19,7 +19,7 @@ async def end_sign_handler(bot: Bot, ev: Event) -> str:
     """用户签到处理（签到该用户绑定的所有 UID）"""
     uids = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
     if not uids:
-        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
+        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     results = []
     for uid in uids:

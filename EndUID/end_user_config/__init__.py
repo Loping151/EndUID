@@ -82,7 +82,7 @@ async def handle_end_user_config(bot: Bot, ev: Event):
 
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        msg = f"{GAME_TITLE} 未绑定终末地账号，请先使用「{PREFIX}绑定」"
+        msg = f"{GAME_TITLE} 未绑定终末地账号，请先使用「{PREFIX}登录」"
         return await _send_text(bot, ev, msg)
 
     msg = await _set_end_user_value(ev, func, uid, value)

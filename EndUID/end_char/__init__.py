@@ -31,7 +31,7 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
     """
     uid = await EndBind.get_bound_uid(user_id, bot_id)
     if not uid:
-        return False, f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
+        return False, f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     _, cred = await end_api.get_ck_result(uid, user_id, bot_id)
     if not cred:

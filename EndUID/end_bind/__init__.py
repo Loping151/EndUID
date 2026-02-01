@@ -78,7 +78,7 @@ async def send_end_login_msg(bot: Bot, ev: Event):
             return await check_token(bot, ev, credential)
         if kind == "cred":
             return await check_cred(bot, ev, credential)
-        msg = f"{GAME_TITLE} 登录参数错误，请使用「{PREFIX}登录」扫码或「{PREFIX}绑定」绑定"
+        msg = f"{GAME_TITLE} 登录参数错误，请使用「{PREFIX}登录」扫码或「{PREFIX}登录」绑定"
         return await _send_text(bot, ev, msg)
 
     at_sender = True if ev.group_id else False

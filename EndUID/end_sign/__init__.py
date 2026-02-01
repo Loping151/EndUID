@@ -54,7 +54,7 @@ async def enable_auto_sign(bot: Bot, ev: Event):
 
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return await bot.send(f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」")
+        return await bot.send(f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」")
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
     if not user:
@@ -70,7 +70,7 @@ async def disable_auto_sign(bot: Bot, ev: Event):
 
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return await bot.send(f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」")
+        return await bot.send(f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」")
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
     if not user:

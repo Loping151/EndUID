@@ -234,7 +234,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     """绘制抽卡记录卡片"""
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return f"未绑定终末地账号，请先使用「{PREFIX}绑定」"
+        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     gacha_data = await load_gachalogs(uid)
     if not gacha_data:

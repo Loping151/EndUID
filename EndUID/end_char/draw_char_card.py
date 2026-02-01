@@ -52,7 +52,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     # 2. 获取用户绑定信息
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
+        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     # 3. 读取本地数据（由刷新指令写入）
     logger.info(f"[EndUID] 正在查询角色: {real_name} (ID: {char_id})")

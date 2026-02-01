@@ -86,7 +86,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
     """绘制终末地卡片（本地数据）"""
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}绑定」"
+        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
     if not save_path.exists():
