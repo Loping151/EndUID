@@ -117,9 +117,11 @@ class EndApi:
 
         try:
             logger.debug(f"[EndUID][RefreshToken] GET {REFRESH_TOKEN_URL} cred_len={len(cred)}")
+            proxy = self._get_proxy()
             async with session.get(
                 REFRESH_TOKEN_URL,
                 headers=headers,
+                proxy=proxy,
             ) as resp:
                 if resp.content_type and "json" in resp.content_type:
                     res = await resp.json()
@@ -283,9 +285,11 @@ class EndApi:
                     text = await resp.text()
                     return {"code": RespCode.REQUEST_ERROR, "data": text}
 
+                proxy = self._get_proxy()
+
                 if method == "GET":
                     # 不使用 params 参数，因为我们已经在 URL 中拼接了查询参数
-                    async with session.get(url, headers=headers) as resp:
+                    async with session.get(url, headers=headers, proxy=proxy) as resp:
                         res = await read_response(resp)
                         logger.debug(f"[EndUID][Request] response: {res}")
 
@@ -307,7 +311,7 @@ class EndApi:
                         return res
                 else:  # POST
                     # POST 请求：如果有 query 参数，已经在 URL 中拼接；body 作为 data 传递
-                    request_kwargs = {"headers": headers}
+                    request_kwargs = {"headers": headers, "proxy": proxy}
                     if body is not None:
                         request_kwargs["data"] = body_string
                     async with session.post(
