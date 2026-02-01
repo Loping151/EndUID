@@ -45,11 +45,7 @@ async def ann_(bot: Bot, ev: Event):
     else:
         img = await ann_detail_card(ann_id)
 
-    if isinstance(img, list):
-        for im in img:
-            await bot.send(im)
-    else:
-        await bot.send(img)
+    await bot.send(img)
 
 
 @sv_ann_sub.on_fullmatch("订阅公告")
@@ -160,12 +156,7 @@ async def check_end_ann_state():
             if isinstance(img, str):
                 continue
             for subscribe in datas:
-                if isinstance(img, list):
-                    for im in img:
-                        await subscribe.send(im)
-                        await asyncio.sleep(random.uniform(0.5, 1.5))
-                else:
-                    await subscribe.send(img)
+                await subscribe.send(img)
                 await asyncio.sleep(random.uniform(1, 3))
         except Exception as e:
             logger.exception(e)

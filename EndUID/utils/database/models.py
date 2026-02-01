@@ -174,7 +174,6 @@ class EndUser(User, table=True):
     # 配置
     bbs_sign_switch: str = Field(default="off", title="签到开关")
     stamina_bg_value: str = Field(default="", title="体力背景")
-    model_bg_value: str = Field(default="", title="立体背景")
 
     # 时间戳
     created_time: Optional[int] = Field(default=None, title="创建时间（秒）")

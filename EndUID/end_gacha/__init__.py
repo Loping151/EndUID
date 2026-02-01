@@ -13,6 +13,7 @@ from ..utils.database.models import EndBind, EndUser
 from ..utils.api.requests import end_api
 from .get_gachalogs import (
     get_new_gachalog,
+    is_uid_locked,
     import_from_json,
     export_gachalogs,
     delete_gachalogs,
@@ -106,6 +107,9 @@ async def import_gacha_record(bot: Bot, ev: Event):
         return await bot.send(
             f"未绑定终末地账号，请先使用「{PREFIX}登录」绑定"
         )
+
+    if is_uid_locked(uid):
+        return
 
     text = ev.text.strip()
 

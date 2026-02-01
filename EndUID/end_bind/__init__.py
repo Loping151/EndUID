@@ -265,7 +265,7 @@ async def check_cred(
         f"{GAME_TITLE} 绑定成功！\n"
         f"游戏昵称: {nickname}\n"
         f"服务器: {channel}\n"
-        f"UID: {endfield_uid}"
+        f"UID: {endfield_uid}\n"
     )
     await _send_text(bot, ev, msg)
 
@@ -290,6 +290,15 @@ async def check_cred(
                 logger.warning("[EndUID] 登录时获取 u8_token 失败，跳过抽卡同步")
         except Exception as e:
             logger.warning(f"[EndUID] 登录时自动同步抽卡记录异常: {e}")
+
+    try:
+        from ..end_char import refresh_card_data
+
+        card_ok, card_err = await refresh_card_data(ev.user_id, ev.bot_id)
+        if not card_ok and card_err:
+            logger.warning(f"[EndUID] 登录时自动刷新面板失败: {card_err}")
+    except Exception as e:
+        logger.warning(f"[EndUID] 登录时自动刷新面板异常: {e}")
 
 
 async def check_token(bot: Bot, ev: Event, token: str):

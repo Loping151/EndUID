@@ -15,6 +15,11 @@ from ..utils.path import PLAYER_PATH
 _uid_locks: dict[str, asyncio.Lock] = {}
 
 
+def is_uid_locked(uid: str) -> bool:
+    lock = _uid_locks.get(uid)
+    return lock is not None and lock.locked()
+
+
 CHAR_POOL_TYPE_MAP = {
     "E_CharacterGachaPoolType_Special": "特许寻访",
     "E_CharacterGachaPoolType_Standard": "基础寻访",
