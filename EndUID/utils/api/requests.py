@@ -497,6 +497,7 @@ class EndApi:
         body = {}
 
         session = await self.get_session()
+        proxy = self._get_proxy()
 
         try:
             logger.debug(f"[EndUID][OAuth] POST {SCAN_LOGIN_API}")
@@ -504,6 +505,7 @@ class EndApi:
                 SCAN_LOGIN_API,
                 headers=headers,
                 json=body,
+                proxy=proxy,
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
@@ -531,11 +533,13 @@ class EndApi:
         """
         url = f"{SCAN_STATUS_API}?scanId={scan_id}"
         session = await self.get_session()
+        proxy = self._get_proxy()
 
         try:
             logger.debug(f"[EndUID][OAuth] GET {url}")
             async with session.get(
                 url,
+                proxy=proxy,
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
@@ -567,6 +571,7 @@ class EndApi:
         body = {"scanCode": scan_code}
 
         session = await self.get_session()
+        proxy = self._get_proxy()
 
         try:
             logger.debug(f"[EndUID][OAuth] POST {TOKEN_BY_SCAN_CODE_API}")
@@ -574,6 +579,7 @@ class EndApi:
                 TOKEN_BY_SCAN_CODE_API,
                 headers=headers,
                 json=body,
+                proxy=proxy,
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
@@ -606,6 +612,7 @@ class EndApi:
         body = {"appCode": APP_CODE, "token": token, "type": 0}
 
         session = await self.get_session()
+        proxy = self._get_proxy()
 
         try:
             logger.debug(f"[EndUID][OAuth] POST {OAUTH_API}")
@@ -613,6 +620,7 @@ class EndApi:
                 OAUTH_API,
                 headers=headers,
                 json=body,
+                proxy=proxy,
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if resp.status == 405:
