@@ -110,11 +110,24 @@ async def _save_list_data(data: WikiListData) -> None:
 
 
 def _is_list_stale(data: WikiListData | None) -> bool:
-    """Check if list data needs re-fetching (gacha expired or never fetched)."""
+    """Check if list data needs re-fetching.
+
+    Stale if fetch_time and now are separated by a 12:00 boundary
+    (noon or midnight).
+    """
     if data is None or data.fetch_time == 0:
         return True
-    age = time.time() - data.fetch_time
-    return age > GACHA_CHECK_SECONDS
+    from datetime import datetime, timedelta
+
+    ft = datetime.fromtimestamp(data.fetch_time)
+    now = datetime.now()
+
+    # Walk forward from fetch_time, hitting each 12:00 boundary
+    boundary = ft.replace(hour=12, minute=0, second=0, microsecond=0)
+    if boundary <= ft:
+        boundary += timedelta(hours=12)
+
+    return now >= boundary
 
 
 async def _refresh_list() -> WikiListData | None:

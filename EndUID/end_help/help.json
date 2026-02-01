@@ -208,6 +208,59 @@
       }
     ]
   },
+  "Wiki图鉴": {
+    "desc": "角色/武器Wiki与卡池查询",
+    "data": [
+      {
+        "name": "角色图鉴",
+        "desc": "查看角色Wiki详情",
+        "eg": "莱万汀图鉴",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "武器图鉴",
+        "desc": "查看武器Wiki详情",
+        "eg": "熔铸火焰图鉴",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "专武图鉴",
+        "desc": "通过角色名查专属武器",
+        "eg": "莱万汀专武图鉴",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "角色列表",
+        "desc": "查看全部角色列表",
+        "eg": "角色列表",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "武器列表",
+        "desc": "查看全部武器列表",
+        "eg": "武器列表",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "卡池",
+        "desc": "查看当前卡池信息",
+        "eg": "卡池",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      }
+    ]
+  },
   "群管理员功能": {
     "pm": 3,
     "desc": "群管理员功能",

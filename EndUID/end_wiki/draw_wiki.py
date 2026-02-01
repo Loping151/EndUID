@@ -1,4 +1,5 @@
 import io
+import time
 from pathlib import Path
 from typing import Union
 
@@ -191,13 +192,58 @@ async def draw_weapon_list(data: WikiListData) -> Union[bytes, str]:
     return "❌ Wiki 渲染失败"
 
 
+def _format_remaining(seconds: float) -> str:
+    """Format seconds into '?天?小时' string."""
+    if seconds <= 0:
+        return ""
+    days = int(seconds // 86400)
+    hours = int((seconds % 86400) // 3600)
+    if days > 0:
+        return f"{days}天{hours}小时"
+    return f"{hours}小时"
+
+
 async def draw_gacha(data: WikiListData) -> Union[bytes, str]:
     """Render gacha/banner info as image."""
     bg = image_to_base64(TEXTURE_PATH / "bg.png")
     end_logo = image_to_base64(TEXTURE_PATH / "end.png")
+    now = time.time()
+
+    char_banners = [b for b in data.gacha if b.banner_type == "character"]
+    weapon_banners = [b for b in data.gacha if b.banner_type == "weapon"]
 
     banners = []
-    for banner in data.gacha:
+    for i, banner in enumerate(char_banners):
+        icon_b64 = ""
+        if banner.target_icon_url:
+            icon_b64 = await get_image_b64_with_cache(
+                banner.target_icon_url, WIKI_IMG_CACHE
+            )
+
+        started = banner.start_timestamp == 0 or now >= banner.start_timestamp
+        time_text = ""
+        if i == 0 and banner.end_timestamp > 0:
+            remaining = banner.end_timestamp - now
+            time_text = (
+                f"剩余 {_format_remaining(remaining)}"
+                if remaining > 0
+                else "已结束"
+            )
+        elif i > 0 and banner.start_timestamp > 0 and not started:
+            until = banner.start_timestamp - now
+            time_text = f"开启还有 {_format_remaining(until)}"
+
+        banners.append({
+            "banner_name": banner.banner_name,
+            "banner_type": banner.banner_type,
+            "events": banner.events,
+            "target_name": banner.target_name,
+            "target_icon": icon_b64,
+            "started": started,
+            "time_text": time_text,
+        })
+
+    for banner in weapon_banners:
         icon_b64 = ""
         if banner.target_icon_url:
             icon_b64 = await get_image_b64_with_cache(
@@ -209,6 +255,8 @@ async def draw_gacha(data: WikiListData) -> Union[bytes, str]:
             "events": banner.events,
             "target_name": banner.target_name,
             "target_icon": icon_b64,
+            "started": True,
+            "time_text": "",
         })
 
     context = {

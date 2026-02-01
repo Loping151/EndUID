@@ -26,7 +26,8 @@ class GachaBanner(BaseModel):
     events: list[str]    # ["限时签到·行火留烬", "作战演练·莱万汀"]
     target_name: str     # 角色名 或 武器名
     target_icon_url: str = ""
-    end_timestamp: float = 0  # unix timestamp, 0=未知
+    start_timestamp: float = 0  # unix timestamp, 0=未知
+    end_timestamp: float = 0    # unix timestamp, 0=未知
 
 
 class WikiListData(BaseModel):
@@ -118,7 +119,6 @@ class WeaponWiki(BaseModel):
     weapon_type: str
     rarity: int
     description: str
-    acquisition: str
     base_attack: int
     base_attack_max: int
     stat_bonuses: list[WeaponStatBonus]

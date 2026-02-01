@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from bs4 import BeautifulSoup, Tag
 
@@ -548,11 +549,51 @@ def _parse_homepage_weapons(
     return result
 
 
+BANNER_CYCLE_SECONDS = 15 * 86400  # 15 days
+
+
+def _parse_event_timer(div: Tag) -> tuple[float, float]:
+    """Parse start/end timestamps from span.eventTimer."""
+    timer = div.find("span", class_="eventTimer")
+    if not timer:
+        return 0.0, 0.0
+    start_raw = timer.get("data-start", "")
+    end_raw = timer.get("data-end", "")
+    start_ts = 0.0
+    end_ts = 0.0
+    try:
+        if start_raw:
+            start_ts = datetime.strptime(start_raw, "%Y/%m/%d %H:%M").timestamp()
+    except ValueError:
+        pass
+    try:
+        if end_raw:
+            end_ts = datetime.strptime(end_raw, "%Y/%m/%d %H:%M").timestamp()
+    except ValueError:
+        pass
+    return start_ts, end_ts
+
+
+def _fill_char_banner_times(banners: list[GachaBanner]) -> None:
+    """Fill start/end timestamps for character banners.
+
+    Only the first character banner has a real end_timestamp from HTML.
+    The 2nd ends 15 days after the 1st, the 3rd ends 15 days after the 2nd.
+    """
+    char_banners = [b for b in banners if b.banner_type == "character"]
+    if not char_banners or char_banners[0].end_timestamp == 0:
+        return
+
+    for i in range(1, len(char_banners)):
+        prev = char_banners[i - 1]
+        char_banners[i].start_timestamp = prev.end_timestamp
+        char_banners[i].end_timestamp = prev.end_timestamp + BANNER_CYCLE_SECONDS
+
+
 def _parse_homepage_gacha(output: Tag) -> list[GachaBanner]:
     """Parse gacha/banner info from homepage."""
     banners: list[GachaBanner] = []
 
-    # Character banners: div.characterActivity
     for div in output.find_all("div", class_="characterActivity"):
         activity_list = div.find("div", class_="activityList")
         if not activity_list:
@@ -580,6 +621,8 @@ def _parse_homepage_gacha(output: Tag) -> list[GachaBanner]:
             if img:
                 target_icon_url = _best_img_url(img)
 
+        start_ts, end_ts = _parse_event_timer(div)
+
         if banner_name or target_name:
             banners.append(
                 GachaBanner(
@@ -588,17 +631,17 @@ def _parse_homepage_gacha(output: Tag) -> list[GachaBanner]:
                     events=events,
                     target_name=target_name,
                     target_icon_url=target_icon_url,
+                    start_timestamp=start_ts,
+                    end_timestamp=end_ts,
                 )
             )
 
-    # Weapon banners: div.weaponActivity
     for div in output.find_all("div", class_="weaponActivity"):
         activity_list = div.find("div", class_="activityList")
         if not activity_list:
             continue
 
         text = _text(activity_list)
-        # Remove MediaWiki:EventTimer noise
         text = re.sub(r"MediaWiki:EventTimer.*", "", text)
 
         banner_name = ""
@@ -617,6 +660,8 @@ def _parse_homepage_gacha(output: Tag) -> list[GachaBanner]:
             if img:
                 target_icon_url = _best_img_url(img)
 
+        start_ts, end_ts = _parse_event_timer(div)
+
         if banner_name or target_name:
             banners.append(
                 GachaBanner(
@@ -625,9 +670,12 @@ def _parse_homepage_gacha(output: Tag) -> list[GachaBanner]:
                     events=[],
                     target_name=target_name,
                     target_icon_url=target_icon_url,
+                    start_timestamp=start_ts,
+                    end_timestamp=end_ts,
                 )
             )
 
+    _fill_char_banner_times(banners)
     return banners
 
 
@@ -662,9 +710,6 @@ def parse_weapon_wiki(html: str, weapon_name: str) -> WeaponWiki | None:
         # Description
         description = basic_info.get("描述", "")
 
-        # Acquisition
-        acquisition = basic_info.get("获取方式", "")
-
         # Parse d-tab.shuxing for initial and max stats
         base_attack = 0
         base_attack_max = 0
@@ -697,7 +742,6 @@ def parse_weapon_wiki(html: str, weapon_name: str) -> WeaponWiki | None:
             weapon_type=basic_info.get("武器种类", ""),
             rarity=rarity,
             description=description,
-            acquisition=acquisition,
             base_attack=base_attack,
             base_attack_max=base_attack_max,
             stat_bonuses=stat_bonuses,

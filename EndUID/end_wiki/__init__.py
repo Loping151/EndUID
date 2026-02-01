@@ -120,7 +120,7 @@ async def weapon_list_handler(bot: Bot, ev: Event):
     return await bot.send(result)
 
 
-@sv_wiki.on_fullmatch("卡池", block=True)
+@sv_wiki.on_fullmatch(("卡池", "卡池信息", "up角色"), block=True)
 async def gacha_handler(bot: Bot, ev: Event):
     logger.info("[EndWiki] 查询卡池信息")
     data = await ensure_list_data()

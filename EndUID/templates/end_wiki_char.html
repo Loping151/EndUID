@@ -2,399 +2,426 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>Character Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endfield Character Wiki</title>
 <style>
-    {% include '_wiki_base_css.html' %}
+    @import url('{{ font_css_url }}');
 
-    .wiki-header {
-        flex-direction: row !important;
-        justify-content: space-between;
-        align-items: flex-start;
+    :root {
+        --c-bg: #0f1014;
+        --c-accent: #ffe600;
+        --c-text: #ffffff;
+        --c-subtext: #8b8b8b;
+        --c-grid: rgba(255, 255, 255, 0.04);
+        --c-card-bg: rgba(20, 21, 24, 0.8);
     }
 
-    .header-text {
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        width: 800px;
+        min-height: 100vh;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: var(--c-text);
+        overflow: hidden; /* 防止立绘撑出滚动条 */
+        position: relative;
+    }
+
+    .container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        padding-bottom: 90px; /* Footer space */
+    }
+
+    /* Backgrounds */
+    .bg-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 0;
+        background: radial-gradient(circle at 70% 30%, #1e1f24 0%, #0f1014 70%);
+    }
+
+    .grid-deco {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(var(--c-grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+        background-size: 60px 60px;
+        z-index: 1;
+        mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+    }
+
+    .char-layer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        max-height: 72%;
+        max-width: 75%;
+        width: auto;
+        height: auto;
+        z-index: 5;
+        object-fit: contain;
+        filter: drop-shadow(-10px 5px 20px rgba(0,0,0,0.5));
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 25%), linear-gradient(to bottom, black 70%, transparent 100%);
+        -webkit-mask-composite: source-in;
+        mask-image: linear-gradient(to right, transparent 0%, black 25%), linear-gradient(to bottom, black 70%, transparent 100%);
+        mask-composite: intersect;
+    }
+
+    /* Content Wrapper */
+    .ui-layer {
+        position: relative;
+        z-index: 10;
+        padding: 50px;
+        width: 100%;
+        height: 100%;
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        flex: 1;
-        min-width: 0;
+        gap: 30px;
     }
 
-    .char-name-row {
+    /* Header */
+    .header-group {
+        width: 100%;
         display: flex;
-        align-items: center;
-        gap: 16px;
+        flex-direction: column;
+        gap: 10px;
     }
 
-    .char-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 8px;
-        border: 2px solid rgba(255,255,255,0.15);
-        object-fit: cover;
-        flex-shrink: 0;
+    .rarity-row {
+        display: flex;
+        gap: 2px;
+        height: 24px;
+        align-items: center;
+    }
+    
+    .rarity-star {
+        width: 24px;
+        height: 24px;
     }
 
     .char-name {
-        font-size: 72px;
-        font-weight: 700;
-        line-height: 1;
+        font-size: 96px;
+        font-weight: 900;
+        line-height: 0.9;
+        color: white;
+        text-shadow: 0 5px 15px rgba(0,0,0,0.8);
         letter-spacing: -2px;
+        margin-left: -4px;
     }
 
-    .char-portrait {
-        flex-shrink: 0;
-        width: 280px;
-        height: 340px;
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.1);
-        background: rgba(0,0,0,0.3);
+    .tags-row {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+        flex-wrap: wrap;
     }
 
-    .char-portrait img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: top center;
+    .tag-box {
+        height: 32px;
+        padding: 0 16px;
+        background: rgba(255,255,255,0.08);
+        border-left: 3px solid var(--c-accent);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transform: skewX(-20deg);
+        backdrop-filter: blur(5px);
+    }
+    
+    .tag-box span {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 14px;
+        transform: skewX(20deg);
+        color: #eee;
     }
 
+    .tag-box.element { background: #b82d22; border: none; }
+    .tag-icon { width: 18px; height: 18px; transform: skewX(20deg); }
+
+    /* Info Grid */
     .info-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 280px);
         gap: 12px;
+        margin-top: 10px;
     }
 
-    .info-item {
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.08);
-        padding: 14px 20px;
+    .info-card {
+        background: var(--c-card-bg);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 10px 15px;
         display: flex;
         flex-direction: column;
-        gap: 4px;
     }
 
     .info-label {
-        font-size: 13px;
+        font-family: 'JetBrains Mono';
+        font-size: 12px;
         color: var(--c-subtext);
-        font-family: 'JetBrains Mono', monospace;
-        letter-spacing: 1px;
+        margin-bottom: 2px;
     }
-
     .info-value {
         font-size: 18px;
-        font-weight: 600;
-        color: var(--c-text);
+        font-weight: 700;
+        color: white;
     }
 
+    /* Scrollable Content Area for Stats/Skills */
+    .scroll-content {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        margin-top: 20px;
+    }
+
+    .section-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--c-accent);
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+        padding-bottom: 5px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+    }
+    .section-title span {
+        font-family: 'JetBrains Mono';
+        font-size: 16px;
+        color: var(--c-subtext);
+        font-weight: 400;
+    }
+
+    /* Stats Table */
     .stats-table {
         width: 100%;
+        background: var(--c-card-bg);
         border-collapse: collapse;
+        font-family: 'Oswald';
     }
-
     .stats-table th {
-        background: rgba(255,230,0,0.1);
         color: var(--c-accent);
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 13px;
-        font-weight: 600;
-        padding: 10px 8px;
+        font-size: 14px;
         text-align: center;
-        border-bottom: 2px solid rgba(255,230,0,0.3);
-        letter-spacing: 1px;
+        padding: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
     }
-
     .stats-table td {
-        padding: 10px 8px;
+        color: white;
+        font-size: 20px;
         text-align: center;
-        font-family: 'Oswald', sans-serif;
-        font-size: 18px;
-        font-weight: 500;
-        color: #ddd;
+        padding: 8px;
         border-bottom: 1px solid rgba(255,255,255,0.05);
     }
+    .stats-table td:first-child { color: #888; font-size: 14px; }
 
-    .stats-table tr:nth-child(even) td {
-        background: rgba(255,255,255,0.02);
-    }
-
-    .stats-table td:first-child {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 14px;
-        color: var(--c-subtext);
-        font-weight: 500;
-    }
-
-    .talent-block {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.08);
-        padding: 20px;
-        margin-bottom: 12px;
-    }
-
-    .talent-name {
-        font-size: 20px;
-        font-weight: 700;
-        margin-bottom: 12px;
-        color: var(--c-accent);
-    }
-
-    .talent-effect {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 8px;
-        align-items: flex-start;
-    }
-
-    .effect-phase {
-        flex-shrink: 0;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
-        font-weight: 700;
-        background: rgba(255,255,255,0.1);
-        padding: 3px 10px;
-        color: var(--c-subtext);
-        white-space: nowrap;
-    }
-
-    .effect-desc {
-        font-size: 15px;
-        line-height: 1.6;
-        color: #ccc;
-    }
-
-    .skill-block {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.08);
-        padding: 20px;
-        margin-bottom: 12px;
-    }
-
-    .skill-name {
-        font-size: 20px;
-        font-weight: 700;
+    /* Talents/Skills Cards */
+    .feature-card {
+        background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+        border-left: 4px solid #444;
+        padding: 15px;
         margin-bottom: 10px;
-        color: var(--c-text);
-        border-left: 4px solid var(--c-accent);
-        padding-left: 12px;
     }
-
-    .skill-desc {
-        font-size: 15px;
-        line-height: 1.7;
-        color: #ccc;
-        white-space: pre-wrap;
-    }
-
-    .bs-item {
-        background: rgba(255,255,255,0.03);
-        border-left: 3px solid rgba(255,255,255,0.15);
-        padding: 12px 16px;
-        margin-bottom: 8px;
-    }
-
-    .bs-name {
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--c-text);
-        margin-bottom: 4px;
-    }
-
-    .bs-desc {
-        font-size: 14px;
-        color: #aaa;
-        line-height: 1.5;
-    }
-
-    .potential-rank {
-        font-family: 'Oswald', sans-serif;
-        font-weight: 700;
-        font-size: 14px;
+    .feature-name { font-size: 20px; font-weight: 700; color: white; margin-bottom: 5px; }
+    .feature-desc { font-size: 15px; line-height: 1.5; color: #ccc; white-space: pre-wrap; }
+    
+    .phase-badge {
+        display: inline-block;
+        font-family: 'JetBrains Mono';
+        font-size: 12px;
+        background: #333;
         color: var(--c-accent);
-        margin-right: 8px;
+        padding: 2px 6px;
+        margin-bottom: 4px;
+        border-radius: 2px;
     }
+
+    /* Potentials */
+    .potential-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px dashed rgba(255,255,255,0.1);
+    }
+    .p-rank { font-family: 'Oswald'; font-size: 24px; color: var(--c-accent); font-weight: 700; width: 40px; }
+
+    /* Footer */
+    .footer {
+        position: absolute;
+        bottom: 0; left: 0; width: 100%;
+        height: 80px; /* 增加高度 */
+        background: rgba(10, 10, 12, 0.98);
+        border-top: 1px solid rgba(255,255,255,0.15);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 40px;
+        z-index: 50;
+        box-sizing: border-box; /* 确保padding不撑大 */
+    }
+    .footer-logo { height: 32px; opacity: 0.8; }
+    .footer-text { font-family: 'Oswald'; font-size: 18px; color: var(--c-subtext); letter-spacing: 1px; }
+
 </style>
 </head>
 <body>
+    <div class="bg-layer">
+        {% if bg %}<img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.2;">{% endif %}
+    </div>
+    <div class="grid-deco"></div>
 
-<div class="bg-layer">
-    {% if bg %}
-    <img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.1;mix-blend-mode:overlay;">
-    {% endif %}
-</div>
-<div class="grid-deco"></div>
-
-<div class="container">
-
-    <div class="wiki-header">
-        <div class="header-text">
-            <div class="rarity">
-                {% for _ in range(wiki.rarity) %}
-                <span class="rarity-star">★</span>
-                {% endfor %}
-            </div>
-            <div class="char-name-row">
-                {% if char_avatar %}
-                <img src="{{ char_avatar }}" class="char-avatar">
-                {% endif %}
-                <div class="char-name">{{ wiki.name }}</div>
-            </div>
-            <div class="rarity-line r-{{ wiki.rarity }}"></div>
-            <div class="tags">
-                <div class="tag-box element">
-                    {% if property_icon %}<img src="{{ property_icon }}" class="tag-icon">{% endif %}
-                    <span>{{ wiki.attribute }}</span>
-                </div>
-                <div class="tag-box">
-                    {% if profession_icon %}<img src="{{ profession_icon }}" class="tag-icon">{% endif %}
-                    <span>{{ wiki.profession }}</span>
-                </div>
-                {% for tag in wiki.tags %}
-                <div class="tag-box">
-                    <span>{{ tag }}</span>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
+    <div class="container">
+        
         {% if char_img %}
-        <div class="char-portrait">
-            <img src="{{ char_img }}">
-        </div>
+        <img src="{{ char_img }}" class="char-layer">
         {% endif %}
-    </div>
 
-    <div>
-        <div class="section-title">基础信息 <span class="en">PROFILE</span></div>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">阵营</div>
-                <div class="info-value">{{ wiki.faction or '-' }}</div>
+        <div class="ui-layer">
+            
+            <div class="header-group">
+                <div class="char-name">{{ wiki.name }}</div>
+                
+                <div class="rarity-row">
+                    {% for _ in range(wiki.rarity) %}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                    {% endfor %}
+                </div>
+
+                <div class="tags-row">
+                    <div class="tag-box element">
+                        {% if property_icon %}<img src="{{ property_icon }}" class="tag-icon">{% endif %}
+                        <span>{{ wiki.attribute }}</span>
+                    </div>
+                    <div class="tag-box">
+                        {% if profession_icon %}<img src="{{ profession_icon }}" class="tag-icon">{% endif %}
+                        <span>{{ wiki.profession }}</span>
+                    </div>
+                    {% for tag in wiki.tags %}
+                    <div class="tag-box"><span>{{ tag }}</span></div>
+                    {% endfor %}
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">阵营 / FACTION</div>
+                        <div class="info-value">{{ wiki.faction or 'UNKNOWN' }}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">种族 / RACE</div>
+                        <div class="info-value">{{ wiki.race or 'UNKNOWN' }}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">实装 / DATE</div>
+                        <div class="info-value">{{ wiki.release_date or '-' }}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">专长 / SPECIALTIES</div>
+                        <div class="info-value" style="font-size:16px;">{{ wiki.specialties | join(' / ') if wiki.specialties else '-' }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="info-item">
-                <div class="info-label">种族</div>
-                <div class="info-value">{{ wiki.race or '-' }}</div>
+
+            <div class="scroll-content">
+                
+                {% if wiki.stats %}
+                <div>
+                    <div class="section-title">基础属性 <span>STATS</span></div>
+                    <table class="stats-table">
+                        <tr><th>LV</th><th>STR</th><th>AGI</th><th>INT</th><th>WIL</th><th>ATK</th><th>HP</th><th>DEF</th></tr>
+                        {% for s in wiki.stats %}
+                        <tr>
+                            <td>{{ s.level }}</td>
+                            <td>{{ s.strength }}</td>
+                            <td>{{ s.agility }}</td>
+                            <td>{{ s.intelligence }}</td>
+                            <td>{{ s.will }}</td>
+                            <td>{{ s.base_attack }}</td>
+                            <td>{{ s.base_hp }}</td>
+                            <td>{{ s.base_defense }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if wiki.talents %}
+                <div>
+                    <div class="section-title">天赋 <span>TALENTS</span></div>
+                    {% for talent in wiki.talents %}
+                    <div class="feature-card">
+                        <div class="feature-name">{{ talent.name }}</div>
+                        {% for eff in talent.effects %}
+                            {% if eff.description %}
+                            <div style="margin-top:8px;">
+                                <div class="phase-badge">{{ eff.phase }}</div>
+                                <div class="feature-desc">{{ eff.description }}</div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if wiki.skills %}
+                <div>
+                    <div class="section-title">技能 <span>SKILLS</span></div>
+                    {% for skill in wiki.skills %}
+                    <div class="feature-card">
+                        <div class="feature-name">{{ skill.name }}</div>
+                        <div class="feature-desc">{{ skill.description }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if wiki.base_skills %}
+                <div>
+                    <div class="section-title">基建技能 <span>BASE SKILLS</span></div>
+                    <div class="feature-card">
+                        {% for bs in wiki.base_skills %}
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">
+                            <div style="font-weight:700; color:#ddd; min-width:120px;">{{ bs.name }}</div>
+                            <div class="feature-desc" style="font-size:14px;">{{ bs.description }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if wiki.potentials %}
+                <div>
+                    <div class="section-title">潜能 <span>POTENTIALS</span></div>
+                    <div class="feature-card">
+                        {% for p in wiki.potentials %}
+                        <div class="potential-item">
+                            <div class="p-rank">P{{ p.rank }}</div>
+                            <div>
+                                <div style="font-weight:700; font-size:16px; margin-bottom:4px;">{{ p.name }}</div>
+                                <div class="feature-desc">{{ p.description }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
             </div>
-            {% if wiki.specialties %}
-            <div class="info-item">
-                <div class="info-label">专长</div>
-                <div class="info-value">{{ wiki.specialties | join('、') }}</div>
-            </div>
-            {% endif %}
-            {% if wiki.hobbies %}
-            <div class="info-item">
-                <div class="info-label">爱好</div>
-                <div class="info-value">{{ wiki.hobbies | join('、') }}</div>
-            </div>
-            {% endif %}
-            {% if wiki.operator_preference %}
-            <div class="info-item">
-                <div class="info-label">干员偏好</div>
-                <div class="info-value">{{ wiki.operator_preference }}</div>
-            </div>
-            {% endif %}
-            {% if wiki.release_date %}
-            <div class="info-item">
-                <div class="info-label">实装日期</div>
-                <div class="info-value">{{ wiki.release_date }}</div>
-            </div>
-            {% endif %}
+
         </div>
     </div>
 
-    {% if wiki.stats %}
-    <div>
-        <div class="section-title">能力值 <span class="en">ATTRIBUTES</span></div>
-        <table class="stats-table">
-            <tr>
-                <th>等级</th>
-                <th>力量</th>
-                <th>敏捷</th>
-                <th>智识</th>
-                <th>意志</th>
-                <th>攻击</th>
-                <th>生命</th>
-                <th>防御</th>
-            </tr>
-            {% for s in wiki.stats %}
-            <tr>
-                <td>{{ s.level }}</td>
-                <td>{{ s.strength }}</td>
-                <td>{{ s.agility }}</td>
-                <td>{{ s.intelligence }}</td>
-                <td>{{ s.will }}</td>
-                <td>{{ s.base_attack }}</td>
-                <td>{{ s.base_hp }}</td>
-                <td>{{ s.base_defense }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+    <div class="footer">
+        {% if end_logo %}<img src="{{ end_logo }}" class="footer-logo">{% endif %}
+        <div class="footer-text">WIKI DATABASE // {{ wiki.name }}</div>
     </div>
-    {% endif %}
-
-    {% if wiki.talents %}
-    <div>
-        <div class="section-title">天赋 <span class="en">TALENTS</span></div>
-        {% for talent in wiki.talents %}
-        <div class="talent-block">
-            <div class="talent-name">{{ talent.name }}</div>
-            {% for eff in talent.effects %}
-            {% if eff.description %}
-            <div class="talent-effect">
-                <div class="effect-phase">{{ eff.phase }}</div>
-                <div class="effect-desc">{{ eff.description }}</div>
-            </div>
-            {% endif %}
-            {% endfor %}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if wiki.skills %}
-    <div>
-        <div class="section-title">技能 <span class="en">SKILLS</span></div>
-        {% for skill in wiki.skills %}
-        <div class="skill-block">
-            <div class="skill-name">{{ skill.name }}</div>
-            <div class="skill-desc">{{ skill.description }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if wiki.base_skills %}
-    <div>
-        <div class="section-title">后勤技能 <span class="en">BASE SKILLS</span></div>
-        {% for bs in wiki.base_skills %}
-        <div class="bs-item">
-            <div class="bs-name">{{ bs.name }}</div>
-            <div class="bs-desc">{{ bs.description }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if wiki.potentials %}
-    <div>
-        <div class="section-title">潜能 <span class="en">POTENTIALS</span></div>
-        {% for p in wiki.potentials %}
-        <div class="bs-item">
-            <div class="bs-name">
-                <span class="potential-rank">P{{ p.rank }}</span>
-                {{ p.name }}
-            </div>
-            <div class="bs-desc">{{ p.description }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="wiki-footer">
-        {% if end_logo %}
-        <img src="{{ end_logo }}" class="footer-logo">
-        {% endif %}
-        <div class="footer-text">ENDFIELD WIKI</div>
-    </div>
-
-</div>
 </body>
 </html>

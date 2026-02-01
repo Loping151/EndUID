@@ -4,7 +4,86 @@
 <meta charset="UTF-8">
 <title>卡池信息</title>
 <style>
-    {% include '_wiki_base_css.html' %}
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #0f1014;
+        --c-accent: #ffe600;
+        --c-text: #ffffff;
+        --c-subtext: #8b8b8b;
+        --c-grid: rgba(255, 255, 255, 0.03);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        width: 1000px;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: var(--c-text);
+        overflow-x: hidden;
+    }
+
+    .container {
+        position: relative;
+        width: 100%;
+        padding: 50px;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    .bg-layer {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: -2;
+        background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+    }
+
+    .grid-deco {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image:
+            linear-gradient(var(--c-grid) 1px, transparent 1px),
+            linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+        background-size: 40px 40px;
+        z-index: -1;
+        mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+    }
+
+    .page-title {
+        font-size: 56px;
+        font-weight: 700;
+        letter-spacing: -2px;
+    }
+
+    .page-subtitle {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 24px;
+        color: var(--c-subtext);
+        margin-top: 4px;
+    }
+
+    .wiki-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 20px;
+        margin-top: 10px;
+    }
+
+    .footer-logo {
+        height: 40px;
+        opacity: 0.6;
+    }
+
+    .footer-text {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--c-subtext);
+        letter-spacing: 1px;
+    }
 
     .banner-card {
         display: flex;
@@ -51,7 +130,7 @@
 
     .banner-type {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
+        font-size: 20px;
         font-weight: 700;
         color: var(--c-accent);
         letter-spacing: 2px;
@@ -77,7 +156,7 @@
     }
 
     .event-tag {
-        font-size: 13px;
+        font-size: 16px;
         color: #aaa;
         background: rgba(255,255,255,0.06);
         padding: 4px 12px;
@@ -89,6 +168,34 @@
         color: #666;
         padding: 40px 0;
         font-size: 18px;
+    }
+
+    .banner-time {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 2px;
+        display: inline-block;
+    }
+
+    .banner-time.active {
+        color: #4cff4c;
+        background: rgba(76, 255, 76, 0.1);
+    }
+
+    .banner-time.upcoming {
+        color: var(--c-accent);
+        background: rgba(255, 230, 0, 0.1);
+    }
+
+    .banner-time.ended {
+        color: #888;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .banner-card.not-started {
+        opacity: 0.6;
     }
 </style>
 </head>
@@ -109,7 +216,7 @@
     </div>
 
     {% for banner in banners %}
-    <div class="banner-card">
+    <div class="banner-card{{ '' if banner.started else ' not-started' }}">
         <div class="banner-icon">
             {% if banner.target_icon %}
             <img src="{{ banner.target_icon }}">
@@ -124,6 +231,9 @@
             <div class="banner-name">{{ banner.banner_name or "未知卡池" }}</div>
             {% if banner.target_name %}
             <div class="banner-target">UP: {{ banner.target_name }}</div>
+            {% endif %}
+            {% if banner.time_text %}
+            <div class="banner-time {{ 'active' if banner.started else 'upcoming' }}">{{ banner.time_text }}</div>
             {% endif %}
             {% if banner.events %}
             <div class="banner-events">

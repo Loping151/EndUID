@@ -42,4 +42,5 @@ async def get_help(pm: int):
         footer=Image.new("RGBA", (1, 1), (0, 0, 0, 0)),
         enable_cache=False,
         pm=pm,
+        column=4,
     )
