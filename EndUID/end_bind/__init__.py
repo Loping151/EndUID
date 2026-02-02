@@ -266,6 +266,7 @@ async def check_cred(
         f"游戏昵称: {nickname}\n"
         f"服务器: {channel}\n"
         f"UID: {endfield_uid}\n"
+        f"将同步抽卡记录，请勿立即触发"
     )
     await _send_text(bot, ev, msg)
 
