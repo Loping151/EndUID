@@ -61,7 +61,7 @@ async def sub_ann_(bot: Bot, ev: Event):
         return await bot.send("终末地公告推送功能已关闭")
 
     logger.info(
-        f"[终末地公告] 群 {ev.group_id} 订阅公告，bot_id={ev.bot_id}, bot_self_id={ev.bot_self_id}"
+        f"「终末地公告」 群 {ev.group_id} 订阅公告，bot_id={ev.bot_id}, bot_self_id={ev.bot_self_id}"
     )
 
     if ev.group_id:
@@ -74,7 +74,7 @@ async def sub_ann_(bot: Bot, ev: Event):
             if subscribe.group_id == ev.group_id:
                 await gs_subscribe.delete_subscribe("session", task_name_ann, ev)
                 is_resubscribe = True
-                logger.info(f"[终末地公告] 群 {ev.group_id} 重新订阅，已删除旧订阅")
+                logger.info(f"「终末地公告」 群 {ev.group_id} 重新订阅，已删除旧订阅")
                 break
 
     await gs_subscribe.add_subscribe(
@@ -120,10 +120,10 @@ async def check_end_ann():
 
 
 async def check_end_ann_state():
-    logger.info("[终末地公告] 定时任务: 终末地公告查询..")
+    logger.info("「终末地公告」 定时任务: 终末地公告查询..")
     datas = await gs_subscribe.get_subscribe(task_name_ann)
     if not datas:
-        logger.info("[终末地公告] 暂无群订阅")
+        logger.info("「终末地公告」 暂无群订阅")
         return
 
     ids = get_ann_new_ids()
@@ -134,7 +134,7 @@ async def check_end_ann_state():
     new_ann_ids = [x["id"] for x in new_ann_list]
     if not ids:
         set_ann_new_ids(new_ann_ids)
-        logger.info("[终末地公告] 初始成功, 将在下个轮询中更新.")
+        logger.info("「终末地公告」 初始成功, 将在下个轮询中更新.")
         return
 
     new_ann_need_send = []
@@ -143,10 +143,10 @@ async def check_end_ann_state():
             new_ann_need_send.append(ann_id)
 
     if not new_ann_need_send:
-        logger.info("[终末地公告] 没有最新公告")
+        logger.info("「终末地公告」 没有最新公告")
         return
 
-    logger.info(f"[终末地公告] 更新公告id: {new_ann_need_send}")
+    logger.info(f"「终末地公告」 更新公告id: {new_ann_need_send}")
     save_ids = sorted(ids, reverse=True) + new_ann_ids
     set_ann_new_ids(list(set(save_ids)))
 
@@ -161,7 +161,7 @@ async def check_end_ann_state():
         except Exception as e:
             logger.exception(e)
 
-    logger.info("[终末地公告] 推送完毕")
+    logger.info("「终末地公告」 推送完毕")
 
 
 # ===================== 缓存清理 =====================
