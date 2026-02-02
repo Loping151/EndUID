@@ -13,7 +13,7 @@ from ..end_config import PREFIX
 from ..utils.api.requests import end_api
 from ..utils.database.models import EndBind, EndUser
 
-GAME_TITLE = "[终末地]"
+GAME_TITLE = "「终末地」"
 
 EndBindUID = SV("End绑定UID", priority=10)
 EndLogin = SV("End登录", priority=5)
@@ -49,7 +49,7 @@ async def _send_text(bot: Bot, ev: Event, msg: str):
 async def send_end_bind_msg(bot: Bot, ev: Event):
     if ev.user_pm > 0:
         logger.warning(f"[EndUID] 暂不支持绑定操作")
-        return
+        return "「终末地」 暂不支持绑定操作，请使用「{PREFIX}登录」进行绑定"
     text = _normalize_text(ev.text)
     if not text:
         msg = (
@@ -78,7 +78,7 @@ async def send_end_login_msg(bot: Bot, ev: Event):
             return await check_token(bot, ev, credential)
         if kind == "cred":
             return await check_cred(bot, ev, credential)
-        msg = f"{GAME_TITLE} 登录参数错误，请使用「{PREFIX}登录」扫码或「{PREFIX}登录」绑定"
+        msg = f"{GAME_TITLE} 登录参数错误，请使用「{PREFIX}登录」扫码"
         return await _send_text(bot, ev, msg)
 
     at_sender = True if ev.group_id else False
