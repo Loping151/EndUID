@@ -450,7 +450,11 @@
                     <div class="stat-label">平均抽数</div>
                 </div>
                 <div class="stat-card">
+                    {% if pool.has_up %}
                     <div class="stat-num {% if pool.remain >= 80 %}pull-unlucky{% elif pool.remain >= 30 %}pull-normal{% else %}pull-lucky{% endif %}">{{ pool.remain }}</div>
+                    {% else %}
+                    <div class="stat-num" style="color: var(--c-subtext);">-</div>
+                    {% endif %}
                     <div class="stat-label">未出UP</div>
                 </div>
             </div>

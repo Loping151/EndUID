@@ -16,9 +16,15 @@ from gsuid_core.utils.database.base_models import (
     BaseBotIDModel,
     with_session,
 )
+from gsuid_core.utils.database.startup import exec_list
 from gsuid_core.utils.database.models import Subscribe
 from gsuid_core.webconsole.mount_app import site, GsAdminModel, PageSchema
 
+exec_list.extend(
+    [
+        "ALTER TABLE EndUser DROP COLUMN model_bg_value",
+    ]
+)
 
 
 class EndBind(Bind, table=True):

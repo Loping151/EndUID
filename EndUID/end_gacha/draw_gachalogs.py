@@ -105,6 +105,7 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
     is_weapon = pool_name.startswith("武器寻访")
     pool_type = "weapon" if is_weapon else "char"
     is_special = pool_name == "特许寻访"
+    has_up = is_special or is_weapon
 
     if not records:
         return {
@@ -114,6 +115,7 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
             "six_star_count": 0,
             "avg_pulls": 0,
             "remain": 0,
+            "has_up": has_up,
             "time_range": "",
             "level": 2,
             "level_tag": LUCK_LEVELS[2],
@@ -219,6 +221,7 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
     return {
         "pool_name": pool_name,
         "pool_type": pool_type,
+        "has_up": has_up,
         "total": total,
         "six_star_count": six_star_count,
         "avg_pulls": avg_pulls,
