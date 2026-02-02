@@ -19,7 +19,7 @@ async def end_sign_handler(bot: Bot, ev: Event) -> str:
     """用户签到处理（签到该用户绑定的所有 UID）"""
     uids = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
     if not uids:
-        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」"
+        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     results = []
     for uid in uids:
@@ -330,7 +330,7 @@ async def build_sign_report_msgs(
             user_id = user.user_id
             bot_id = user.bot_id
 
-            msg = f"✅ [终末地] 今日签到任务已完成"
+            msg = f"✅ 「终末地」 今日签到任务已完成"
 
             if user_id not in private_msgs:
                 private_msgs[user_id] = {}
@@ -365,7 +365,7 @@ async def build_sign_report_msgs(
             group_success = sum(1 for u in users if u.cookie_status != "无效")
 
             title = (
-                f"✅ [终末地] 今日签到任务已完成！\n"
+                f"✅ 「终末地」 今日签到任务已完成！\n"
                 f"本群共签到成功 {group_success} 人\n"
                 f"全局统计: 成功 {success_count} | 已签 {signed_count} | 失败 {fail_count}"
             )

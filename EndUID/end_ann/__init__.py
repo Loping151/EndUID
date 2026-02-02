@@ -217,9 +217,9 @@ async def clean_cache_directories(days: int) -> str:
         total_space += r_space
 
     if total_count == 0:
-        return f"[终末地] 没有找到需要清理的缓存文件(保留{days}天内的文件)"
+        return f"「终末地」 没有找到需要清理的缓存文件(保留{days}天内的文件)"
 
-    return f"[终末地] 清理完成！共删除{total_count}个文件，释放{total_space:.2f}MB"
+    return f"「终末地」 清理完成！共删除{total_count}个文件，释放{total_space:.2f}MB"
 
 
 @sv_ann_clear_cache.on_fullmatch(("end清理缓存", "end删除缓存"), block=True)

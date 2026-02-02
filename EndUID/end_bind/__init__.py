@@ -165,8 +165,12 @@ async def check_cred(
 
     res = await end_api.get_binding(cred)
     if not res or res.get("code") != 0 or res.get("message") != "OK":
-        logger.error(f"[EndUID] 绑定失败，响应: {res}")
-        return await _send_text(bot, ev, f"{GAME_TITLE} 绑定失败，请检查 cred 是否正确")
+        logger.warning(f"[EndUID] 首次请求绑定信息失败，响应: {res}，尝试重试一次")
+        asyncio.sleep(2)
+        res = await end_api.get_binding(cred) # 再来一次
+        if not res or res.get("code") != 0 or res.get("message") != "OK":
+            logger.error(f"[EndUID] 绑定失败，响应: {res}")
+            return await _send_text(bot, ev, f"{GAME_TITLE} 绑定失败，请检查 cred 是否正确")
 
     binding_list = res.get("data", {}).get("list", [])
     endfield_uid = None

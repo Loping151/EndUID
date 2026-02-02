@@ -31,7 +31,7 @@ end_build_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 async def draw_build(ev: Event) -> Union[bytes, str]:
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return f"❌ 未绑定终末地账号，请先使用「{PREFIX}登录」"
+        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
     if not save_path.exists():

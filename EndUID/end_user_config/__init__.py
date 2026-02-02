@@ -6,7 +6,7 @@ from ..utils.alias_map import get_alias_display_name, resolve_alias_entry
 from ..utils.database.models import EndBind, EndUser
 
 
-GAME_TITLE = "[终末地]"
+GAME_TITLE = "「终末地」"
 PREFIX = get_plugin_available_prefix("EndUID")
 
 END_USER_MAP = {
