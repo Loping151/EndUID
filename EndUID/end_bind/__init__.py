@@ -263,6 +263,7 @@ async def check_cred(
             record_id=user.record_id,
             server_id=user.server_id,
             skland_user_id=user.skland_user_id,
+            cookie_status="",
         )
 
     msg = (
