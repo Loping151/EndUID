@@ -166,7 +166,7 @@ async def check_cred(
     res = await end_api.get_binding(cred)
     if not res or res.get("code") != 0 or res.get("message") != "OK":
         logger.warning(f"[EndUID] 首次请求绑定信息失败，响应: {res}，尝试重试一次")
-        asyncio.sleep(2)
+        await asyncio.sleep(2)
         res = await end_api.get_binding(cred) # 再来一次
         if not res or res.get("code") != 0 or res.get("message") != "OK":
             logger.error(f"[EndUID] 绑定失败，响应: {res}")
