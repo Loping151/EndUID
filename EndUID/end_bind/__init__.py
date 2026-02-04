@@ -381,16 +381,23 @@ async def del_bind(bot: Bot, ev: Event):
         msg = f"{GAME_TITLE} 该命令需要带上正确的uid!\n例如「{PREFIX}删除123456789」"
         return await _send_text(bot, ev, msg)
 
-    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
-    if not uid:
+    bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
+    if not bind_data:
         return await _send_text(bot, ev, f"{GAME_TITLE} 未绑定账号")
 
-    user = await EndUser.select_end_user(target_uid, ev.user_id, ev.bot_id)
-    if user:
-        await EndUser.delete_end_user(target_uid, ev.user_id, ev.bot_id)
+    # 删除 EndUser 记录（所有 game_id）
+    users = await EndUser.select_data_list(user_id=ev.user_id, bot_id=ev.bot_id)
+    deleted_any = False
+    for user in users:
+        if user.uid == target_uid:
+            await EndUser.delete_end_user(target_uid, ev.user_id, ev.bot_id, game_id=user.game_id)
+            deleted_any = True
 
-    res = await EndBind.delete_uid(ev.user_id, ev.bot_id, target_uid)
-    if res != 0:
+    # 从 EndBind 的 uid 和 ark_uid 中都尝试删除
+    res_uid = await EndBind.delete_uid(ev.user_id, ev.bot_id, target_uid)
+    res_ark = await EndBind.remove_ark_uid(ev.user_id, ev.bot_id, target_uid)
+
+    if res_uid != 0 and not res_ark and not deleted_any:
         return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该UID[{target_uid}]")
 
     return await _send_text(bot, ev, f"{GAME_TITLE} 删除成功")
@@ -418,10 +425,24 @@ async def switch_or_view_uid(bot: Bot, ev: Event):
         else:
             return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该 UID[{target_uid}]")
     elif "查看" in ev.command:
-        uid_list = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
-        if uid_list:
-            uids_text = "\n".join([f"{i+1}. {uid}{' (当前)' if i == 0 else ''}" for i, uid in enumerate(uid_list)])
-            msg = f"{GAME_TITLE} 已绑定的 UID 列表：\n{uids_text}"
-            return await _send_text(bot, ev, msg)
-        else:
+        bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
+        uid_list = bind_data.uid.split('_') if bind_data and bind_data.uid else []
+        uid_list = [u for u in uid_list if u]
+        ark_uid_list = bind_data.ark_uid.split('_') if bind_data and bind_data.ark_uid else []
+        ark_uid_list = [u for u in ark_uid_list if u]
+
+        if not uid_list and not ark_uid_list:
             return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定任何 UID")
+
+        lines = [f"{GAME_TITLE} 已绑定的 UID 列表："]
+        idx = 1
+        for uid in uid_list:
+            current = " (当前)" if idx == 1 else ""
+            lines.append(f"{idx}. [终末地] {uid}{current}")
+            idx += 1
+        if uid_list and ark_uid_list:
+            lines.append("--------------------------------")
+        for uid in ark_uid_list:
+            lines.append(f"{idx}. [明日方舟] {uid}")
+            idx += 1
+        return await _send_text(bot, ev, "\n".join(lines))

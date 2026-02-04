@@ -130,6 +130,36 @@ class EndBind(Bind, table=True):
         return 0
 
     @classmethod
+    async def remove_ark_uid(
+        cls,
+        user_id: str,
+        bot_id: str,
+        uid: str,
+    ) -> bool:
+        """从 ark_uid 中移除指定 UID
+
+        Returns:
+            True: 成功移除, False: 未找到
+        """
+        result = await cls.select_data(user_id, bot_id)
+        if not result or not result.ark_uid:
+            return False
+
+        ark_uid_list = [u for u in result.ark_uid.split("_") if u]
+        if uid not in ark_uid_list:
+            return False
+
+        ark_uid_list.remove(uid)
+        new_ark_uid = "_".join(ark_uid_list) if ark_uid_list else ""
+
+        await cls.update_data(
+            user_id=user_id,
+            bot_id=bot_id,
+            ark_uid=new_ark_uid,
+        )
+        return True
+
+    @classmethod
     async def get_data_by_user_id(
         cls,
         user_id: str,

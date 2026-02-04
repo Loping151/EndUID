@@ -134,6 +134,14 @@ async def import_gacha_record(bot: Bot, ev: Event):
             )
 
         await bot.send("正在获取抽卡记录...为避免请求过快，可能较久，请等待...")
+
+        # 刷新 cred 确保凭证有效
+        refreshed = await end_api.refresh_token(user.cookie)
+        if not refreshed:
+            return await bot.send(
+                f"凭证已失效，请重新「{PREFIX}登录」"
+            )
+
         u8_token = await end_api.get_u8_token(user.token, binding_uid)
         if not u8_token:
             return await bot.send(
