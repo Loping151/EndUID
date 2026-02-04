@@ -321,7 +321,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
             if item.get("type") == "weapon":
                 url = weapon_icon_map.get(
                     item_name,
-                    f"https://imgheybox.max-c.com/endfield/icon/{item_name}.png",
+                    f"https://imgheybox.max-c.com/endfield/icon/{item_name.rstrip('.')}.png",
                 )
             else:
                 url = char_avatar_map.get(item_name, "")

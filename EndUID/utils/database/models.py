@@ -1,6 +1,6 @@
 """EndUID 数据库模型"""
 import time
-from typing import Optional, Type
+from typing import List, Optional, Type
 
 from sqlmodel import Field, select, col
 from datetime import datetime
@@ -23,6 +23,8 @@ from gsuid_core.webconsole.mount_app import site, GsAdminModel, PageSchema
 exec_list.extend(
     [
         "ALTER TABLE EndUser DROP COLUMN model_bg_value",
+        "ALTER TABLE EndUser ADD COLUMN game_id INTEGER DEFAULT 3 NOT NULL",
+        'ALTER TABLE EndBind ADD COLUMN ark_uid TEXT DEFAULT ""',
     ]
 )
 
@@ -38,6 +40,28 @@ class EndBind(Bind, table=True):
         default=None,
         title="终末地 UID"
     )
+    # 明日方舟 UID
+    ark_uid: Optional[str] = Field(
+        default=None,
+        title="明日方舟 UID"
+    )
+
+    @classmethod
+    @with_session
+    async def get_binds_by_uid(
+        cls,
+        session: AsyncSession,
+        uid: str,
+    ) -> List["EndBind"]:
+        """根据终末地UID或明日方舟UID查找绑定记录（含包含匹配）"""
+        stmt = select(cls).where(
+            or_(
+                col(cls.uid).contains(uid),
+                col(cls.ark_uid).contains(uid),
+            )
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
 
     @classmethod
     async def insert_end_uid(
@@ -57,6 +81,53 @@ class EndBind(Bind, table=True):
             lenth_limit=length_limit,
             is_digit=True,
         )
+
+    @classmethod
+    async def insert_ark_uid(
+        cls,
+        user_id: str,
+        bot_id: str,
+        uid: str,
+        group_id: Optional[str] = None,
+    ) -> int:
+        """插入或更新明日方舟 UID 绑定
+
+        Returns:
+            0: 成功, -1: UID 为空, -2: 已绑定, -3: UID 非数字
+        """
+        if not uid:
+            return -1
+        if not uid.isdigit():
+            return -3
+
+        result = await cls.select_data(user_id, bot_id)
+        if not result:
+            # 没有绑定记录，先创建（需要主 uid 存在才能创建）
+            if not await cls.bind_exists(user_id, bot_id):
+                code = await cls.insert_data(
+                    user_id=user_id,
+                    bot_id=bot_id,
+                    ark_uid=uid,
+                    group_id=group_id,
+                )
+                return code
+            result = await cls.select_data(user_id, bot_id)
+
+        ark_uid_list = result.ark_uid.split("_") if result and result.ark_uid else []
+        ark_uid_list = [i for i in ark_uid_list if i]
+
+        if uid in ark_uid_list:
+            return -2
+
+        ark_uid_list.append(uid)
+        new_ark_uid = "_".join(ark_uid_list)
+
+        await cls.update_data(
+            user_id=user_id,
+            bot_id=bot_id,
+            ark_uid=new_ark_uid,
+        )
+        return 0
 
     @classmethod
     async def get_data_by_user_id(
@@ -162,6 +233,9 @@ class EndUser(User, table=True):
     uid: str = Field(default="", title="游戏 UID")
     cookie: str = Field(default="", title="森空岛 Cred")
 
+    # 游戏 ID
+    game_id: int = Field(default=3, title="GameID", nullable=False, sa_column_kwargs={"server_default": "3"})
+
     # 账号信息
     nickname: str = Field(default="", title="游戏昵称")
 
@@ -192,9 +266,13 @@ class EndUser(User, table=True):
         cls,
         session: AsyncSession,
         cred: str,
+        game_id: Optional[int] = 3,
     ) -> Optional['EndUser']:
         """通过 cred 查询用户（用于 token 缓存）"""
-        sql = select(cls).where(cls.cookie == cred)
+        filters = [cls.cookie == cred]
+        if game_id is not None:
+            filters.append(cls.game_id == game_id)
+        sql = select(cls).where(*filters)
         result = await session.execute(sql)
         data = result.scalars().all()
         return data[0] if data else None
@@ -207,6 +285,7 @@ class EndUser(User, table=True):
         uid: str,
         user_id: str,
         bot_id: str,
+        game_id: Optional[int] = 3,
     ) -> Optional['EndUser']:
         """查询用户信息"""
         filters = [
@@ -214,6 +293,8 @@ class EndUser(User, table=True):
             cls.uid == uid,
             cls.bot_id == bot_id,
         ]
+        if game_id is not None:
+            filters.append(cls.game_id == game_id)
         sql = select(cls).where(*filters)
         result = await session.execute(sql)
         data = result.scalars().all()
@@ -227,6 +308,7 @@ class EndUser(User, table=True):
         uid: str,
         user_id: str,
         bot_id: str,
+        game_id: Optional[int] = 3,
     ):
         """更新最后使用时间"""
         current_time = int(time.time())
@@ -236,6 +318,8 @@ class EndUser(User, table=True):
             cls.uid == uid,
             cls.bot_id == bot_id,
         ]
+        if game_id is not None:
+            filters.append(cls.game_id == game_id)
         result = await session.execute(select(cls).where(*filters))
         user = result.scalars().first()
 
@@ -264,6 +348,7 @@ class EndUser(User, table=True):
         uid: str,
         user_id: str,
         bot_id: str,
+        game_id: Optional[int] = 3,
     ):
         """标记 Cookie 为无效"""
         filters = [
@@ -271,6 +356,8 @@ class EndUser(User, table=True):
             cls.uid == uid,
             cls.bot_id == bot_id,
         ]
+        if game_id is not None:
+            filters.append(cls.game_id == game_id)
         result = await session.execute(select(cls).where(*filters))
         user = result.scalars().first()
         if user:
@@ -293,11 +380,13 @@ class EndUser(User, table=True):
         uid: str,
         user_id: str,
         bot_id: str,
+        game_id: Optional[int] = 3,
     ) -> bool:
         """删除指定用户记录"""
-        sql = select(cls).where(
-            and_(cls.uid == uid, cls.user_id == user_id, cls.bot_id == bot_id)
-        )
+        conditions = [cls.uid == uid, cls.user_id == user_id, cls.bot_id == bot_id]
+        if game_id is not None:
+            conditions.append(cls.game_id == game_id)
+        sql = select(cls).where(and_(*conditions))
         result = await session.execute(sql)
         data = result.scalars().first()
         if not data:

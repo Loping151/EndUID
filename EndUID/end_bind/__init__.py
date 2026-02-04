@@ -11,6 +11,7 @@ from gsuid_core.utils.cookie_manager.qrlogin import get_qrcode_base64
 
 from ..end_config import PREFIX
 from ..utils.api.requests import end_api
+from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
 from ..utils.database.models import EndBind, EndUser
 
 GAME_TITLE = "「终末地」"
@@ -173,108 +174,126 @@ async def check_cred(
             return await _send_text(bot, ev, f"{GAME_TITLE} 绑定失败，请检查 cred 是否正确")
 
     binding_list = res.get("data", {}).get("list", [])
-    endfield_uid = None
-    nickname = None
-    channel = None
-    record_uid = None
-    server_id = "1"
+    GAME_ID_SET = {ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID}
+    DEFAULT_NICK = {ENDFIELD_GAME_ID: "终末地角色", ARKNIGHTS_GAME_ID: "明日方舟角色"}
 
+    # 收集所有 gameId 为 1 或 3 的角色信息
+    roles = []
     for binding_item in binding_list:
-        if binding_item.get("appCode") == "endfield":
-            binding_list_data = binding_item.get("bindingList", [])
-            if binding_list_data:
-                first_bind = binding_list_data[0]
-                default_role = first_bind.get("defaultRole")
-                if not default_role and first_bind.get("roles"):
-                    default_role = first_bind["roles"][0]
+        binding_list_data = binding_item.get("bindingList", [])
+        for bind_entry in binding_list_data:
+            entry_game_id = bind_entry.get("gameId")
+            if entry_game_id not in GAME_ID_SET:
+                continue
 
-                if default_role:
-                    endfield_uid = default_role.get("roleId")
-                    nickname = (
-                        default_role.get("nickname")
-                        or first_bind.get("nickName")
-                        or "终末地角色"
-                    )
-                    channel = first_bind.get("channelName", "官服")
-                    record_uid = first_bind.get("uid")
-                    if default_role.get("serverId"):
-                        server_id = str(default_role.get("serverId"))
-            break
+            default_role = bind_entry.get("defaultRole")
+            if not default_role and bind_entry.get("roles"):
+                default_role = bind_entry["roles"][0]
+            if not default_role:
+                continue
 
-    if not endfield_uid:
+            role_id = default_role.get("roleId")
+            if not role_id:
+                continue
+
+            roles.append({
+                "game_id": entry_game_id,
+                "role_id": role_id,
+                "nickname": (
+                    default_role.get("nickname")
+                    or bind_entry.get("nickName")
+                    or DEFAULT_NICK.get(entry_game_id, "角色")
+                ),
+                "channel": bind_entry.get("channelName", "官服"),
+                "record_uid": bind_entry.get("uid"),
+                "server_id": str(default_role.get("serverId", "1")),
+            })
+
+    if not roles:
         logger.warning(f"[EndUID] 请求返回：{binding_list}，请汇报此结果")
         return await _send_text(bot, ev, f"{GAME_TITLE} 未找到账号绑定信息")
 
-    result = await EndBind.insert_end_uid(
-        user_id=ev.user_id,
-        bot_id=ev.bot_id,
-        uid=endfield_uid,
-        group_id=ev.group_id,
-    )
+    # 绑定 UID 到 EndBind
+    endfield_uid = None
+    endfield_record_uid = None
+    endfield_server_id = "1"
+    for role in roles:
+        if role["game_id"] == ENDFIELD_GAME_ID:
+            endfield_uid = role["role_id"]
+            endfield_record_uid = role["record_uid"]
+            endfield_server_id = role["server_id"]
+            result = await EndBind.insert_end_uid(
+                user_id=ev.user_id,
+                bot_id=ev.bot_id,
+                uid=role["role_id"],
+                group_id=ev.group_id,
+            )
+            if result == -1:
+                return await _send_text(bot, ev, f"{GAME_TITLE} 终末地 UID 格式错误")
+            if result == -3:
+                return await _send_text(bot, ev, f"{GAME_TITLE} 终末地 UID 包含非法字符")
+        elif role["game_id"] == ARKNIGHTS_GAME_ID:
+            result = await EndBind.insert_ark_uid(
+                user_id=ev.user_id,
+                bot_id=ev.bot_id,
+                uid=role["role_id"],
+                group_id=ev.group_id,
+            )
+            if result == -1:
+                return await _send_text(bot, ev, f"{GAME_TITLE} 明日方舟 UID 格式错误")
+            if result == -3:
+                return await _send_text(bot, ev, f"{GAME_TITLE} 明日方舟 UID 包含非法字符")
 
-    if result == -1:
-        return await _send_text(bot, ev, f"{GAME_TITLE} UID 格式错误")
-    if result == -3:
-        return await _send_text(bot, ev, f"{GAME_TITLE} UID 包含非法字符")
+    # 为每个角色创建/更新 EndUser
+    for role in roles:
+        gid = role["game_id"]
+        rid = role["role_id"]
 
-    user = await EndUser.select_end_user(endfield_uid, ev.user_id, ev.bot_id)
-    if not user:
-        user = EndUser(
-            user_id=ev.user_id,
-            bot_id=ev.bot_id,
-            uid=endfield_uid,
-        )
+        exists = await EndUser.select_end_user(rid, ev.user_id, ev.bot_id, game_id=gid)
+        user_data = {
+            "cookie": cred,
+            "nickname": role["nickname"],
+            "platform": "3",
+            "record_id": role["record_uid"],
+            "server_id": role["server_id"],
+            "game_id": gid,
+        }
+        if used_token:
+            user_data["token"] = used_token
+        if skland_user_id:
+            user_data["skland_user_id"] = skland_user_id
 
-    user.cookie = cred
-    user.nickname = nickname
-    user.platform = "3"
+        if not exists:
+            await EndUser.insert_data(
+                user_id=ev.user_id,
+                bot_id=ev.bot_id,
+                uid=rid,
+                **user_data,
+            )
+        else:
+            await EndUser.update_data_by_uid(
+                rid,
+                ev.bot_id,
+                cookie_status="",
+                **user_data,
+            )
 
-    if used_token:
-        user.token = used_token
+    # 构建绑定成功消息
+    endfield_role = next((r for r in roles if r["game_id"] == ENDFIELD_GAME_ID), None)
+    msg_lines = [f"{GAME_TITLE} 绑定成功！"]
+    if endfield_role:
+        msg_lines.append(f"游戏昵称: {endfield_role['nickname']}")
+        msg_lines.append(f"服务器: {endfield_role['channel']}")
+        msg_lines.append(f"UID: {endfield_role['role_id']}")
+    ark_count = sum(1 for r in roles if r["game_id"] == ARKNIGHTS_GAME_ID)
+    if ark_count > 0:
+        msg_lines.append(f"绑定明日方舟UID {ark_count} 个")
+    if endfield_uid:
+        msg_lines.append("将同步抽卡记录，请勿立即触发")
+    await _send_text(bot, ev, "\n".join(msg_lines))
 
-    if record_uid:
-        user.record_id = record_uid
-    user.server_id = server_id
-    if skland_user_id:
-        user.skland_user_id = skland_user_id
-
-    exists = await EndUser.select_end_user(endfield_uid, ev.user_id, ev.bot_id)
-    if not exists:
-        await EndUser.insert_data(
-            user_id=ev.user_id,
-            bot_id=ev.bot_id,
-            uid=endfield_uid,
-            cookie=user.cookie,
-            token=user.token,
-            nickname=user.nickname,
-            platform=user.platform,
-            record_id=user.record_id,
-            server_id=user.server_id,
-            skland_user_id=user.skland_user_id,
-        )
-    else:
-        await EndUser.update_data_by_uid(
-            endfield_uid,
-            ev.bot_id,
-            cookie=user.cookie,
-            token=user.token,
-            nickname=user.nickname,
-            platform=user.platform,
-            record_id=user.record_id,
-            server_id=user.server_id,
-            skland_user_id=user.skland_user_id,
-            cookie_status="",
-        )
-
-    msg = (
-        f"{GAME_TITLE} 绑定成功！\n"
-        f"游戏昵称: {nickname}\n"
-        f"服务器: {channel}\n"
-        f"UID: {endfield_uid}\n"
-        f"将同步抽卡记录，请勿立即触发"
-    )
-    await _send_text(bot, ev, msg)
-
+    record_uid = endfield_record_uid
+    server_id = endfield_server_id
     if gacha_grant_token and record_uid:
         try:
             u8_token = await end_api.get_u8_token_by_grant(

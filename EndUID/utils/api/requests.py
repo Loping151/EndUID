@@ -403,6 +403,24 @@ class EndApi:
             accept_encoding="gzip, deflate",
         )
 
+    async def ark_attendance(
+        self,
+        cred: str,
+        uid: str,
+    ) -> Optional[dict]:
+        """明日方舟签到"""
+        return await self.request(
+            url=GAME_ATTENDANCE_URL,
+            method="POST",
+            cred=cred,
+            uid=uid,
+            game_id=1,
+            body={"uid": uid, "gameId": 1},
+            use_device_id=False,
+            platform=1,
+            accept_encoding="gzip, deflate",
+        )
+
     async def get_player_info(
         self,
         cred: str,

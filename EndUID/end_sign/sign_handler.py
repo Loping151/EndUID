@@ -10,42 +10,47 @@ from gsuid_core.logger import logger
 from gsuid_core.segment import MessageSegment
 
 from ..utils.api.requests import end_api
+from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
 from ..utils.database.models import EndBind, EndUser, EndSignRecord
 from ..utils.status_store import record_fail, record_success
 from ..end_config import EndConfig, PREFIX
 
 
 async def end_sign_handler(bot: Bot, ev: Event) -> str:
-    """用户签到处理（签到该用户绑定的所有 UID）"""
-    uids = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
-    if not uids:
-        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+    """用户签到处理（签到该用户绑定的所有游戏 UID）"""
+    users = await EndUser.select_data_list(user_id=ev.user_id, bot_id=ev.bot_id)
+    users = [u for u in users if u.cookie]
+    if not users:
+        return f"未绑定账号，请先使用「{PREFIX}登录」"
 
+    GAME_NAMES = {ENDFIELD_GAME_ID: "终末地", ARKNIGHTS_GAME_ID: "明日方舟"}
     results = []
-    for uid in uids:
-        user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-        if not user or not user.cookie:
-            results.append(f"❌ [{uid}] 未找到 cred 信息")
-            continue
-        nickname = user.nickname or uid
-        result = await do_sign_in(uid, user.cookie, nickname)
+    for user in users:
+        game_name = GAME_NAMES.get(user.game_id, "")
+        nickname = user.nickname or user.uid
+        display = f"{game_name} {nickname}" if game_name else nickname
+        result = await do_sign_in(user.uid, user.cookie, display, game_id=user.game_id)
         results.append(result)
 
     return "\n".join(results)
 
 
-async def do_sign_in(uid: str, cred: str, nickname: str) -> str:
+async def do_sign_in(uid: str, cred: str, nickname: str, game_id: int = ENDFIELD_GAME_ID) -> str:
     """执行签到操作
 
     Args:
         uid: 游戏 UID
         cred: 森空岛 Cred
         nickname: 游戏昵称
+        game_id: 游戏 ID
 
     Returns:
         签到结果消息
     """
-    res = await end_api.attendance(cred, uid)
+    if game_id == ARKNIGHTS_GAME_ID:
+        res = await end_api.ark_attendance(cred, uid)
+    else:
+        res = await end_api.attendance(cred, uid)
 
     if res is None:
         record_fail()
@@ -202,7 +207,10 @@ async def do_sign_in_with_result(
 
     for attempt in range(1, max_retries + 1):
         try:
-            res = await end_api.attendance(user.cookie, user.uid)
+            if user.game_id == ARKNIGHTS_GAME_ID:
+                res = await end_api.ark_attendance(user.cookie, user.uid)
+            else:
+                res = await end_api.attendance(user.cookie, user.uid)
 
             if res is None:
                 if attempt < max_retries:
