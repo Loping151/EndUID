@@ -25,6 +25,7 @@ exec_list.extend(
         "ALTER TABLE EndUser DROP COLUMN model_bg_value",
         "ALTER TABLE EndUser ADD COLUMN game_id INTEGER DEFAULT 3 NOT NULL",
         'ALTER TABLE EndBind ADD COLUMN ark_uid TEXT DEFAULT ""',
+        'ALTER TABLE EndUser ADD COLUMN hg_token TEXT DEFAULT ""',
     ]
 )
 
@@ -270,7 +271,8 @@ class EndUser(User, table=True):
     nickname: str = Field(default="", title="游戏昵称")
 
     # 认证信息
-    token: Optional[str] = Field(default=None, title="OAuth Token")
+    token: Optional[str] = Field(default=None, title="Skland API Token")
+    hg_token: str = Field(default="", title="HyperGryph Login Token")
     platform: str = Field(default="3", title="平台 ID")
 
     # 记录编号

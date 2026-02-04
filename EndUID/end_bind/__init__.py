@@ -259,7 +259,7 @@ async def check_cred(
             "game_id": gid,
         }
         if used_token:
-            user_data["token"] = used_token
+            user_data["hg_token"] = used_token
         if skland_user_id:
             user_data["skland_user_id"] = skland_user_id
 
@@ -289,32 +289,35 @@ async def check_cred(
     if ark_count > 0:
         msg_lines.append(f"绑定明日方舟UID {ark_count} 个")
     if endfield_uid:
-        msg_lines.append("将同步抽卡记录，请勿立即触发")
+        msg_lines.append("将在后台同步抽卡记录")
     await _send_text(bot, ev, "\n".join(msg_lines))
 
     record_uid = endfield_record_uid
     server_id = endfield_server_id
     if gacha_grant_token and record_uid:
-        try:
-            u8_token = await end_api.get_u8_token_by_grant(
-                gacha_grant_token, record_uid
-            )
-            if u8_token:
-                from ..end_gacha.get_gachalogs import get_new_gachalog
-
-                success, gacha_msg, _ = await get_new_gachalog(
-                    uid=endfield_uid,
-                    u8_token=u8_token,
-                    server_id=server_id,
+        async def _sync_gacha():
+            try:
+                u8_token = await end_api.get_u8_token_by_grant(
+                    gacha_grant_token, record_uid
                 )
-                if success and gacha_msg:
-                    await _send_text(bot, ev, f"已同步抽卡记录: {gacha_msg}")
-                elif gacha_msg:
-                    logger.warning(f"[EndUID] 自动同步抽卡记录失败: {gacha_msg}")
-            else:
-                logger.warning("[EndUID] 登录时获取 u8_token 失败，跳过抽卡同步")
-        except Exception as e:
-            logger.warning(f"[EndUID] 登录时自动同步抽卡记录异常: {e}")
+                if u8_token:
+                    from ..end_gacha.get_gachalogs import get_new_gachalog
+
+                    success, gacha_msg, _ = await get_new_gachalog(
+                        uid=endfield_uid,
+                        u8_token=u8_token,
+                        server_id=server_id,
+                    )
+                    if success and gacha_msg:
+                        await _send_text(bot, ev, f"已同步抽卡记录: {gacha_msg}")
+                    elif gacha_msg:
+                        logger.warning(f"[EndUID] 自动同步抽卡记录失败: {gacha_msg}")
+                else:
+                    logger.warning("[EndUID] 登录时获取 u8_token 失败，跳过抽卡同步")
+            except Exception as e:
+                logger.warning(f"[EndUID] 登录时自动同步抽卡记录异常: {e}")
+
+        asyncio.create_task(_sync_gacha())
 
     try:
         from ..end_char import refresh_card_data
@@ -368,10 +371,10 @@ async def my_token(bot: Bot, ev: Event):
         return await _send_text(bot, ev, f"{GAME_TITLE} 未绑定账号")
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-    if not user or not user.token:
+    if not user or not user.hg_token:
         return await _send_text(bot, ev, f"{GAME_TITLE} 未找到 token 信息")
 
-    return await _send_text(bot, ev, user.token)
+    return await _send_text(bot, ev, user.hg_token)
 
 
 @EndBindUID.on_command(("删除", "解绑"))

@@ -120,7 +120,7 @@ async def import_gacha_record(bot: Bot, ev: Event):
         await bot.send("正在获取抽卡记录，请稍候...")
     else:
         user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-        if not user or not user.token:
+        if not user or not user.hg_token:
             return await bot.send(
                 f"请在命令后附带抽卡链接或 u8_token\n"
                 f"也可以先使用「{PREFIX}登录」扫码登录，之后可直接使用本命令自动获取\n"
@@ -135,17 +135,10 @@ async def import_gacha_record(bot: Bot, ev: Event):
 
         await bot.send("正在获取抽卡记录...为避免请求过快，可能较久，请等待...")
 
-        # 刷新 cred 确保凭证有效
-        refreshed = await end_api.refresh_token(user.cookie)
-        if not refreshed:
-            return await bot.send(
-                f"凭证已失效，请重新「{PREFIX}登录」"
-            )
-
-        u8_token = await end_api.get_u8_token(user.token, binding_uid)
+        u8_token = await end_api.get_u8_token(user.hg_token, binding_uid)
         if not u8_token:
             return await bot.send(
-                "自动获取 token 失败，可能是使用旧的插件版本登录！\n"
+                "自动获取 token 失败！\n"
                 f"请重新「{PREFIX}登录」或使用方式二、三手动提供抽卡链接"
             )
 
@@ -175,7 +168,7 @@ async def export_gacha_record(bot: Bot, ev: Event):
         )
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-    if not user or not user.token:
+    if not user or not user.cookie:
         return await bot.send(
             f"请先使用「{PREFIX}登录」绑定账号后再导出抽卡记录"
         )
@@ -198,7 +191,7 @@ async def delete_gacha_record(bot: Bot, ev: Event):
         )
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-    if not user or not user.token:
+    if not user or not user.cookie:
         return await bot.send(
             f"请先使用「{PREFIX}登录」绑定账号后再删除抽卡记录"
         )
