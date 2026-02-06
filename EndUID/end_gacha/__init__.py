@@ -22,7 +22,7 @@ from .draw_gachalogs import draw_gacha_card, draw_gacha_help
 
 sv_gacha_help = SV("End抽卡帮助")
 sv_gacha_tool = SV("End抽卡工具")
-sv_gacha_import = SV("End导入抽卡记录", priority=5)
+sv_gacha_import = SV("End导入抽卡记录", priority=4)
 sv_gacha_record = SV("End抽卡记录")
 sv_gacha_export = SV("End导出抽卡记录")
 sv_gacha_delete = SV("End删除抽卡记录")
