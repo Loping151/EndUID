@@ -11,7 +11,7 @@ from gsuid_core.segment import MessageSegment
 
 from ..utils.api.requests import end_api
 from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
-from ..utils.database.models import EndBind, EndUser, EndSignRecord
+from ..utils.database.models import EndBind, EndUser, EndSignRecord, EndSubscribe
 from ..utils.status_store import record_fail, record_success
 from ..end_config import EndConfig, PREFIX
 
@@ -378,8 +378,11 @@ async def build_sign_report_msgs(
                 f"全局统计: 成功 {success_count} | 已签 {signed_count} | 失败 {fail_count}"
             )
 
-            # 获取 bot_id (使用第一个用户的 bot_id)
-            bot_id = users[0].bot_id
+            # 从群组绑定表获取 bot_self_id，如果没有则 fallback 到第一个 user 的 bot_id
+            bot_id = await EndSubscribe.get_group_bot(group_id)
+            if not bot_id:
+                bot_id = users[0].bot_id
+                logger.debug(f"[EndUID] 群 {group_id} 未在 EndSubscribe 中找到绑定，使用 fallback bot_id: {bot_id}")
 
             if group_id not in group_msgs:
                 group_msgs[group_id] = {}
