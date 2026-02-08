@@ -132,11 +132,10 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
 
     for record in sorted_records:
         rarity = record.get("rarity", 0)
-        is_free = record.get("isFree", False)
-
-        # 特许寻访中免费抽不计入保底
-        if is_special and is_free:
-            continue
+        
+        # is_free = record.get("isFree", False)
+        # if is_special and is_free:
+        #     continue
 
         pull_counter += 1
 
