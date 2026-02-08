@@ -4,3 +4,7 @@ __pycache__/
 *.log
 .DS_Store
 
+# AI agent docs
+spec.md
+**/module.md
+
