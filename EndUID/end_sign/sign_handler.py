@@ -96,7 +96,7 @@ async def end_auto_sign() -> str:
     # 筛选启用了签到的用户
     candidate_users = [
         user for user in all_users
-        if user.cookie and user.cookie_status != "无效" and user.bbs_sign_switch == "on"
+        if user.cookie and user.cookie_status != "无效" and (user.bbs_sign_switch == "on" or EndConfig.get_config("SigninMaster").data)
     ]
 
     if not candidate_users:
