@@ -23,6 +23,8 @@ end_sign_all_sv = SV("End全部签到", pm=0)
 end_sign_switch_sv = SV("End自动签到")
 # 订阅签到结果
 end_sign_sub_sv = SV("End订阅签到结果", pm=0)
+# 删除无效token（管理员）
+end_del_invalid_sv = SV("End删除无效token", priority=1, pm=1)
 
 
 @end_sign_sv.on_fullmatch(("签到"))
@@ -78,6 +80,17 @@ async def disable_auto_sign(bot: Bot, ev: Event):
 
     await EndUser.update_data_by_uid(uid, ev.bot_id, bbs_sign_switch="off")
     return await bot.send("✅ 已关闭自动签到")
+
+
+# ===================== 删除无效token =====================
+
+@end_del_invalid_sv.on_fullmatch(("删除无效token"), block=True)
+async def delete_all_invalid_cookie(bot: Bot, ev: Event):
+    from ..utils.database.models import EndUser
+    at_sender = True if ev.group_id else False
+    del_len = await EndUser.delete_all_invalid_cookie()
+    msg = f"[EndUID] 已删除无效token【{del_len}】个"
+    await bot.send((" " if at_sender else "") + msg, at_sender)
 
 
 # ===================== 订阅签到结果 =====================

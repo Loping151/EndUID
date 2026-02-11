@@ -15,7 +15,7 @@ async def get_yesterday_sign_num():
 
 async def get_user_num():
     datas = await EndUser.get_all_data()
-    return len(datas)
+    return sum(1 for u in datas if u.cookie and u.cookie_status != "无效")
 
 
 register_status(

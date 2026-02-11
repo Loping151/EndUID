@@ -477,6 +477,15 @@ class EndUser(User, table=True):
         ]
         return len(active_users)
 
+    @classmethod
+    @with_session
+    async def delete_all_invalid_cookie(cls, session: AsyncSession):
+        """删除所有无效缓存"""
+        sql = delete(cls).where(
+            or_(col(cls.cookie_status) == "无效", col(cls.cookie) == ""),
+        )
+        result = await session.execute(sql)
+        return result.rowcount
 
 
 class EndSubscribe(BaseModel, table=True):

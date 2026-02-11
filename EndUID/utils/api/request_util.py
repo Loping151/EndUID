@@ -14,6 +14,8 @@ class RespCode(IntEnum):
     # 认证相关
     TOKEN_INVALID = 220     # 登录过期
     CRED_INVALID = 10001    # Cred 失效或已签到
+    LOGIN_EXPIRED = 10002   # 登录失效
+    TIME_ERROR = 10003      # 时间错误
 
     # 请求相关
     REQUEST_ERROR = 10000   # 请求异常

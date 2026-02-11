@@ -10,6 +10,7 @@ from gsuid_core.logger import logger
 from gsuid_core.segment import MessageSegment
 
 from ..utils.api.requests import end_api
+from ..utils.api.request_util import RespCode
 from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
 from ..utils.database.models import EndBind, EndUser, EndSignRecord, EndSubscribe
 from ..utils.status_store import record_fail, record_success
@@ -126,6 +127,7 @@ async def end_auto_sign() -> str:
     success_count = 0
     signed_count = 0
     fail_count = 0
+    failed_users: List[EndUser] = []
 
     # 获取配置
     concurrent_num = EndConfig.get_config("SigninConcurrentNum").data
@@ -146,9 +148,10 @@ async def end_auto_sign() -> str:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 统计结果
-        for result in results:
+        for user, result in zip(batch, results):
             if isinstance(result, Exception):
                 fail_count += 1
+                failed_users.append(user)
                 logger.error(f"[EndUID] 签到异常: {result}")
             elif isinstance(result, dict):
                 if result["status"] == "success":
@@ -157,6 +160,7 @@ async def end_auto_sign() -> str:
                     signed_count += 1
                 else:
                     fail_count += 1
+                    failed_users.append(user)
 
         # 批次间隔
         if i + concurrent_num < len(sign_users):
@@ -179,7 +183,7 @@ async def end_auto_sign() -> str:
 
     # 构建推送消息
     private_msgs, group_msgs = await build_sign_report_msgs(
-        sign_users, success_count, signed_count, fail_count
+        sign_users, success_count, signed_count, fail_count, failed_users
     )
 
     # 发送推送
@@ -231,6 +235,10 @@ async def do_sign_in_with_result(
                 logger.info(f"[EndUID] {display_uid} 今日已签到")
                 await EndSignRecord.mark_signed(user.uid)
                 return {"status": "signed", "message": f"[{display_uid}] 今日已签到"}
+            elif code in (RespCode.CRED_INVALID, RespCode.TOKEN_INVALID, RespCode.LOGIN_EXPIRED):
+                logger.warning(f"[EndUID] {display_uid} 凭证失效（code={code}），标记为无效")
+                await EndUser.mark_invalid(user.uid, user.user_id, user.bot_id, user.game_id)
+                return {"status": "fail", "message": f"[{display_uid}] 签到失败（凭证失效）"}
             else:
                 if attempt < max_retries:
                     logger.warning(
@@ -310,6 +318,7 @@ async def build_sign_report_msgs(
     success_count: int,
     signed_count: int,
     fail_count: int,
+    failed_users: Optional[List[EndUser]] = None,
 ) -> Tuple[Dict, Dict]:
     """构建签到报告消息
 
@@ -318,12 +327,18 @@ async def build_sign_report_msgs(
         success_count: 成功数量
         signed_count: 已签数量
         fail_count: 失败数量
+        failed_users: 签到失败的用户列表
 
     Returns:
         (私聊消息字典, 群消息字典)
     """
     private_msgs = {}
     group_msgs = {}
+
+    if failed_users is None:
+        failed_users = []
+
+    failed_user_ids = {(u.user_id, u.bot_id) for u in failed_users}
 
     # 是否启用推送
     enable_private = EndConfig.get_config("PrivateSignReport").data
@@ -375,7 +390,6 @@ async def build_sign_report_msgs(
             title = (
                 f"✅ 「终末地」 今日签到任务已完成！\n"
                 f"本群共签到成功 {group_success} 人\n"
-                f"全局统计: 成功 {success_count} | 已签 {signed_count} | 失败 {fail_count}"
             )
 
             # 从群组绑定表获取 bot_self_id，如果没有则 fallback 到第一个 user 的 bot_id
@@ -390,10 +404,16 @@ async def build_sign_report_msgs(
             if bot_id not in group_msgs[group_id]:
                 group_msgs[group_id][bot_id] = []
 
-            # 文本消息
-            group_msgs[group_id][bot_id].append(title)
-
-            # 仅文字报告，不渲染图片
+            # 构建完整消息（标题 + at 失败成员）
+            messages = [MessageSegment.text(title)]
+            for user in users:
+                if (user.user_id, user.bot_id) in failed_user_ids:
+                    messages.extend([
+                        MessageSegment.text("\n"),
+                        MessageSegment.at(user.user_id),
+                        MessageSegment.text(" 签到失败"),
+                    ])
+            group_msgs[group_id][bot_id].append(messages)
 
     return private_msgs, group_msgs
 
