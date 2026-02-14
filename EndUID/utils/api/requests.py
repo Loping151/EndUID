@@ -19,10 +19,12 @@ from .request_util import (
     get_endfield_web_headers,
     get_skland_app_headers,
     ANDROID_USER_AGENT,
+    IOS_USER_AGENT,
     SKLAND_APP_USER_AGENT,
     SKLAND_APP_VNAME,
     SKLAND_APP_PLATFORM,
     SIGN_VNAME,
+    ARK_SIGN_VNAME,
     RespCode,
 )
 from ..database.models import EndUser
@@ -418,7 +420,9 @@ class EndApi:
             body={"uid": uid, "gameId": 1},
             use_device_id=False,
             platform=1,
-            accept_encoding="gzip, deflate",
+            vname=ARK_SIGN_VNAME,
+            user_agent=IOS_USER_AGENT,
+            accept_encoding="gzip",
         )
 
     async def get_player_info(

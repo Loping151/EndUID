@@ -176,6 +176,7 @@ async def check_cred(
     binding_list = res.get("data", {}).get("list", [])
     GAME_ID_SET = {ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID}
     DEFAULT_NICK = {ENDFIELD_GAME_ID: "终末地角色", ARKNIGHTS_GAME_ID: "明日方舟角色"}
+    SERVER_NAME_MAP = {"China": "国服"}
 
     # 收集所有 gameId 为 1 或 3 的角色信息
     roles = []
@@ -189,24 +190,40 @@ async def check_cred(
             default_role = bind_entry.get("defaultRole")
             if not default_role and bind_entry.get("roles"):
                 default_role = bind_entry["roles"][0]
-            if not default_role:
-                continue
 
-            role_id = default_role.get("roleId")
-            if not role_id:
-                continue
+            if default_role:
+                role_id = default_role.get("roleId")
+                if not role_id:
+                    continue
+                nickname = (
+                    default_role.get("nickname")
+                    or bind_entry.get("nickName")
+                    or DEFAULT_NICK.get(entry_game_id, "角色")
+                )
+                server_id = str(default_role.get("serverId", "1"))
+            else:
+                # 方舟等游戏可能没有 roles/defaultRole，UID 在外层
+                role_id = bind_entry.get("uid")
+                if not role_id:
+                    continue
+                nickname = (
+                    bind_entry.get("nickName")
+                    or DEFAULT_NICK.get(entry_game_id, "角色")
+                )
+                server_id = "1"
 
             roles.append({
                 "game_id": entry_game_id,
                 "role_id": role_id,
-                "nickname": (
-                    default_role.get("nickname")
-                    or bind_entry.get("nickName")
-                    or DEFAULT_NICK.get(entry_game_id, "角色")
+                "nickname": nickname,
+                "channel": (
+                    bind_entry.get("channelName")
+                    or SERVER_NAME_MAP.get(
+                        (default_role or {}).get("serverName", ""), "官服"
+                    )
                 ),
-                "channel": bind_entry.get("channelName", "官服"),
                 "record_uid": bind_entry.get("uid"),
-                "server_id": str(default_role.get("serverId", "1")),
+                "server_id": server_id,
             })
 
     if not roles:
