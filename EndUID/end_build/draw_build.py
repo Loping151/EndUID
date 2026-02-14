@@ -33,13 +33,12 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
     if not uid:
         return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
-    save_path = PLAYER_PATH / uid / "card_detail.json"
-    if not save_path.exists():
-        from ..end_char import refresh_card_data
-        success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
-        if not success:
-            return error_msg
+    from ..end_char import refresh_card_data
+    success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+    if not success:
+        return error_msg
 
+    save_path = PLAYER_PATH / uid / "card_detail.json"
     try:
         async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
             raw = await f.read()

@@ -88,15 +88,12 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
     if not uid:
         return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
-    save_path = PLAYER_PATH / uid / "card_detail.json"
-    if not save_path.exists():
-        # 自动刷新一次
-        logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
-        from . import refresh_card_data
-        success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
-        if not success:
-            return error_msg
+    from . import refresh_card_data
+    success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+    if not success:
+        return error_msg
 
+    save_path = PLAYER_PATH / uid / "card_detail.json"
     try:
         async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
             raw = await f.read()
