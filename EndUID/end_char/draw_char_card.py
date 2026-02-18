@@ -41,13 +41,14 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     # 1. 角色别名解析
     resolved = resolve_alias_entry(char_name)
     if not resolved:
-        return f"❌ 未找到角色: {char_name}，请检查名称或稍后更新数据"
+        return f"❌ 未找到角色，请检查名称或稍后更新数据"
     
     real_name, entry = resolved
     char_id = entry.get("id")
     
     if not char_id:
-         return f"❌ 角色 {real_name} 数据不完整 (缺少ID)"
+        logger.warning(f"[EndUID] 角色 {real_name} 的数据条目缺少 ID")
+        return
 
     # 2. 获取用户绑定信息
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
