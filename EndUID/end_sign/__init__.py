@@ -54,15 +54,18 @@ async def sign_all(bot: Bot, ev: Event):
 async def enable_auto_sign(bot: Bot, ev: Event):
     from ..utils.database.models import EndBind, EndUser
 
-    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
-    if not uid:
+    bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
+    if not bind_data or not bind_data.uid:
         return await bot.send(f"未绑定终末地账号，请先使用「{PREFIX}登录」")
 
-    user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-    if not user:
-        return await bot.send("❌ 未找到用户信息")
+    # 收集所有游戏 UID（终末地 + 明日方舟）
+    all_uids = [u for u in bind_data.uid.split("_") if u]
+    if bind_data.ark_uid:
+        all_uids.extend(u for u in bind_data.ark_uid.split("_") if u)
 
-    await EndUser.update_data_by_uid(uid, ev.bot_id, bbs_sign_switch="on")
+    for uid in all_uids:
+        await EndUser.update_data_by_uid(uid, ev.bot_id, bbs_sign_switch="on")
+
     return await bot.send("✅ 已开启自动签到")
 
 
@@ -70,15 +73,18 @@ async def enable_auto_sign(bot: Bot, ev: Event):
 async def disable_auto_sign(bot: Bot, ev: Event):
     from ..utils.database.models import EndBind, EndUser
 
-    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
-    if not uid:
+    bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
+    if not bind_data or not bind_data.uid:
         return await bot.send(f"未绑定终末地账号，请先使用「{PREFIX}登录」")
 
-    user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
-    if not user:
-        return await bot.send("❌ 未找到用户信息")
+    # 收集所有游戏 UID（终末地 + 明日方舟）
+    all_uids = [u for u in bind_data.uid.split("_") if u]
+    if bind_data.ark_uid:
+        all_uids.extend(u for u in bind_data.ark_uid.split("_") if u)
 
-    await EndUser.update_data_by_uid(uid, ev.bot_id, bbs_sign_switch="off")
+    for uid in all_uids:
+        await EndUser.update_data_by_uid(uid, ev.bot_id, bbs_sign_switch="off")
+
     return await bot.send("✅ 已关闭自动签到")
 
 
