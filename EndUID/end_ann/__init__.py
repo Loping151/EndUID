@@ -222,7 +222,7 @@ async def clean_cache_directories(days: int) -> str:
     return f"「终末地」 清理完成！共删除{total_count}个文件，释放{total_space:.2f}MB"
 
 
-@sv_ann_clear_cache.on_fullmatch(("end清理缓存", "end删除缓存"), block=True)
+@sv_ann_clear_cache.on_fullmatch(("清理缓存", "删除缓存"), block=True)
 async def end_clean_cache_(bot: Bot, ev: Event):
     """手动清理缓存指令"""
     logger.info(f"[EndUID][缓存清理] 手动触发清理，保留{CACHE_DAYS_TO_KEEP}天内的文件")
