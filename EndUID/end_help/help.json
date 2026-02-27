@@ -298,7 +298,7 @@
       {
         "name": "清理缓存",
         "desc": "清理30天前的公告缓存文件",
-        "eg": "end清理缓存",
+        "eg": "清理缓存",
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
