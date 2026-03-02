@@ -30,6 +30,11 @@ from .request_util import (
 from ..database.models import EndUser
 
 
+class CredentialInvalidError(Exception):
+    """凭证失效异常（Token 刷新时发现 cred 已过期）"""
+    pass
+
+
 class EndApi:
     """终末地 API 请求引擎"""
 
@@ -75,12 +80,17 @@ class EndApi:
     async def refresh_token(self, cred: str, force: bool = False) -> Optional[str]:
         """刷新 Token（从数据库读取，失效时自动刷新）
 
+        网络失败自动重试最多 3 次；凭证失效抛出 CredentialInvalidError。
+
         Args:
             cred: 用户凭证
             force: 是否强制刷新（忽略 3 分钟缓存）
 
         Returns:
-            token 字符串，失败返回 None
+            token 字符串，网络失败返回 None
+
+        Raises:
+            CredentialInvalidError: 凭证已失效（调用方应标记用户无效）
         """
         if not cred:
             return None
@@ -110,50 +120,75 @@ class EndApi:
             # 没有 token，需要刷新
             need_refresh = True
 
-        # 3. 调用刷新 API
+        # 3. 调用刷新 API（带网络重试）
         if not need_refresh and not force:
             return user.token if user and user.token else None
 
         headers = get_refresh_header(cred)
         session = await self.get_session()
+        max_retries = 3
+        retry_delay = 1.0
 
-        try:
-            logger.debug(f"[EndUID][RefreshToken] GET {REFRESH_TOKEN_URL} cred_len={len(cred)}")
-            proxy = self._get_proxy()
-            async with session.get(
-                REFRESH_TOKEN_URL,
-                headers=headers,
-                proxy=proxy,
-            ) as resp:
-                if resp.content_type and "json" in resp.content_type:
-                    res = await resp.json()
-                    logger.debug(f"[EndUID][RefreshToken] response: {res}")
-                else:
-                    text = await resp.text()
-                    logger.error(
-                        f"[EndUID] Token 刷新失败: HTTP {resp.status}, body={text[:200]}"
-                    )
-                    return None
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.debug(f"[EndUID][RefreshToken] GET {REFRESH_TOKEN_URL} cred_len={len(cred)}")
+                proxy = self._get_proxy()
+                async with session.get(
+                    REFRESH_TOKEN_URL,
+                    headers=headers,
+                    proxy=proxy,
+                ) as resp:
+                    if resp.content_type and "json" in resp.content_type:
+                        res = await resp.json()
+                        logger.debug(f"[EndUID][RefreshToken] response: {res}")
+                    else:
+                        text = await resp.text()
+                        logger.error(
+                            f"[EndUID] Token 刷新失败: HTTP {resp.status}, body={text[:200]}"
+                        )
+                        if attempt < max_retries:
+                            logger.warning(f"[EndUID] Token 刷新非JSON响应，第 {attempt}/{max_retries} 次重试")
+                            await asyncio.sleep(retry_delay)
+                            continue
+                        return None
 
-                if res.get("code") == RespCode.OK and res.get("message") == "OK":
-                    token = res["data"]["token"]
-                    timestamp = res.get("timestamp")
+                    code = res.get("code")
 
-                    # 更新数据库
-                    await EndUser.update_data_by_xx(
-                        {"cookie": cred},
-                        token=token,
-                        last_cred_request_time=current_time
-                    )
+                    if code == RespCode.OK and res.get("message") == "OK":
+                        token = res["data"]["token"]
+                        timestamp = res.get("timestamp")
 
-                    logger.info(f"[EndUID] Token 刷新成功 (timestamp={timestamp})")
-                    return token
-                else:
-                    logger.error(f"[EndUID] Token 刷新失败: {res}")
-                    return None
-        except Exception as e:
-            logger.error(f"[EndUID] Token 刷新异常: {e}")
-            return None
+                        # 更新数据库
+                        await EndUser.update_data_by_xx(
+                            {"cookie": cred},
+                            token=token,
+                            last_cred_request_time=current_time
+                        )
+
+                        logger.info(f"[EndUID] Token 刷新成功 (timestamp={timestamp})")
+                        return token
+                    elif code in (RespCode.CRED_INVALID, RespCode.TOKEN_INVALID, RespCode.LOGIN_EXPIRED):
+                        # 凭证失效，不重试，直接抛出
+                        logger.warning(f"[EndUID] Token 刷新失败（凭证失效 code={code}）")
+                        raise CredentialInvalidError(f"凭证失效 code={code}")
+                    else:
+                        logger.error(f"[EndUID] Token 刷新失败: {res}")
+                        if attempt < max_retries:
+                            logger.warning(f"[EndUID] Token 刷新未知错误，第 {attempt}/{max_retries} 次重试")
+                            await asyncio.sleep(retry_delay)
+                            continue
+                        return None
+            except CredentialInvalidError:
+                raise
+            except Exception as e:
+                if attempt < max_retries:
+                    logger.warning(f"[EndUID] Token 刷新异常（第 {attempt}/{max_retries} 次重试）: {e}")
+                    await asyncio.sleep(retry_delay)
+                    continue
+                logger.error(f"[EndUID] Token 刷新异常（已重试{max_retries}次）: {e}")
+                return None
+
+        return None
 
     # ===================== 通用请求方法 =====================
 
@@ -190,7 +225,11 @@ class EndApi:
             vname = SIGN_VNAME
 
         # 1. 获取 Token
-        token = await self.refresh_token(cred)
+        try:
+            token = await self.refresh_token(cred)
+        except CredentialInvalidError:
+            logger.warning(f"[EndUID] 凭证失效，请求中止")
+            return None
         if not token:
             return None
 
@@ -772,10 +811,16 @@ class EndApi:
             return None
 
         # 验证 Token 可用性
-        token = await self.refresh_token(user.cookie)
-        if not token:
-            # 标记为无效
+        try:
+            token = await self.refresh_token(user.cookie)
+        except CredentialInvalidError:
+            # 凭证确认失效，标记为无效
+            logger.warning(f"[EndUID] {uid} 凭证失效，标记为无效")
             await EndUser.mark_invalid(uid, user_id, bot_id)
+            return None
+        if not token:
+            # 网络错误，不标记无效
+            logger.warning(f"[EndUID] {uid} Token 刷新失败（网络错误），跳过")
             return None
 
         # 更新最后使用时间
