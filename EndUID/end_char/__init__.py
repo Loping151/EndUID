@@ -84,6 +84,8 @@ async def send_char_card_handler(bot: Bot, ev: Event):
     char_name = ""
     if getattr(ev, "regex_group", None):
         char_name = ev.regex_group[0] or ev.regex_group[1] or ""
+        if char_name == "刷新":
+            return
     if not char_name:
         match = re.search(f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$", ev.raw_text)
         if match:
