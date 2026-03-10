@@ -170,7 +170,7 @@ setup_scheduler()
 
 # ===================== 清理签到记录 =====================
 
-@scheduler.scheduled_job("cron", hour=0, minute=5)
+@scheduler.scheduled_job("cron", hour=0, minute=5, id="clear_ww_sign")
 async def clear_end_sign_record():
     """每天 00:05 清除 2 天前的签到记录"""
     from ..utils.database.models import EndSignRecord
