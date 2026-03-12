@@ -71,11 +71,13 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
 
     char_name_map: Dict[str, str] = {}
     char_avatar_url_map: Dict[str, str] = {}
+    avatar_url_to_name: Dict[str, str] = {}
     for char in detail.chars:
         if char.charData and char.id:
             char_name_map[char.id] = char.charData.name
             if char.charData.avatarSqUrl:
                 char_avatar_url_map[char.id] = char.charData.avatarSqUrl
+                avatar_url_to_name[char.charData.avatarSqUrl] = char.charData.name
 
     needed_char_ids: set = set()
     for d in detail.domain:
@@ -97,6 +99,23 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
         b64 = await get_image_b64_with_cache(url, AVATAR_CACHE_PATH)
         if b64:
             char_avatar_b64[cid] = b64
+
+    # Room chars may use template IDs (chr_xxxx) with their own avatarUrl
+    room_avatar_b64: Dict[str, str] = {}
+    for room in detail.spaceShip.rooms:
+        for c in room.chars:
+            if not isinstance(c, dict):
+                continue
+            cid = c.get("charId", "")
+            if cid and cid not in char_avatar_b64:
+                avatar_url = c.get("avatarUrl", "")
+                if avatar_url:
+                    b64 = await get_image_b64_with_cache(
+                        avatar_url, AVATAR_CACHE_PATH
+                    )
+                    if b64:
+                        room_avatar_b64[cid] = b64
+    char_avatar_b64.update(room_avatar_b64)
 
     base_avatar_b64 = ""
     if base and base.avatarUrl:
@@ -211,11 +230,23 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
 
         room_chars = []
         for c in room.chars:
-            char_id = c.get("charId", "") if isinstance(c, dict) else ""
+            if isinstance(c, dict):
+                char_id = c.get("charId", "")
+                char_name = char_name_map.get(char_id, "")
+                if not char_name:
+                    avatar_url = c.get("avatarUrl", "")
+                    if avatar_url:
+                        char_name = avatar_url_to_name.get(avatar_url, "")
+            else:
+                char_id = ""
+                char_name = ""
             room_chars.append({
-                "charName": char_name_map.get(char_id, ""),
+                "charName": char_name,
                 "avatar": char_avatar_b64.get(char_id, ""),
             })
+        # Pad to 3 slots
+        while len(room_chars) < 3:
+            room_chars.append({"charName": "", "avatar": ""})
 
         rooms.append({
             "id": room.id,
@@ -226,6 +257,9 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
             "maxLevel": max_level,
             "chars": room_chars,
         })
+
+    # Sort by type, 总控中枢(0) first
+    rooms.sort(key=lambda r: r["type"])
 
     context = {
         "roleId": base.roleId if base else uid,

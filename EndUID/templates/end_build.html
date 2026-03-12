@@ -545,42 +545,71 @@
                 帝江号 <span>SPACESHIP</span>
             </div>
             <div class="spaceship-section">
-                <div class="room-grid">
                     {% for room in spaceShip.rooms %}
-                    <div class="room-card" style="border-top: 2px solid {% if room.color == 'blue' %}#4a9eff{% elif room.color == 'yellow' %}#ffe600{% elif room.color == 'green' %}#4ade80{% elif room.color == 'purple' %}#c084fc{% else %}#555{% endif %};">
-                        <div class="room-header">
-                            <span class="room-type-name">{{ room.typeName }}</span>
-                            <div class="room-level-row">
-                                <span class="room-lvl-text">Lv.{{ room.level }}</span>
-                                <div class="level-pips">
-                                    {% for i in range(room.maxLevel) %}
-                                    <div class="level-pip {% if i < room.level %}filled {{ room.color }}{% endif %}"></div>
-                                    {% endfor %}
+                        {% if room.type == 0 %}
+                        <div class="room-card" style="border-top: 2px solid #4a9eff; width: 100%; margin-bottom: 12px;">
+                            <div class="room-header">
+                                <span class="room-type-name">{{ room.typeName }}</span>
+                                <div class="room-level-row">
+                                    <span class="room-lvl-text">Lv.{{ room.level }}</span>
+                                    <div class="level-pips">
+                                        {% for i in range(room.maxLevel) %}
+                                        <div class="level-pip {% if i < room.level %}filled {{ room.color }}{% endif %}"></div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
+                            <div class="room-chars">
+                                {% for char in room.chars %}
+                                    {% if char.avatar %}
+                                    <div class="mini-avatar" style="width:44px; height:44px;">
+                                        <img src="{{ char.avatar }}" title="{{ char.charName }}">
+                                    </div>
+                                    {% elif char.charName %}
+                                    <div class="empty-slot" style="width:44px; height:44px; font-size:11px; border-color:#555;">{{ char.charName[:2] }}</div>
+                                    {% else %}
+                                    <div class="empty-slot" style="width:44px; height:44px; border-color:#333;">-</div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </div>
-                        <div class="room-chars">
-                            {% set has_avatar = [] %}
-                            {% for char in room.chars %}
-                                {% if char.avatar %}
-                                <div class="mini-avatar" style="width:44px; height:44px;">
-                                    <img src="{{ char.avatar }}" title="{{ char.charName }}">
-                                </div>
-                                {% if has_avatar.append(1) %}{% endif %}
-                                {% elif char.charName %}
-                                <div class="empty-slot" style="width:44px; height:44px; font-size:11px; border-color:#555;">{{ char.charName[:2] }}</div>
-                                {% endif %}
-                            {% endfor %}
-                            {% if not room.chars %}
-                                <div class="empty-slot" style="width:100%; height:44px; border-color:#333;">空闲</div>
-                            {% endif %}
-                        </div>
-                    </div>
+                        {% endif %}
                     {% endfor %}
+                    <div class="room-grid">
+                    {% for room in spaceShip.rooms %}
+                        {% if room.type != 0 %}
+                        <div class="room-card" style="border-top: 2px solid {% if room.color == 'yellow' %}#ffe600{% elif room.color == 'green' %}#4ade80{% elif room.color == 'purple' %}#c084fc{% else %}#555{% endif %};">
+                            <div class="room-header">
+                                <span class="room-type-name">{{ room.typeName }}</span>
+                                <div class="room-level-row">
+                                    <span class="room-lvl-text">Lv.{{ room.level }}</span>
+                                    <div class="level-pips">
+                                        {% for i in range(room.maxLevel) %}
+                                        <div class="level-pip {% if i < room.level %}filled {{ room.color }}{% endif %}"></div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="room-chars">
+                                {% for char in room.chars %}
+                                    {% if char.avatar %}
+                                    <div class="mini-avatar" style="width:44px; height:44px;">
+                                        <img src="{{ char.avatar }}" title="{{ char.charName }}">
+                                    </div>
+                                    {% elif char.charName %}
+                                    <div class="empty-slot" style="width:44px; height:44px; font-size:11px; border-color:#555;">{{ char.charName[:2] }}</div>
+                                    {% else %}
+                                    <div class="empty-slot" style="width:44px; height:44px; border-color:#333;">-</div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    </div>
                     {% if not spaceShip.rooms %}
                     <div style="padding: 20px; text-align: center; color: #666;">暂无舱室数据</div>
                     {% endif %}
-                </div>
             </div>
         </div>
 

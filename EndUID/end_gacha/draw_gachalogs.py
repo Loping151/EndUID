@@ -51,6 +51,11 @@ STANDARD_CHAR_NAMES = {
     "骏卫",
 }
 
+# 常驻武器池名（池名去掉"武器寻访-"后的短名）
+STANDARD_WEAPON_POOL_NAMES = {
+    "坚冰申领", "星声申领", "远途申领", "崇山申领", "雷鸣申领",
+}
+
 # 常驻武器名（使用 weaponName 判断）
 STANDARD_WEAPON_NAMES = {
     "扶摇",
@@ -225,10 +230,83 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
         "six_star_count": six_star_count,
         "avg_pulls": avg_pulls,
         "remain": remain,
+        "pity": pull_counter,
         "time_range": time_range,
         "level": level,
         "level_tag": level_tag,
         "six_star_items": six_star_items,
+    }
+
+
+def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
+    """将多个武器池统计合并为一个区块"""
+    combined_total = 0
+    combined_six_star_count = 0
+    all_six_star_items: list = []
+    all_pull_counts: list = []
+    sub_pools: list = []
+    time_parts: list = []
+
+    for ps in pool_stats_list:
+        combined_total += ps["total"]
+        combined_six_star_count += ps["six_star_count"]
+
+        short_name = ps["pool_name"].replace("武器寻访-", "")
+        for item in ps["six_star_items"]:
+            item_copy = dict(item)
+            item_copy["pool_label"] = short_name
+            all_six_star_items.append(item_copy)
+            all_pull_counts.append(item_copy["pull_count"])
+
+        sub_pools.append({
+            "short_name": short_name,
+            "total": ps["total"],
+            "pity": ps["pity"],
+            "six_star_count": ps["six_star_count"],
+        })
+
+        if ps["time_range"]:
+            for part in ps["time_range"].split(" - "):
+                time_parts.append(part.strip())
+
+    avg_pulls = (
+        round(sum(all_pull_counts) / len(all_pull_counts), 1)
+        if all_pull_counts else 0
+    )
+
+    if combined_six_star_count == 0:
+        level = 2
+    elif avg_pulls <= 30:
+        level = 4
+    elif avg_pulls <= 45:
+        level = 3
+    elif avg_pulls <= 60:
+        level = 2
+    elif avg_pulls <= 70:
+        level = 1
+    else:
+        level = 0
+
+    time_range = ""
+    if time_parts:
+        time_parts.sort()
+        time_range = f"{time_parts[0]} - {time_parts[-1]}"
+
+    return {
+        "pool_name": merged_name,
+        "pool_type": "weapon",
+        "is_merged": True,
+        "has_up": False,
+        "total": combined_total,
+        "six_star_count": combined_six_star_count,
+        "avg_pulls": avg_pulls,
+        "remain": 0,
+        "pity": 0,
+        "time_range": time_range,
+        "level": level,
+        "level_tag": LUCK_LEVELS[level],
+        "six_star_items": all_six_star_items,
+        "sub_pools": sub_pools,
     }
 
 
@@ -301,22 +379,40 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
         except Exception as e:
             logger.warning(f"[EndUID][Gacha] 读取卡片详情失败: {e}")
 
-    # 池显示顺序
-    pool_order = ["特许寻访", "基础寻访", "启程寻访"]
-    pools = []
-
-    for pn in pool_order:
-        if pn in pool_data:
-            pools.append(_calc_pool_stats(pn, pool_data[pn]))
-
-    # 武器池
+    # 武器池分组合并
+    weapon_up_stats = []
+    weapon_std_stats = []
+    handled_pool_names = {"特许寻访", "基础寻访", "启程寻访"}
     for pn in sorted(pool_data.keys()):
-        if pn.startswith("武器寻访") and pn not in [p["pool_name"] for p in pools]:
-            pools.append(_calc_pool_stats(pn, pool_data[pn]))
+        if not pn.startswith("武器寻访"):
+            continue
+        handled_pool_names.add(pn)
+        stats = _calc_pool_stats(pn, pool_data[pn])
+        short_name = pn.replace("武器寻访-", "")
+        if short_name in STANDARD_WEAPON_POOL_NAMES:
+            weapon_std_stats.append(stats)
+        else:
+            weapon_up_stats.append(stats)
+
+    weapon_up_merged = _merge_weapon_pools(weapon_up_stats, "武器寻访") if weapon_up_stats else None
+    weapon_std_merged = _merge_weapon_pools(weapon_std_stats, "武器寻访-常驻") if weapon_std_stats else None
+
+    # 池显示顺序: 特许寻访 → 基础寻访 → 武器寻访 → 武器寻访-常驻 → 启程寻访
+    pools = []
+    if "特许寻访" in pool_data:
+        pools.append(_calc_pool_stats("特许寻访", pool_data["特许寻访"]))
+    if "基础寻访" in pool_data:
+        pools.append(_calc_pool_stats("基础寻访", pool_data["基础寻访"]))
+    if weapon_up_merged:
+        pools.append(weapon_up_merged)
+    if weapon_std_merged:
+        pools.append(weapon_std_merged)
+    if "启程寻访" in pool_data:
+        pools.append(_calc_pool_stats("启程寻访", pool_data["启程寻访"]))
 
     # 其他未归类
     for pn in pool_data:
-        if pn not in [p["pool_name"] for p in pools]:
+        if pn not in handled_pool_names:
             pools.append(_calc_pool_stats(pn, pool_data[pn]))
 
     # 为六星角色/武器解析头像
