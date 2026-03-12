@@ -256,6 +256,13 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     weapon_icon_map: dict[str, str] = {}
 
     card_path = PLAYER_PATH / uid / "card_detail.json"
+    if not card_path.exists():
+        # Auto-refresh to download character avatars
+        try:
+            from ..end_char import refresh_card_data
+            await refresh_card_data(ev.user_id, ev.bot_id)
+        except Exception as e:
+            logger.debug(f"[EndUID][Gacha] 自动刷新失败: {e}")
     if card_path.exists():
         try:
             async with aiofiles.open(card_path, "r", encoding="utf-8") as f:

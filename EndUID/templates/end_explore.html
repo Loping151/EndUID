@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endfield Explore Card</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-panel: rgba(255, 255, 255, 0.03);
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 1000px;
+            min-height: 800px;
+            background-color: var(--c-bg);
+            font-family: 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            padding-bottom: 50px;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: #111;
+            border: 1px solid var(--c-accent);
+            flex-shrink: 0;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .name-row {
+            display: flex;
+            align-items: baseline;
+            gap: 15px;
+        }
+
+        .user-name {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .user-uid {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: var(--c-subtext);
+            background: rgba(255,255,255,0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .info-tags {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+        }
+
+        .tag {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            color: #ccc;
+            background: var(--c-panel);
+            padding: 4px 12px;
+            border: 1px solid var(--c-border);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag strong {
+            color: var(--c-accent);
+            font-size: 18px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #eee;
+            border-left: 4px solid var(--c-accent);
+            padding-left: 12px;
+        }
+
+        .section-title span {
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            color: var(--c-subtext);
+            font-weight: 400;
+            opacity: 0.6;
+        }
+
+        .domain-section {
+            margin-bottom: 10px;
+        }
+
+        .domain-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .domain-title .tag {
+            padding: 4px 12px;
+            font-size: 18px;
+        }
+
+        /* 表格 */
+        .explore-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--c-border);
+        }
+
+        .explore-table thead th {
+            background: rgba(255,255,255,0.06);
+            padding: 14px 16px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #aaa;
+            text-align: center;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .explore-table thead th:first-child {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .explore-table tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .explore-table tbody tr:nth-child(even) {
+            background: rgba(255,255,255,0.015);
+        }
+
+        .explore-table tbody tr:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .explore-table td {
+            padding: 14px 16px;
+            font-size: 18px;
+            text-align: center;
+            color: #ccc;
+        }
+
+        .explore-table td:first-child {
+            text-align: left;
+            padding-left: 20px;
+            font-weight: 600;
+            color: #ddd;
+            font-size: 20px;
+        }
+
+        .cell-count {
+            font-family: 'JetBrains Mono';
+            font-size: 18px;
+        }
+
+        .cell-count .cur {
+            color: var(--c-accent);
+            font-weight: 700;
+        }
+
+        .cell-count .sep {
+            color: #666;
+            margin: 0 2px;
+        }
+
+        .cell-count .max {
+            color: #888;
+        }
+
+        .cell-count.full .cur {
+            color: #4ade80;
+        }
+
+        .cell-count.zero .cur,
+        .cell-count.zero .max {
+            color: #555;
+        }
+
+        /* 底部Logo */
+        .footer-logo {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            opacity: 0.3;
+            width: 120px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-layer">
+        {% if bg %}
+        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.1; mix-blend-mode: overlay;">
+        {% endif %}
+    </div>
+    <div class="grid-deco"></div>
+
+    <div class="container">
+
+        <div class="header">
+            <div class="avatar">
+                {% if avatar %}
+                <img src="{{ avatar }}">
+                {% else %}
+                <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; color:#555;">?</div>
+                {% endif %}
+            </div>
+            <div class="user-details">
+                <div class="name-row">
+                    <div class="user-name">{{ name }}</div>
+                    {% if roleId %}
+                    <div class="user-uid">UID {{ roleId }}</div>
+                    {% endif %}
+                </div>
+                <div class="info-tags">
+                    <div class="tag">LEVEL <strong>{{ level }}</strong></div>
+                    <div class="tag">WORLD <strong>{{ worldLevel }}</strong></div>
+                    <div class="tag" style="font-family: 'Source Han Sans CN', sans-serif;">苏醒日 <strong>{{ createTime.split(' ')[0] if createTime else 'N/A' }}</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">
+                区域探索 <span>EXPLORATION</span>
+            </div>
+
+            {% for domain in domains %}
+            <div class="domain-section">
+                <div class="domain-title">
+                    {{ domain.name }}
+                    <div class="tag">Lv.<strong>{{ domain.level }}</strong></div>
+                </div>
+                <table class="explore-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 22%;">区域</th>
+                            <th style="width: 19.5%;">宝箱</th>
+                            <th style="width: 19.5%;">醚质</th>
+                            <th style="width: 19.5%;">协议</th>
+                            <th style="width: 19.5%;">装备 / 档案</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lv in domain.levels %}
+                        <tr>
+                            <td>{{ lv.name }}</td>
+                            <td>
+                                {% set cls = "full" if lv.trchest.count == lv.trchest.total and lv.trchest.total > 0 else ("zero" if lv.trchest.total == 0 else "") %}
+                                <span class="cell-count {{ cls }}">
+                                    <span class="cur">{{ lv.trchest.count }}</span><span class="sep">/</span><span class="max">{{ lv.trchest.total }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                {% set cls = "full" if lv.puzzle.count == lv.puzzle.total and lv.puzzle.total > 0 else ("zero" if lv.puzzle.total == 0 else "") %}
+                                <span class="cell-count {{ cls }}">
+                                    <span class="cur">{{ lv.puzzle.count }}</span><span class="sep">/</span><span class="max">{{ lv.puzzle.total }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                {% set cls = "full" if lv.blackbox.count == lv.blackbox.total and lv.blackbox.total > 0 else ("zero" if lv.blackbox.total == 0 else "") %}
+                                <span class="cell-count {{ cls }}">
+                                    <span class="cur">{{ lv.blackbox.count }}</span><span class="sep">/</span><span class="max">{{ lv.blackbox.total }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                {% set ecls = "full" if lv.equipTrchest.count == lv.equipTrchest.total and lv.equipTrchest.total > 0 else ("zero" if lv.equipTrchest.total == 0 else "") %}
+                                {% set pcls = "full" if lv.piece.count == lv.piece.total and lv.piece.total > 0 else ("zero" if lv.piece.total == 0 else "") %}
+                                <span class="cell-count {{ ecls }}">
+                                    <span class="cur">{{ lv.equipTrchest.count }}</span><span class="sep">/</span><span class="max">{{ lv.equipTrchest.total }}</span>
+                                </span>
+                                <span style="color:#555; margin: 0 4px;">|</span>
+                                <span class="cell-count {{ pcls }}">
+                                    <span class="cur">{{ lv.piece.count }}</span><span class="sep">/</span><span class="max">{{ lv.piece.total }}</span>
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+
+            {% if not domains %}
+            <div style="padding: 30px; text-align: center; color: #666; border: 1px solid var(--c-border);">暂无探索数据</div>
+            {% endif %}
+        </div>
+
+        {% if end_logo %}
+        <img src="{{ end_logo }}" class="footer-logo">
+        {% endif %}
+
+    </div>
+</body>
+</html>

@@ -65,9 +65,25 @@
       },
       {
         "name": "建设",
-        "desc": "查看地区建设与基建信息",
+        "desc": "查看基建据点与帝江号信息",
         "eg": "建设",
         "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "探索",
+        "desc": "查看区域探索进度",
+        "eg": "探索",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "日历",
+        "desc": "查看活动日历与干员寻访",
+        "eg": "日历",
+        "need_ck": false,
         "need_sk": false,
         "need_admin": false
       },

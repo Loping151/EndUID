@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endfield Calendar</title>
+    <style>
+        @import url('{{ font_css_url }}');
+
+        :root {
+            --c-bg: #0f1014;
+            --c-panel: rgba(255, 255, 255, 0.03);
+            --c-accent: #ffe600;
+            --c-text: #ffffff;
+            --c-subtext: #8b8b8b;
+            --c-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            width: 1000px;
+            min-height: 600px;
+            background-color: var(--c-bg);
+            font-family: 'Source Han Sans CN', sans-serif;
+            color: var(--c-text);
+            padding-bottom: 50px;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -2;
+            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
+        }
+
+        .grid-deco {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+        }
+
+        /* Header */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .calendar-title {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .calendar-title span {
+            font-family: 'JetBrains Mono';
+            font-size: 16px;
+            color: var(--c-subtext);
+            font-weight: 400;
+            margin-left: 12px;
+        }
+
+        .calendar-date {
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            color: var(--c-subtext);
+            background: rgba(255,255,255,0.05);
+            padding: 4px 12px;
+            border-radius: 4px;
+        }
+
+        /* Banner */
+        .banner-wrap {
+            width: 100%;
+            height: 280px;
+            overflow: hidden;
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+        }
+
+        .banner-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Section title */
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            border-left: 4px solid var(--c-accent);
+            padding-left: 12px;
+        }
+
+        .section-title span {
+            font-family: 'JetBrains Mono';
+            font-size: 16px;
+            color: #aaa;
+            font-weight: 400;
+            opacity: 0.6;
+        }
+
+        /* Gacha pool cards */
+        .pool-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .pool-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--c-border);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .pool-chars {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .pool-char {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #555;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .pool-char.rarity_6 {
+            border-color: #ff9d3a;
+            box-shadow: 0 0 12px rgba(255,157,58,0.3);
+        }
+
+        .pool-char.rarity_5 {
+            border-color: #c084fc;
+            box-shadow: 0 0 12px rgba(192,132,252,0.3);
+        }
+
+        .pool-char img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .pool-char-badge {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 2px 0;
+            color: var(--c-accent);
+        }
+
+        .pool-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pool-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .pool-time {
+            font-family: 'JetBrains Mono';
+            font-size: 16px;
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        .pool-status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .status-badge.ongoing {
+            background: rgba(255,230,0,0.15);
+            color: var(--c-accent);
+            border: 1px solid rgba(255,230,0,0.3);
+        }
+
+        .status-badge.ended {
+            background: rgba(255,255,255,0.05);
+            color: #666;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .status-badge.upcoming {
+            background: rgba(74,158,255,0.15);
+            color: #4a9eff;
+            border: 1px solid rgba(74,158,255,0.3);
+        }
+
+        .remaining-text {
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            color: #ddd;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            flex: 1;
+            height: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        /* Activities */
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .activity-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--c-border);
+            display: flex;
+            overflow: hidden;
+            height: 140px;
+        }
+
+        .activity-pic {
+            width: 160px;
+            height: 100%;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: #111;
+        }
+
+        .activity-pic img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .activity-body {
+            flex: 1;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+        }
+
+        .activity-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .activity-desc {
+            font-size: 14px;
+            color: #bbb;
+        }
+
+        .activity-time {
+            font-family: 'JetBrains Mono';
+            font-size: 13px;
+            color: #999;
+        }
+
+        .activity-bottom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Footer */
+        .footer-logo {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            opacity: 0.3;
+            width: 120px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-layer">
+        {% if bg %}
+        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.1; mix-blend-mode: overlay;">
+        {% endif %}
+    </div>
+    <div class="grid-deco"></div>
+
+    <div class="container">
+
+        <div class="calendar-header">
+            <div class="calendar-title">活动日历 <span>CALENDAR</span></div>
+            <div class="calendar-date">{{ now }}</div>
+        </div>
+
+        {% if banner %}
+        <div class="banner-wrap">
+            <img src="{{ banner }}">
+        </div>
+        {% endif %}
+
+        {% if charPools %}
+        <div>
+            <div class="section-title">干员寻访 <span>RECRUITMENT</span></div>
+            <div class="pool-grid">
+                {% for pool in charPools %}
+                <div class="pool-card">
+                    <div class="pool-chars">
+                        {% for ch in pool.chars %}
+                        <div class="pool-char {{ ch.rarity }}">
+                            {% if ch.pic %}
+                            <img src="{{ ch.pic }}">
+                            {% endif %}
+                            {% if ch.dotType == 'label_type_up' %}
+                            <div class="pool-char-badge">UP</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="pool-info">
+                        <div class="pool-name">{{ pool.name }}</div>
+                        <div class="pool-time">{{ pool.startTime }} ~ {{ pool.endTime }}</div>
+                        <div class="pool-status-row">
+                            {% if pool.status == '进行中' %}
+                            <span class="status-badge ongoing">{{ pool.status }}</span>
+                            {% elif pool.status == '已结束' %}
+                            <span class="status-badge ended">{{ pool.status }}</span>
+                            {% else %}
+                            <span class="status-badge upcoming">{{ pool.status }}</span>
+                            {% endif %}
+                            {% if pool.remaining %}
+                            <span class="remaining-text">{{ pool.remaining }}</span>
+                            {% endif %}
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: {{ pool.progress }}%; background: {{ pool.color }};"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if weaponPools %}
+        <div>
+            <div class="section-title">武器寻访 <span>WEAPON POOL</span></div>
+            <div class="pool-grid">
+                {% for pool in weaponPools %}
+                <div class="pool-card">
+                    <div class="pool-info">
+                        <div class="pool-name">{{ pool.name }}</div>
+                        <div class="pool-time">{{ pool.startTime }} ~ {{ pool.endTime }}</div>
+                        <div class="pool-status-row">
+                            {% if pool.status == '进行中' %}
+                            <span class="status-badge ongoing">{{ pool.status }}</span>
+                            {% elif pool.status == '已结束' %}
+                            <span class="status-badge ended">{{ pool.status }}</span>
+                            {% else %}
+                            <span class="status-badge upcoming">{{ pool.status }}</span>
+                            {% endif %}
+                            {% if pool.remaining %}
+                            <span class="remaining-text">{{ pool.remaining }}</span>
+                            {% endif %}
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: {{ pool.progress }}%; background: {{ pool.color }};"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if activities %}
+        <div>
+            <div class="section-title">活动日历 <span>EVENTS</span></div>
+            <div class="activity-grid">
+                {% for act in activities %}
+                <div class="activity-card">
+                    <div class="activity-pic">
+                        {% if act.pic %}
+                        <img src="{{ act.pic }}">
+                        {% endif %}
+                    </div>
+                    <div class="activity-body">
+                        <div>
+                            <div class="activity-name">{{ act.name }}</div>
+                            <div class="activity-desc">{{ act.description }}</div>
+                        </div>
+                        <div class="activity-time">{{ act.startTime }} ~ {{ act.endTime }}</div>
+                        <div class="activity-bottom">
+                            {% if act.status == '进行中' %}
+                            <span class="status-badge ongoing">{{ act.status }}</span>
+                            {% elif act.status == '已结束' %}
+                            <span class="status-badge ended">{{ act.status }}</span>
+                            {% else %}
+                            <span class="status-badge upcoming">{{ act.status }}</span>
+                            {% endif %}
+                            {% if act.remaining %}
+                            <span class="remaining-text">{{ act.remaining }}</span>
+                            {% endif %}
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: {{ act.progress }}%; background: {{ act.color }};"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if end_logo %}
+        <img src="{{ end_logo }}" class="footer-logo">
+        {% endif %}
+
+    </div>
+</body>
+</html>

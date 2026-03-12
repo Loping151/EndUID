@@ -51,7 +51,7 @@
         .grid-deco {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
             background-size: 40px 40px;
@@ -162,51 +162,76 @@
         }
 
         .room-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: flex;
+            flex-wrap: wrap;
             gap: 12px;
         }
 
         .room-card {
             background: rgba(0,0,0,0.4);
             border: 1px solid var(--c-border);
-            padding: 10px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
+            flex: 1 1 170px;
+            min-width: 160px;
         }
 
         .room-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px dashed rgba(255,255,255,0.1);
-            padding-bottom: 5px;
+            padding-bottom: 8px;
             margin-bottom: 2px;
         }
 
-        .room-type {
-            font-family: 'JetBrains Mono';
-            font-size: 14px;
+        .room-type-name {
+            font-size: 15px;
             color: #ddd;
             font-weight: 700;
         }
 
-        .room-lvl {
+        .room-level-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .room-lvl-text {
             font-family: 'Oswald';
-            color: var(--c-accent);
-            font-size: 16px;
+            font-size: 13px;
+            color: var(--c-subtext);
+        }
+
+        .level-pips {
+            display: flex;
+            gap: 3px;
+        }
+
+        .level-pip {
+            width: 14px;
+            height: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            transform: skewX(-12deg);
+        }
+
+        .level-pip.filled.blue   { background: #4a9eff; border-color: #4a9eff; }
+        .level-pip.filled.yellow { background: #ffe600; border-color: #ffe600; }
+        .level-pip.filled.green  { background: #4ade80; border-color: #4ade80; }
+        .level-pip.filled.purple { background: #c084fc; border-color: #c084fc; }
+
+        .room-chars {
+            display: flex;
+            gap: 6px;
         }
 
         /* 区域建设 */
         .domain-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 2列布局更宽敞，或者3列 */
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
-        }
-        
-        @media (min-width: 1000px) {
-            .domain-grid { grid-template-columns: repeat(3, 1fr); }
+            align-items: start;
         }
 
         .domain-card {
@@ -217,7 +242,7 @@
         }
 
         .domain-header {
-            padding: 12px 15px;
+            padding: 14px 18px;
             background: rgba(255,255,255,0.05);
             display: flex;
             justify-content: space-between;
@@ -225,40 +250,217 @@
             border-bottom: 1px solid var(--c-border);
         }
 
+        .domain-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         .domain-name {
             font-weight: 700;
-            font-size: 16px;
+            font-size: 20px;
+        }
+
+        .domain-money-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            color: var(--c-subtext);
+            background: rgba(0,0,0,0.25);
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .domain-money-badge-label {
+            font-family: 'Source Han Sans CN', sans-serif;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .domain-money-badge strong {
+            color: var(--c-accent);
         }
 
         .settlement-list {
             padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .settlement-item {
             background: rgba(0,0,0,0.2);
-            padding: 8px;
+            padding: 12px;
             border-left: 2px solid #555;
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        /* 资金电池样式 */
+        .money-battery-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .money-battery {
+            width: 36px;
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 3px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+            min-height: 60px;
+            flex: 1;
+        }
+
+        .money-battery-cap {
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 5px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .money-battery-fill {
+            width: 100%;
+            background: linear-gradient(to top, #ffe600, #ffef66);
+            transition: height 0.3s;
+            border-radius: 0 0 2px 2px;
+        }
+
+        .money-battery-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'JetBrains Mono';
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow:
+                0 0 4px rgba(0,0,0,1),
+                0 0 4px rgba(0,0,0,1),
+                0 1px 3px rgba(0,0,0,0.9);
+            white-space: nowrap;
+        }
+
+        .money-battery-label {
+            font-size: 10px;
+            color: #999;
+            white-space: nowrap;
+        }
+
+        .st-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
         }
 
         .st-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+        }
+
+        .st-name-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .st-name {
-            font-size: 14px;
+            font-size: 16px;
             color: #ccc;
+            font-weight: 600;
         }
 
         .st-lvl {
             font-family: 'Oswald';
-            font-size: 14px;
+            font-size: 15px;
             color: var(--c-subtext);
+        }
+
+        .st-money-text {
+            font-family: 'JetBrains Mono';
+            font-size: 13px;
+            color: var(--c-subtext);
+        }
+
+        .st-money-text strong {
+            color: var(--c-accent);
+        }
+
+        /* 经验进度条 */
+        .exp-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .exp-label {
+            font-family: 'JetBrains Mono';
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
+            width: 28px;
+        }
+
+        .exp-bar {
+            flex: 1;
+            height: 12px;
+            background: #1a1a1a;
+            border-radius: 2px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .exp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #555, #888);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .exp-bar-fill.maxed {
+            background: linear-gradient(90deg, var(--c-accent), #ffef66);
+        }
+
+        .exp-text {
+            font-family: 'JetBrains Mono';
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .st-officer-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        .st-officer-label {
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
         }
 
         /* 头像列表通用样式 */
@@ -269,8 +471,8 @@
         }
 
         .mini-avatar {
-            width: 36px;
-            height: 36px;
+            width: 44px;
+            height: 44px;
             background: #222;
             border: 1px solid #444;
             overflow: hidden;
@@ -314,7 +516,7 @@
     <div class="grid-deco"></div>
 
     <div class="container">
-        
+
         <div class="header">
             <div class="avatar">
                 {% if avatar %}
@@ -345,27 +547,38 @@
             <div class="spaceship-section">
                 <div class="room-grid">
                     {% for room in spaceShip.rooms %}
-                    <div class="room-card">
+                    <div class="room-card" style="border-top: 2px solid {% if room.color == 'blue' %}#4a9eff{% elif room.color == 'yellow' %}#ffe600{% elif room.color == 'green' %}#4ade80{% elif room.color == 'purple' %}#c084fc{% else %}#555{% endif %};">
                         <div class="room-header">
-                            <span class="room-type">TYPE-{{ room.type }}</span>
-                            <span class="room-lvl">Lv.{{ room.level }}</span>
+                            <span class="room-type-name">{{ room.typeName }}</span>
+                            <div class="room-level-row">
+                                <span class="room-lvl-text">Lv.{{ room.level }}</span>
+                                <div class="level-pips">
+                                    {% for i in range(room.maxLevel) %}
+                                    <div class="level-pip {% if i < room.level %}filled {{ room.color }}{% endif %}"></div>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
-                        <div class="char-list">
+                        <div class="room-chars">
+                            {% set has_avatar = [] %}
                             {% for char in room.chars %}
                                 {% if char.avatar %}
-                                <div class="mini-avatar">
-                                    <img src="{{ char.avatar }}">
+                                <div class="mini-avatar" style="width:44px; height:44px;">
+                                    <img src="{{ char.avatar }}" title="{{ char.charName }}">
                                 </div>
+                                {% if has_avatar.append(1) %}{% endif %}
+                                {% elif char.charName %}
+                                <div class="empty-slot" style="width:44px; height:44px; font-size:11px; border-color:#555;">{{ char.charName[:2] }}</div>
                                 {% endif %}
                             {% endfor %}
                             {% if not room.chars %}
-                                <div class="empty-slot">-</div>
+                                <div class="empty-slot" style="width:100%; height:44px; border-color:#333;">空闲</div>
                             {% endif %}
                         </div>
                     </div>
                     {% endfor %}
                     {% if not spaceShip.rooms %}
-                    <div style="grid-column: 1/-1; padding: 20px; text-align: center; color: #666;">暂无舱室数据</div>
+                    <div style="padding: 20px; text-align: center; color: #666;">暂无舱室数据</div>
                     {% endif %}
                 </div>
             </div>
@@ -379,27 +592,66 @@
                 {% for domain in domains %}
                 <div class="domain-card">
                     <div class="domain-header">
-                        <div class="domain-name">{{ domain.name }}</div>
-                        <div class="tag" style="padding: 2px 8px; font-size:12px;">Lv.<strong>{{ domain.level }}</strong></div>
+                        <div class="domain-header-left">
+                            <div class="domain-name">{{ domain.name }}</div>
+                            <div class="tag" style="padding: 2px 10px; font-size:14px;">Lv.<strong>{{ domain.level }}</strong></div>
+                        </div>
+                        {% if domain.moneyTotalRaw > 0 %}
+                        <div class="domain-money-badge">
+                            <span class="domain-money-badge-label">调度券</span>
+                            <strong>{{ domain.moneyCount }}</strong> / {{ domain.moneyTotal }}
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="settlement-list">
                         {% for st in domain.settlements %}
                         <div class="settlement-item">
-                            <div class="st-info">
-                                <span class="st-name">{{ st.name }}</span>
-                                <span class="st-lvl">Lv.{{ st.level }}</span>
+                            <div class="money-battery-col">
+                                <div class="money-battery">
+                                    <div class="money-battery-cap"></div>
+                                    <div class="money-battery-fill" style="height: {{ st.moneyPct }}%;"></div>
+                                    <div class="money-battery-text">{{ st.moneyPct }}%</div>
+                                </div>
+                                <span class="money-battery-label">调度券</span>
                             </div>
-                            <div class="char-list">
-                                {% for off in st.officers %}
-                                    {% if off.avatar %}
-                                    <div class="mini-avatar">
-                                        <img src="{{ off.avatar }}">
+                            <div class="st-content">
+                                <div class="st-info">
+                                    <div class="st-name-group">
+                                        <span class="st-name">{{ st.name }}</span>
+                                        <span class="st-lvl">Lv.{{ st.level }}</span>
                                     </div>
+                                    <span class="st-money-text"><strong>{{ st.remainMoney }}</strong> / {{ st.moneyMax }}</span>
+                                </div>
+                                <div class="exp-bar-wrap">
+                                    <span class="exp-label">EXP</span>
+                                    <div class="exp-bar">
+                                        {% if st.expToLevelUp > 0 %}
+                                        <div class="exp-bar-fill" style="width: {{ st.expPct }}%;"></div>
+                                        {% else %}
+                                        <div class="exp-bar-fill maxed" style="width: 100%;"></div>
+                                        {% endif %}
+                                    </div>
+                                    {% if st.expToLevelUp > 0 %}
+                                    <span class="exp-text">{{ "{:,}".format(st.exp) }} / {{ "{:,}".format(st.expToLevelUp) }}</span>
+                                    {% else %}
+                                    <span class="exp-text" style="color: var(--c-accent);">MAX</span>
                                     {% endif %}
-                                {% endfor %}
-                                {% if not st.officers %}
-                                    <div class="empty-slot" style="width:30px; height:30px; border-color:#444;"></div>
-                                {% endif %}
+                                </div>
+                                <div class="st-officer-row">
+                                    <span class="st-officer-label">驻守</span>
+                                    <div class="char-list">
+                                        {% for off in st.officers %}
+                                            {% if off.avatar %}
+                                            <div class="mini-avatar" style="width:40px; height:40px;">
+                                                <img src="{{ off.avatar }}">
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if not st.officers %}
+                                            <div class="empty-slot" style="width:40px; height:40px; border-color:#333;">-</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         {% endfor %}

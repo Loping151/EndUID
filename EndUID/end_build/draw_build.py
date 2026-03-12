@@ -28,6 +28,16 @@ TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
 end_build_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 
 
+def fmt_money(val: int) -> str:
+    """Format money: >10000 shows as W with up to 2 decimals."""
+    if val >= 10000:
+        w = val / 10000
+        if w == int(w):
+            return f"{int(w)}W"
+        return f"{w:.2f}".rstrip("0").rstrip(".") + "W"
+    return f"{val:,}"
+
+
 async def draw_build(ev: Event) -> Union[bytes, str]:
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
@@ -127,18 +137,41 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
                             "name": char_name_map.get(cid, cid[:8]),
                             "avatar": char_avatar_b64.get(cid, ""),
                         })
+            remain = int(s.remainMoney) if s.remainMoney else 0
+            money_max = int(s.moneyMax) if s.moneyMax else 0
+            exp_val = int(s.exp) if s.exp else 0
+            exp_max = int(s.expToLevelUp) if s.expToLevelUp else 0
             settlements.append({
                 "id": s.id,
                 "name": s.name,
                 "level": s.level,
-                "remainMoney": s.remainMoney,
+                "remainMoney": fmt_money(remain),
+                "moneyMax": fmt_money(money_max),
+                "moneyPct": round(remain / money_max * 100) if money_max > 0 else 0,
+                "exp": exp_val,
+                "expToLevelUp": exp_max,
+                "expPct": round(exp_val / exp_max * 100) if exp_max > 0 else 0,
                 "officers": officers,
             })
+
+        # moneyMgr
+        money_mgr = d.moneyMgr
+        money_count = 0
+        money_total = 0
+        if isinstance(money_mgr, str):
+            pass
+        elif money_mgr:
+            money_count = int(money_mgr.count) if money_mgr.count else 0
+            money_total = int(money_mgr.total) if money_mgr.total else 0
 
         domains.append({
             "domainId": d.domainId,
             "name": d.name,
             "level": d.level,
+            "moneyCount": fmt_money(money_count),
+            "moneyTotal": fmt_money(money_total),
+            "moneyTotalRaw": money_total,
+            "moneyPct": round(money_count / money_total * 100) if money_total > 0 else 0,
             "settlements": settlements,
             "collections": collections,
             "totalPuzzle": total_puzzle,
@@ -149,25 +182,48 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
 
     domains.sort(key=lambda x: x.get("domainId", ""))
 
+    ROOM_TYPE_BASE = {
+        0: ("总控中枢", "blue", 5),
+        1: ("制造仓", "yellow", 3),
+        2: ("培养仓", "green", 3),
+        5: ("会客室", "purple", 3),
+    }
+    ROMAN = {1: "Ⅰ", 2: "Ⅱ", 3: "Ⅲ", 4: "Ⅳ", 5: "Ⅴ"}
+
+    # Count occurrences of each type for numbering
+    type_counter: Dict[int, int] = {}
+    type_totals: Dict[int, int] = {}
+    for room in detail.spaceShip.rooms:
+        if room.type in ROOM_TYPE_BASE:
+            type_totals[room.type] = type_totals.get(room.type, 0) + 1
+
     rooms: List[Dict] = []
     for room in detail.spaceShip.rooms:
+        if room.type not in ROOM_TYPE_BASE:
+            continue
+        base_name, color, max_level = ROOM_TYPE_BASE[room.type]
+        # Append roman numeral if multiple rooms of same type
+        if type_totals.get(room.type, 1) > 1:
+            type_counter[room.type] = type_counter.get(room.type, 0) + 1
+            display_name = f"{base_name}{ROMAN.get(type_counter[room.type], '')}"
+        else:
+            display_name = base_name
+
         room_chars = []
         for c in room.chars:
             char_id = c.get("charId", "") if isinstance(c, dict) else ""
-            phys = c.get("physicalStrength", 0) if isinstance(c, dict) else 0
-            fav = c.get("favorability", 0) if isinstance(c, dict) else 0
             room_chars.append({
-                "charId": char_id,
-                "charName": char_name_map.get(char_id, char_id[:8] if char_id else ""),
+                "charName": char_name_map.get(char_id, ""),
                 "avatar": char_avatar_b64.get(char_id, ""),
-                "physicalStrength": round(phys, 1),
-                "favorability": fav,
             })
 
         rooms.append({
             "id": room.id,
             "type": room.type,
+            "typeName": display_name,
+            "color": color,
             "level": room.level,
+            "maxLevel": max_level,
             "chars": room_chars,
         })
 

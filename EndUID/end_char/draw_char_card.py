@@ -1,4 +1,5 @@
 import io
+import base64
 import json
 from pathlib import Path
 from typing import Optional, Union
@@ -34,6 +35,45 @@ TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
 
 # Jinja2 环境
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
+
+async def _composite_gem_icon(icon_url: str, rarity: int) -> str:
+    """Download gem icon and composite it on top of gem_X.png background."""
+    try:
+        from ..utils.image import pic_download_from_url
+
+        # Download the gem icon
+        await pic_download_from_url(EQUIP_CACHE_PATH, icon_url)
+        filename = icon_url.split("/")[-1]
+        local_path = EQUIP_CACHE_PATH / filename
+        if not local_path.exists():
+            return ""
+
+        icon_img = Image.open(local_path).convert("RGBA")
+        icon_size = icon_img.size
+
+        # Load rarity background and resize to match icon
+        bg_path = TEXTURE_PATH / f"gem_{rarity}.png"
+        if not bg_path.exists():
+            # Fallback: return plain icon
+            return await get_image_b64_with_cache(icon_url, EQUIP_CACHE_PATH)
+
+        bg_img = Image.open(bg_path).convert("RGBA")
+        bg_img = bg_img.resize(icon_size, Image.LANCZOS)
+
+        # Composite: bg on bottom, icon on top
+        composite = bg_img.copy()
+        composite.paste(icon_img, (0, 0), icon_img)
+
+        # Convert to base64
+        buf = io.BytesIO()
+        composite.save(buf, "PNG")
+        buf.seek(0)
+        data = buf.read()
+        return f"data:image/png;base64,{base64.b64encode(data).decode('utf-8')}"
+    except Exception as e:
+        logger.warning(f"[EndUID] Gem icon composite failed: {e}")
+        return ""
+
 
 async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     """绘制角色卡片"""
@@ -154,11 +194,42 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
             if wp_icon_url:
                 wp_icon_b64 = await get_image_b64_with_cache(wp_icon_url, EQUIP_CACHE_PATH)
             
+            # 基质信息
+            gem_info = None
+            if wp_data.gem and wp_data.gem.gemData and wp_data.gem.gemData.name:
+                gem_data = wp_data.gem.gemData
+                gem_icon_b64 = ""
+                # Extract rarity from templateId like "item_gem_rarity_5"
+                gem_rarity = 3
+                if gem_data.templateId:
+                    parts = gem_data.templateId.split("_")
+                    if parts and parts[-1].isdigit():
+                        gem_rarity = int(parts[-1])
+                gem_icon_url = gem_data.icon
+                if gem_icon_url:
+                    gem_icon_b64 = await _composite_gem_icon(
+                        gem_icon_url, gem_rarity
+                    )
+                # Rarity color for bottom bar
+                gem_rarity_colors = {
+                    2: "#4a9eff",
+                    3: "#4a9eff",
+                    4: "#c084fc",
+                    5: "#ff9d3a",
+                }
+                gem_info = {
+                    "name": gem_data.name,
+                    "icon": gem_icon_b64,
+                    "rarity": gem_rarity,
+                    "rarity_color": gem_rarity_colors.get(gem_rarity, "#888"),
+                }
+
             weapon_info = {
                 "name": wp_detail.name,
                 "icon": wp_icon_b64,
                 "level": wp_data.level,
                 "rarity": wp_detail.rarity.value if wp_detail.rarity else 1,
+                "gem": gem_info,
             }
             
     # 装备 - 防具

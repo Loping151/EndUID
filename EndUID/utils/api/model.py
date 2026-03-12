@@ -141,13 +141,28 @@ class WeaponData(BaseModel):
     desc: str = ""
 
 
+class GemData(BaseModel):
+    """基质数据"""
+    termId: str = ""
+    name: str = ""
+    icon: str = ""
+    templateId: str = ""
+
+
+class Gem(BaseModel):
+    """基质信息"""
+    id: str = ""
+    icon: str = ""
+    gemData: GemData = Field(default_factory=GemData)
+
+
 class Weapon(BaseModel):
     """武器信息"""
     weaponData: WeaponData = Field(default_factory=WeaponData)
     level: int = 0
     refineLevel: int = 0
     breakthroughLevel: int = 0
-    gem: Optional[Any] = None
+    gem: Optional[Gem] = None
 
 
 class Character(BaseModel):
@@ -205,8 +220,13 @@ class Settlement(BaseModel):
     id: str = ""
     level: int = 0
     remainMoney: str = "0"
+    moneyMax: str = "0"
+    exp: str = "0"
+    expToLevelUp: str = "0"
     officerCharIds: str = ""
+    officerCharAvatar: str = ""
     name: str = ""
+    lastTickTime: str = ""
 
 
 class Collection(BaseModel):
@@ -224,6 +244,23 @@ class MoneyMgr(BaseModel):
     count: str = ""
 
 
+class CountTotal(BaseModel):
+    """计数/总量"""
+    count: int = 0
+    total: int = 0
+
+
+class Level(BaseModel):
+    """地图区域探索数据"""
+    levelId: str = ""
+    name: str = ""
+    puzzleCount: CountTotal = Field(default_factory=CountTotal)
+    trchestCount: CountTotal = Field(default_factory=CountTotal)
+    equipTrchestCount: CountTotal = Field(default_factory=CountTotal)
+    pieceCount: CountTotal = Field(default_factory=CountTotal)
+    blackboxCount: CountTotal = Field(default_factory=CountTotal)
+
+
 class Domain(BaseModel):
     """据点信息"""
     domainId: str = ""
@@ -231,6 +268,7 @@ class Domain(BaseModel):
     settlements: List[Settlement] = Field(default_factory=list)
     moneyMgr: Optional[Union[str, MoneyMgr]] = ""
     collections: List[Collection] = Field(default_factory=list)
+    levels: List[Level] = Field(default_factory=list)
     factory: Optional[Any] = None
     name: str = ""
 
