@@ -150,7 +150,7 @@ async def _get_new_gachalog(
             if not seq_id:
                 break
 
-            await asyncio.sleep(0.2)  # 避免请求过快
+            await asyncio.sleep(0.1)  # 避免请求过快
 
         if records:
             old_list = old_pool_data.get(pool_name, [])
@@ -215,7 +215,7 @@ async def _get_new_gachalog(
             if not seq_id:
                 break
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
         if records:
             old_list = old_pool_data.get(display_name, [])

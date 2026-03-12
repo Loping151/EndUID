@@ -164,8 +164,8 @@ class Character(BaseModel):
     evolvePhase: int = 0
     potentialLevel: int = 0
     weapon: Weapon = Field(default_factory=Weapon)
-    gender: str = ""
-    ownTs: str = ""
+    gender: Optional[str] = ""
+    ownTs: Optional[str] = ""
 
 
 class AchieveDisplay(BaseModel):
@@ -223,7 +223,7 @@ class Domain(BaseModel):
     domainId: str = ""
     level: int = 0
     settlements: List[Settlement] = Field(default_factory=list)
-    moneyMgr: str = ""
+    moneyMgr: Optional[str] = ""
     collections: List[Collection] = Field(default_factory=list)
     factory: Optional[Any] = None
     name: str = ""
@@ -271,9 +271,9 @@ class CardDetail(BaseModel):
     dungeon: Dungeon = Field(default_factory=Dungeon)
     bpSystem: BpSystem = Field(default_factory=BpSystem)
     dailyMission: DailyMission = Field(default_factory=DailyMission)
-    config: UserConfig = Field(default_factory=UserConfig)
+    config: Optional[UserConfig] = Field(default_factory=UserConfig)
     currentTs: str = ""
-    quickaccess: List[QuickAccess] = Field(default_factory=list)
+    quickaccess: Optional[List[QuickAccess]] = Field(default_factory=list)
 
 
 class CardDetailData(BaseModel):
