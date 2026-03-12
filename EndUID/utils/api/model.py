@@ -153,7 +153,7 @@ class Gem(BaseModel):
     """基质信息"""
     id: str = ""
     icon: str = ""
-    gemData: GemData = Field(default_factory=GemData)
+    gemData: Optional[GemData] = Field(default_factory=GemData)
 
 
 class Weapon(BaseModel):
