@@ -218,12 +218,18 @@ class Collection(BaseModel):
     blackboxCount: int = 0
 
 
+class MoneyMgr(BaseModel):
+    """据点资金信息"""
+    total: str = ""
+    count: str = ""
+
+
 class Domain(BaseModel):
     """据点信息"""
     domainId: str = ""
     level: int = 0
     settlements: List[Settlement] = Field(default_factory=list)
-    moneyMgr: Optional[str] = ""
+    moneyMgr: Optional[Union[str, MoneyMgr]] = ""
     collections: List[Collection] = Field(default_factory=list)
     factory: Optional[Any] = None
     name: str = ""
