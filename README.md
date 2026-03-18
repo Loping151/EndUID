@@ -10,6 +10,8 @@
 
 安装方式：
 
+首先参考核心安装：https://docs.sayu-bot.com/
+
 ```bash
 cd gsuid_core/gsuid_core/plugins
 git clone https://github.com/Loping151/EndUID
@@ -17,7 +19,9 @@ git clone https://github.com/Loping151/EndUID
 
 登录方式：
 
-可以认为仅支持森空岛扫码登录。因为我不管，都给我去下载森空岛
+可以认为仅支持森空岛扫码登录。因为我不管，都给我去下载森空岛。
+
+催更/反馈/Bug/建议：与 [XWUID](https://github.com/Loping151/XutheringWavesUID) 首页的同一个群吧，不想再建群了。Issue亦会看。
 
 ## 丨其他
 
@@ -29,3 +33,4 @@ git clone https://github.com/Loping151/EndUID
 ## 致谢
 - [arknights-plugin](https://github.com/gxy12345/arknights-plugin)
 - [endfield-gacha](https://github.com/bhaoo/endfield-gacha) — Endfield 抽卡记录 API 参考
+- Potentially 合作的攻略组。？
