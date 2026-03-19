@@ -216,10 +216,22 @@ async def clean_cache_directories(days: int) -> str:
         total_count += r_count
         total_space += r_space
 
-    bake_count, bake_space = clean_old_cache_files(BAKE_PATH, days)
+    # 烘焙缓存（含子目录）
+    bake_count, bake_space = 0, 0.0
+    if BAKE_PATH.exists():
+        cutoff = time.time() - (days * 86400)
+        for f in BAKE_PATH.rglob("*"):
+            if f.is_file() and f.stat().st_ctime < cutoff:
+                try:
+                    sz = f.stat().st_size
+                    f.unlink()
+                    bake_count += 1
+                    bake_space += sz
+                except Exception:
+                    pass
     if bake_count > 0:
         total_count += bake_count
-        total_space += bake_space
+        total_space += bake_space / 1024 / 1024
 
     if total_count == 0:
         return f"「终末地」 没有找到需要清理的缓存文件(保留{days}天内的文件)"

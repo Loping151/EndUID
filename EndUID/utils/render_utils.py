@@ -406,11 +406,13 @@ async def get_image_b64_with_cache(
                 data = f.read()
             return f"data:image/{ext};base64,{base64.b64encode(data).decode('utf-8')}"
 
-        # 烘焙缓存
+        # 烘焙缓存: bake/{来源目录}/{原文件名}_{quality}_{宽x高}.webp
+        bake_dir = BAKE_PATH / cache_path.name
+        bake_dir.mkdir(exist_ok=True)
         stem = Path(filename).stem
         size_tag = f"_{cover_size[0]}x{cover_size[1]}" if cover_size else ""
         bake_name = f"{stem}_q{quality or 80}{size_tag}.webp"
-        bake_path = BAKE_PATH / bake_name
+        bake_path = bake_dir / bake_name
 
         if bake_path.exists() and bake_path.stat().st_mtime >= local_path.stat().st_mtime:
             with open(bake_path, "rb") as f:
