@@ -146,6 +146,9 @@ async def _ensure_browser():
         return _browser
 
 
+_pool_lock = asyncio.Lock()
+
+
 async def _acquire_page():
     """Get a reusable page from the pool, or create a new one."""
     global _pool_ctx, _active_renders
@@ -154,23 +157,24 @@ async def _acquire_page():
     if browser is None:
         return None, -1
 
-    gen = _pool_generation
+    async with _pool_lock:
+        gen = _pool_generation
 
-    # Try to reuse a pooled page
-    while not _page_pool.empty():
-        try:
-            page, page_gen = _page_pool.get_nowait()
-            if page_gen == gen and not page.is_closed():
-                _active_renders += 1
-                return page, gen
-        except asyncio.QueueEmpty:
-            break
+        # Try to reuse a pooled page
+        while not _page_pool.empty():
+            try:
+                page, page_gen = _page_pool.get_nowait()
+                if page_gen == gen and not page.is_closed():
+                    _active_renders += 1
+                    return page, gen
+            except asyncio.QueueEmpty:
+                break
 
-    # Create shared context if needed
-    if _pool_ctx is None or _pool_ctx._impl_obj._is_closed:
-        _pool_ctx = await browser.new_context(
-            viewport={"width": 1200, "height": 1000}
-        )
+        # Create shared context if needed
+        if _pool_ctx is None or _pool_ctx._impl_obj._is_closed:
+            _pool_ctx = await browser.new_context(
+                viewport={"width": 1200, "height": 1000}
+            )
 
     page = await _pool_ctx.new_page()
     _active_renders += 1
@@ -406,13 +410,13 @@ async def get_image_b64_with_cache(
                 data = f.read()
             return f"data:image/{ext};base64,{base64.b64encode(data).decode('utf-8')}"
 
-        # 烘焙缓存: bake/{来源目录}/{原文件名}_{quality}_{宽x高}.webp
-        bake_dir = BAKE_PATH / cache_path.name
-        bake_dir.mkdir(exist_ok=True)
+        # 烘焙缓存: bake/{文件名}_{路径hash}_{quality}_{宽x高}.webp
+        import hashlib
+        path_hash = hashlib.md5(str(local_path.resolve()).encode()).hexdigest()[:8]
         stem = Path(filename).stem
         size_tag = f"_{cover_size[0]}x{cover_size[1]}" if cover_size else ""
-        bake_name = f"{stem}_q{quality or 80}{size_tag}.webp"
-        bake_path = bake_dir / bake_name
+        bake_name = f"{stem}_{path_hash}_q{quality or 80}{size_tag}.webp"
+        bake_path = BAKE_PATH / bake_name
 
         if bake_path.exists() and bake_path.stat().st_mtime >= local_path.stat().st_mtime:
             with open(bake_path, "rb") as f:
