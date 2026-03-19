@@ -171,7 +171,13 @@ async def _acquire_page():
                 break
 
         # Create shared context if needed
-        if _pool_ctx is None or _pool_ctx._impl_obj._is_closed:
+        ctx_closed = _pool_ctx is None
+        if not ctx_closed:
+            try:
+                ctx_closed = _pool_ctx._impl_obj._is_closed
+            except AttributeError:
+                ctx_closed = True
+        if ctx_closed:
             _pool_ctx = await browser.new_context(
                 viewport={"width": 1200, "height": 1000}
             )
@@ -214,7 +220,8 @@ async def _render_via_remote(html_content: str, remote_url: str) -> Optional[byt
             if response.status_code == 200:
                 image_data = response.content
                 elapsed_time = time.time() - start_time
-                logger.info(f"[End] 外置渲染成功，耗时: {elapsed_time:.2f}s，图片大小: {len(image_data)} bytes")
+                html_kb = len(html_content) / 1024
+                logger.info(f"[End] 外置渲染成功，耗时: {elapsed_time:.2f}s，HTML大小: {html_kb:.1f}KB，图片大小: {len(image_data)} bytes")
                 return image_data
             else:
                 logger.warning(f"[End] 外置渲染失败，状态码: {response.status_code}, 错误: {response.text}")
@@ -328,12 +335,24 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
         return None
 
 
-def image_to_base64(image_path: Union[str, Path]) -> str:
+def image_to_base64(image_path: Union[str, Path], quality: int = 0) -> str:
+    """图片文件转 base64 data URL。
+
+    quality=0: 原格式直读（无损）
+    quality>0: WebP 有损压缩
+    """
     if not isinstance(image_path, Path):
         image_path = Path(image_path)
     if not image_path.exists():
         return ""
     try:
+        if quality > 0:
+            from PIL import Image
+            from io import BytesIO
+            img = Image.open(image_path).convert("RGBA")
+            buf = BytesIO()
+            img.save(buf, format="WEBP", quality=quality)
+            return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
         with open(image_path, "rb") as f:
             data = f.read()
         ext = image_path.suffix.lstrip(".").lower()

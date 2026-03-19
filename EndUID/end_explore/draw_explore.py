@@ -97,8 +97,8 @@ async def draw_explore(ev: Event) -> Union[bytes, str]:
         "level": base.level if base else 0,
         "worldLevel": base.worldLevel if base else 0,
         "domains": domains,
-        "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
-        "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),
+        "bg": image_to_base64(TEXTURE_PATH / "bg.png", quality=75),
+        "end_logo": image_to_base64(TEXTURE_PATH / "end.png", quality=75),
     }
 
     img_bytes = await render_html(

@@ -449,8 +449,8 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
         "pools": pools,
         "data_time": gacha_data.get("data_time", ""),
         "illustration": illustration_b64,
-        "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
-        "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),
+        "bg": image_to_base64(TEXTURE_PATH / "bg.png", quality=75),
+        "end_logo": image_to_base64(TEXTURE_PATH / "end.png", quality=75),
         "up_tag": image_to_base64(TEXTURE_PATH / "up_tag.png"),
     }
 
@@ -465,8 +465,8 @@ async def draw_gacha_help() -> Union[bytes, str]:
     """绘制抽卡帮助页"""
     context = {
         "prefix": PREFIX,
-        "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
-        "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),
+        "bg": image_to_base64(TEXTURE_PATH / "bg.png", quality=75),
+        "end_logo": image_to_base64(TEXTURE_PATH / "end.png", quality=75),
     }
 
     img_bytes = await render_html(end_templates, "end_gacha_help.html", context)

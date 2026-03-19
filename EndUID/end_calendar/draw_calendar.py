@@ -233,8 +233,8 @@ async def draw_calendar(ev: Event) -> Union[bytes, str]:
         "charPools": char_pools,
         "weaponPools": weapon_pools,
         "activities": activities,
-        "bg": image_to_base64(TEXTURE_PATH / "bg.png"),
-        "end_logo": image_to_base64(TEXTURE_PATH / "end.png"),
+        "bg": image_to_base64(TEXTURE_PATH / "bg.png", quality=75),
+        "end_logo": image_to_base64(TEXTURE_PATH / "end.png", quality=75),
     }
 
     img_bytes = await render_html(

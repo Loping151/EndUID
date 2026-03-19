@@ -40,8 +40,8 @@ def _get_profession_icon(name: str) -> str:
 
 async def draw_char_wiki(wiki: CharWiki) -> Union[bytes, str]:
     """Render character wiki detail as image."""
-    bg = image_to_base64(TEXTURE_PATH / "bg.png")
-    end_logo = image_to_base64(TEXTURE_PATH / "end.png")
+    bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
+    end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
     property_icon = _get_property_icon(wiki.attribute)
     profession_icon = _get_profession_icon(wiki.profession)
 
@@ -86,8 +86,8 @@ async def draw_weapon_wiki(wiki: WeaponWiki) -> Union[bytes, str]:
     """Render weapon wiki detail as image."""
     from .fetch import ensure_list_data, get_weapon_entry
 
-    bg = image_to_base64(TEXTURE_PATH / "bg.png")
-    end_logo = image_to_base64(TEXTURE_PATH / "end.png")
+    bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
+    end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
 
     # Look up weapon icon from homepage list data
     weapon_img = ""
@@ -116,8 +116,8 @@ async def draw_weapon_wiki(wiki: WeaponWiki) -> Union[bytes, str]:
 
 async def draw_char_list(data: WikiListData) -> Union[bytes, str]:
     """Render character list as image."""
-    bg = image_to_base64(TEXTURE_PATH / "bg.png")
-    end_logo = image_to_base64(TEXTURE_PATH / "end.png")
+    bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
+    end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
 
     groups = {}
     for attr, entries in data.characters.items():
@@ -156,8 +156,8 @@ async def draw_char_list(data: WikiListData) -> Union[bytes, str]:
 
 async def draw_weapon_list(data: WikiListData) -> Union[bytes, str]:
     """Render weapon list as image."""
-    bg = image_to_base64(TEXTURE_PATH / "bg.png")
-    end_logo = image_to_base64(TEXTURE_PATH / "end.png")
+    bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
+    end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
 
     groups = {}
     for wtype, entries in data.weapons.items():
@@ -205,8 +205,8 @@ def _format_remaining(seconds: float) -> str:
 
 async def draw_gacha(data: WikiListData) -> Union[bytes, str]:
     """Render gacha/banner info as image."""
-    bg = image_to_base64(TEXTURE_PATH / "bg.png")
-    end_logo = image_to_base64(TEXTURE_PATH / "end.png")
+    bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
+    end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
     now = time.time()
 
     char_banners = [b for b in data.gacha if b.banner_type == "character"]

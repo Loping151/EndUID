@@ -295,7 +295,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
             }
         )
 
-    bg_url_b64 = image_to_base64(TEXTURE_PATH / "bg.png")
+    bg_url_b64 = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
     user_avatar = ""
     if base_info and base_info.avatarUrl:
         user_avatar = await get_image_b64_with_cache(base_info.avatarUrl, AVATAR_CACHE_PATH)
