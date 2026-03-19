@@ -137,7 +137,7 @@ async def draw_update_log_img() -> Union[bytes, str]:
     if not _CACHED_LOGS:
         return "获取失败"
 
-    icon_b64 = image_to_base64(ICON_PATH)
+    icon_b64 = image_to_base64(ICON_PATH, quality=75)
 
     logs = []
     for index, raw_log in enumerate(_CACHED_LOGS):

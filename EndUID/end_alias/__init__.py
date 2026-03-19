@@ -30,8 +30,8 @@ end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
 
 
-def _local_b64(filename: str) -> str:
-    return image_to_base64(TEXTURE_PATH / filename)
+def _local_b64(filename: str, quality: int = 75) -> str:
+    return image_to_base64(TEXTURE_PATH / filename, quality=quality)
 
 
 def _format_alias_list(key: str, entry: dict) -> list[str]:

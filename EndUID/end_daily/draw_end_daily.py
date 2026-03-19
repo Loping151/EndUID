@@ -46,8 +46,8 @@ def _safe_int(value: Optional[str], default: int = 0) -> int:
         return default
 
 
-def _local_b64(filename: str) -> str:
-    return image_to_base64(TEXTURE_PATH / filename)
+def _local_b64(filename: str, quality: int = 75) -> str:
+    return image_to_base64(TEXTURE_PATH / filename, quality=quality)
 
 
 def _format_recovery_time(
