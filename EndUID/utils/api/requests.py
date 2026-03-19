@@ -345,6 +345,10 @@ class EndApi:
                                 logger.info(f"[EndUID] Token 失效，准备刷新")
                             return res
 
+                        if resp.status == 401:
+                            logger.warning(f"[EndUID] 请求返回 401，凭证失效")
+                            return {"code": RespCode.CRED_INVALID, "message": "HTTP 401 Unauthorized"}
+
                         if resp.status != 200:
                             logger.error(f"[EndUID] 请求失败: {resp.status}")
                             return None
@@ -372,6 +376,10 @@ class EndApi:
                             elif res.get("code") == RespCode.TOKEN_INVALID:
                                 logger.info(f"[EndUID] Token 失效，准备刷新")
                             return res
+
+                        if resp.status == 401:
+                            logger.warning(f"[EndUID] 请求返回 401，凭证失效")
+                            return {"code": RespCode.CRED_INVALID, "message": "HTTP 401 Unauthorized"}
 
                         if resp.status != 200:
                             logger.error(f"[EndUID] 请求失败: {resp.status}")
