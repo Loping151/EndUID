@@ -21,6 +21,7 @@ WIKI_CACHE_PATH = CACHE_BASE / "wiki"
 WIKI_CHAR_CACHE = WIKI_CACHE_PATH / "char"
 WIKI_WEAPON_CACHE = WIKI_CACHE_PATH / "weapon"
 WIKI_IMG_CACHE = WIKI_CACHE_PATH / "img"
+BAKE_PATH = CACHE_BASE / "bake"
 
 PLAYER_PATH = MAIN_PATH / "players"
 
@@ -44,6 +45,7 @@ def init_dir():
         WIKI_CHAR_CACHE,
         WIKI_WEAPON_CACHE,
         WIKI_IMG_CACHE,
+        BAKE_PATH,
         PLAYER_PATH,
     ]:
         p.mkdir(parents=True, exist_ok=True)

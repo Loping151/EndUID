@@ -104,7 +104,7 @@ async def ann_list_card() -> Union[bytes, str]:
             cover_b64 = ""
             if cover_url:
                 cover_b64 = await get_image_b64_with_cache(
-                    cover_url, ANN_CACHE_PATH, quality=60
+                    cover_url, ANN_CACHE_PATH, quality=60, cover_size=(400, 200),
                 )
 
             user_avatar = ann.get("userAvatar", "")

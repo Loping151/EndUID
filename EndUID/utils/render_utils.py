@@ -1,7 +1,6 @@
 import base64
 import asyncio
 import time
-import re
 import logging
 from typing import Union, Optional
 from pathlib import Path
@@ -50,10 +49,15 @@ _browser = None
 _browser_lock = asyncio.Lock()
 _browser_uses = 0
 _last_used = 0.0
-_active_contexts = 0
+_active_renders = 0
 
 _MAX_BROWSER_USES = 1000
 _BROWSER_IDLE_TTL = 3600
+
+# Page pool for reuse (avoids context/page creation overhead per render)
+_page_pool: asyncio.Queue = asyncio.Queue()
+_pool_ctx = None
+_pool_generation = 0  # Incremented on browser restart to invalidate stale pages
 
 _FONT_CSS_NAME = "fonts.css"
 _FONTS_DIR = TEMP_PATH / "fonts"
@@ -88,7 +92,8 @@ _mount_fonts()
 
 async def _ensure_browser():
     """Get a reusable browser instance; restart periodically to bound memory."""
-    global _playwright, _browser, _browser_uses, _last_used, _active_contexts
+    global _playwright, _browser, _browser_uses, _last_used, _active_renders
+    global _pool_ctx, _pool_generation
 
     if not PLAYWRIGHT_AVAILABLE or async_playwright is None:
         return None
@@ -109,7 +114,7 @@ async def _ensure_browser():
             or (_last_used > 0 and now - _last_used > _BROWSER_IDLE_TTL)
         )
 
-        if need_restart and _browser is not None and _active_contexts > 0:
+        if need_restart and _browser is not None and _active_renders > 0:
             need_restart = False
 
         if need_restart:
@@ -119,6 +124,15 @@ async def _ensure_browser():
                 except Exception:
                     pass
                 _browser = None
+
+            # Invalidate page pool (old pages belong to dead browser)
+            _pool_ctx = None
+            _pool_generation += 1
+            while not _page_pool.empty():
+                try:
+                    _page_pool.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
 
             if _playwright is None:
                 _playwright = await async_playwright().start()
@@ -130,6 +144,54 @@ async def _ensure_browser():
 
         _last_used = now
         return _browser
+
+
+async def _acquire_page():
+    """Get a reusable page from the pool, or create a new one."""
+    global _pool_ctx, _active_renders
+
+    browser = await _ensure_browser()
+    if browser is None:
+        return None, -1
+
+    gen = _pool_generation
+
+    # Try to reuse a pooled page
+    while not _page_pool.empty():
+        try:
+            page, page_gen = _page_pool.get_nowait()
+            if page_gen == gen and not page.is_closed():
+                _active_renders += 1
+                return page, gen
+        except asyncio.QueueEmpty:
+            break
+
+    # Create shared context if needed
+    if _pool_ctx is None or _pool_ctx._impl_obj._is_closed:
+        _pool_ctx = await browser.new_context(
+            viewport={"width": 1200, "height": 1000}
+        )
+
+    page = await _pool_ctx.new_page()
+    _active_renders += 1
+    return page, gen
+
+
+async def _release_page(page, gen: int):
+    """Return a page to the pool for reuse, or discard if stale."""
+    global _active_renders, _browser_uses, _last_used
+
+    _active_renders = max(0, _active_renders - 1)
+    _browser_uses += 1
+    _last_used = time.monotonic()
+
+    if gen == _pool_generation and not page.is_closed():
+        await _page_pool.put((page, gen))
+    else:
+        try:
+            await page.close()
+        except Exception:
+            pass
 
 
 async def _render_via_remote(html_content: str, remote_url: str) -> Optional[bytes]:
@@ -164,7 +226,6 @@ async def _render_via_remote(html_content: str, remote_url: str) -> Optional[byt
 
 
 async def render_html(end_templates, template_name: str, context: dict) -> Optional[bytes]:
-    global _browser_uses, _last_used, _active_contexts
 
     try:
         logger.debug(f"[End] HTML渲染开始: {template_name}")
@@ -196,7 +257,6 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
             if font_css_path.exists():
                 context["font_css_url"] = f"{base_url}/end/fonts/{_FONT_CSS_NAME}"
             else:
-                # 本地没有fonts.css时，使用配置的在线字体URL
                 font_css_url = EndConfig.get_config("FontCssUrl").data
                 context["font_css_url"] = font_css_url
 
@@ -212,62 +272,52 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
             return None
 
         logger.debug(f"[End] 使用本地 Playwright 渲染")
-        logger.debug(f"[End] async_playwright type: {type(async_playwright)}")
-
-        font_css_path = _FONTS_DIR / _FONT_CSS_NAME
-        if not font_css_path.exists():
-            logger.warning("[End] fonts.css 不存在，继续使用原始字体链接。")
 
         local_start_time = time.time()
+        page, gen = None, -1
         try:
-            logger.debug("[End] 获取复用浏览器实例...")
-            browser = await _ensure_browser()
-            if browser is None:
+            page, gen = await _acquire_page()
+            if page is None:
                 return None
 
-            context_obj = await browser.new_context(viewport={"width": 1200, "height": 1000})
-            _active_contexts += 1
-            try:
-                page = await context_obj.new_page()
-                logger.debug("[End] 加载HTML内容...")
-                await page.set_content(html_content, wait_until='networkidle')
+            await page.set_content(html_content, wait_until='load')
 
-                logger.debug("[End] 正在计算容器尺寸...")
-                container = page.locator(".container")
-                await page.wait_for_selector(".container", timeout=2000)
-                size = await container.evaluate(
-                    """(el) => {
-                        const rect = el.getBoundingClientRect();
-                        const width = Math.ceil(Math.max(rect.width, el.scrollWidth));
-                        const height = Math.ceil(Math.max(rect.height, el.scrollHeight));
-                        return { width, height };
-                    }"""
+            container = page.locator(".container")
+            await page.wait_for_selector(".container", timeout=2000)
+            size = await container.evaluate(
+                """(el) => {
+                    const rect = el.getBoundingClientRect();
+                    const width = Math.ceil(Math.max(rect.width, el.scrollWidth));
+                    const height = Math.ceil(Math.max(rect.height, el.scrollHeight));
+                    return { width, height };
+                }"""
+            )
+
+            if size and size.get("width") and size.get("height"):
+                await page.set_viewport_size(
+                    {
+                        "width": max(1, int(size["width"])),
+                        "height": max(1, int(size["height"])),
+                    }
                 )
 
-                if size and size.get("width") and size.get("height"):
-                    await page.set_viewport_size(
-                        {
-                            "width": max(1, int(size["width"])),
-                            "height": max(1, int(size["height"])),
-                        }
-                    )
-
-                logger.debug("[End] 正在截图...")
-                screenshot = await container.screenshot(type='jpeg', quality=90)
-                local_elapsed_time = time.time() - local_start_time
-                logger.info(f"[End] 本地渲染成功，耗时: {local_elapsed_time:.2f}s，图片大小: {len(screenshot)} bytes")
-                return screenshot
-            finally:
-                try:
-                    await context_obj.close()
-                except Exception:
-                    pass
-                _active_contexts = max(0, _active_contexts - 1)
-                _browser_uses += 1
-                _last_used = time.monotonic()
+            screenshot = await container.screenshot(type='jpeg', quality=90)
+            render_time = time.time() - local_start_time
+            html_kb = len(html_content) / 1024
+            logger.info(f"[End] 本地渲染成功，耗时: {render_time:.2f}s，HTML: {html_kb:.0f}KB，图片: {len(screenshot)} bytes")
+            return screenshot
         except Exception as e:
             logger.error(f"[End] Playwright execution failed: {e}")
+            if page is not None:
+                try:
+                    await page.close()
+                except Exception:
+                    pass
+                page = None
             raise e
+        finally:
+            if page is not None:
+                await _release_page(page, gen)
 
     except Exception as e:
         logger.error(f"[End] HTML渲染失败: {e}")
@@ -330,12 +380,15 @@ def get_footer_b64(footer_type: str = "black") -> Optional[str]:
         return None
 
 
-async def get_image_b64_with_cache(url: str, cache_path: Path, quality = None) -> str:
+async def get_image_b64_with_cache(
+    url: str, cache_path: Path, quality=None, cover_size: tuple = None,
+) -> str:
     if not url:
         return ""
 
     try:
         from .image import pic_download_from_url
+        from .path import BAKE_PATH
         from PIL import Image
         from io import BytesIO
 
@@ -344,41 +397,50 @@ async def get_image_b64_with_cache(url: str, cache_path: Path, quality = None) -
         filename = url.split("/")[-1]
         local_path = cache_path / filename
 
-        # 如果 quality 为 None，不压缩，直接返回原始图片的 base64
-        if quality is None:
+        # 不压缩也不裁切，直接返回原图
+        if quality is None and cover_size is None:
             ext = local_path.suffix.lstrip(".").lower()
             if ext == "jpg":
                 ext = "jpeg"
             with open(local_path, "rb") as f:
                 data = f.read()
-            b64_str = f"data:image/{ext};base64,{base64.b64encode(data).decode('utf-8')}"
-            return b64_str
+            return f"data:image/{ext};base64,{base64.b64encode(data).decode('utf-8')}"
 
+        # 烘焙缓存
+        stem = Path(filename).stem
+        size_tag = f"_{cover_size[0]}x{cover_size[1]}" if cover_size else ""
+        bake_name = f"{stem}_q{quality or 80}{size_tag}.webp"
+        bake_path = BAKE_PATH / bake_name
+
+        if bake_path.exists() and bake_path.stat().st_mtime >= local_path.stat().st_mtime:
+            with open(bake_path, "rb") as f:
+                data = f.read()
+            return f"data:image/webp;base64,{base64.b64encode(data).decode('utf-8')}"
+
+        # 未命中 — PIL 处理 + 写入烘焙缓存
         img = Image.open(local_path)
 
-        if img.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            if img.mode == 'P':
-                img = img.convert('RGBA')
-            if img.mode in ('RGBA', 'LA'):
-                background.paste(img, mask=img.split()[-1])
-                img = background
-        elif img.mode != 'RGB':
-            img = img.convert('RGB')
+        if cover_size is not None:
+            tw, th = cover_size
+            scale = max(tw / img.width, th / img.height)
+            new_w, new_h = int(img.width * scale), int(img.height * scale)
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+            left = (new_w - tw) // 2
+            top = (new_h - th) // 2
+            img = img.crop((left, top, left + tw, top + th))
 
-        buffer = BytesIO()
-        img.save(buffer, 'JPEG', quality=quality, optimize=True)
-        buffer.seek(0)
+        img.save(bake_path, 'WEBP', quality=quality or 80)
 
-        data = buffer.read()
-        b64_str = f"data:image/jpeg;base64,{base64.b64encode(data).decode('utf-8')}"
+        with open(bake_path, "rb") as f:
+            data = f.read()
 
         orig_size = local_path.stat().st_size
-        compressed_size = len(data)
-        compression_ratio = (1 - compressed_size / orig_size) * 100 if orig_size > 0 else 0
-        logger.debug(f"[渲染工具] 图片压缩: {filename}, 原始: {orig_size} bytes, 压缩后: {compressed_size} bytes, 压缩率: {compression_ratio:.2f}%")
+        logger.debug(
+            f"[渲染工具] 烘焙: {filename} → {bake_name}, "
+            f"原始: {orig_size} bytes, 烘焙后: {len(data)} bytes"
+        )
 
-        return b64_str
+        return f"data:image/webp;base64,{base64.b64encode(data).decode('utf-8')}"
 
     except Exception as e:
         logger.warning(f"[渲染工具] 获取图片 base64 失败: {url}, {e}")
