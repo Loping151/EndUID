@@ -178,7 +178,7 @@ async def _acquire_page():
 
     page = await _pool_ctx.new_page()
     _active_renders += 1
-    return page, gen
+    return page, _pool_generation
 
 
 async def _release_page(page, gen: int):
