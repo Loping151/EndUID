@@ -68,14 +68,18 @@ async def _render_alias_card(key: str, entry: dict, alias_list: list[str]) -> Op
     return await render_html(end_templates, "end_alias_card.html", context)
 
 
-@sv_add_alias.on_regex(rf"^(?P<action>添加|删除)(?P<name>{CHAR_NAME_PATTERN})别名(?P<new_alias>{CHAR_NAME_PATTERN})$", block=True)
+@sv_add_alias.on_regex(rf"^(?P<action>添加|删除)(?P<name>{CHAR_NAME_PATTERN})别名(?P<aliases>.+)$", block=True)
 async def handle_add_alias(bot: Bot, ev: Event):
     action = ev.regex_dict.get("action")
     char_name = ev.regex_dict.get("name")
-    new_alias = ev.regex_dict.get("new_alias")
+    raw = ev.regex_dict.get("aliases", "").strip()
 
-    if not char_name or not new_alias:
+    if not char_name or not raw:
         return await bot.send("❌ 参数不足")
+
+    alias_list = [a.strip() for a in re.split(r'[,，\s]+', raw) if a.strip()]
+    if not alias_list:
+        return await bot.send("❌ 别名不能为空")
 
     resolved = resolve_alias_entry(char_name)
     if not resolved:
@@ -90,31 +94,38 @@ async def handle_add_alias(bot: Bot, ev: Event):
     display_name = str(entry.get("name", "")).strip() or key
     entry_id = str(entry.get("id", "")).strip()
 
-    if action == "添加":
-        existing = resolve_alias_entry(new_alias)
-        if existing and existing[0] != key:
-            return await bot.send(f"❌ 别名【{new_alias}】已被角色【{existing[0]}】占用")
+    msgs = []
+    changed = False
+    for new_alias in alias_list:
+        if action == "添加":
+            existing = resolve_alias_entry(new_alias)
+            if existing and existing[0] != key:
+                msgs.append(f"❌ 别名【{new_alias}】已被角色【{existing[0]}】占用")
+                continue
+            aliases = get_alias_list(entry)
+            if new_alias in aliases or new_alias in {display_name, key, entry_id}:
+                msgs.append(f"❌ 别名【{new_alias}】已存在")
+                continue
+            aliases.append(new_alias)
+            set_alias_list(entry, aliases)
+            msgs.append(f"✅ 成功为角色【{display_name}】添加别名【{new_alias}】")
+            changed = True
+        elif action == "删除":
+            aliases = get_alias_list(entry)
+            if new_alias in {display_name, key, entry_id}:
+                msgs.append(f"❌ 别名【{new_alias}】不可删除")
+                continue
+            if new_alias not in aliases:
+                msgs.append(f"❌ 别名【{new_alias}】不存在，无法删除")
+                continue
+            aliases.remove(new_alias)
+            set_alias_list(entry, aliases)
+            msgs.append(f"✅ 成功为角色【{display_name}】删除别名【{new_alias}】")
+            changed = True
 
-        aliases = get_alias_list(entry)
-        if new_alias in aliases or new_alias in {display_name, key, entry_id}:
-            return await bot.send(f"❌ 别名【{new_alias}】已存在")
-
-        aliases.append(new_alias)
-        set_alias_list(entry, aliases)
+    if changed:
         save_alias_map(data)
-        return await bot.send(f"✅ 成功为角色【{display_name}】添加别名【{new_alias}】")
-
-    if action == "删除":
-        aliases = get_alias_list(entry)
-        if new_alias in {display_name, key, entry_id}:
-            return await bot.send(f"❌ 别名【{new_alias}】不可删除")
-        if new_alias not in aliases:
-            return await bot.send(f"❌ 别名【{new_alias}】不存在，无法删除")
-
-        aliases.remove(new_alias)
-        set_alias_list(entry, aliases)
-        save_alias_map(data)
-        return await bot.send(f"✅ 成功为角色【{display_name}】删除别名【{new_alias}】")
+    return await bot.send("\n".join(msgs))
 
 
 @sv_list_alias.on_regex(rf"^(?P<name>{CHAR_NAME_PATTERN})别名(列表)?$", block=True)
