@@ -419,6 +419,10 @@ async def get_image_b64_with_cache(
 
         filename = url.split("/")[-1]
         local_path = cache_path / filename
+        # pic_download_from_url 会将图片转为 webp 并删除原文件
+        webp_path = local_path.with_suffix(".webp")
+        if not local_path.exists() and webp_path.exists():
+            local_path = webp_path
 
         # 不压缩也不裁切，直接返回原图
         if quality is None and cover_size is None:
