@@ -45,7 +45,10 @@ async def _composite_gem_icon(icon_url: str, rarity: int) -> str:
         await pic_download_from_url(EQUIP_CACHE_PATH, icon_url)
         filename = icon_url.split("/")[-1]
         local_path = EQUIP_CACHE_PATH / filename
-        if not local_path.exists():
+        webp_path = local_path.with_suffix(".webp")
+        if webp_path.exists():
+            local_path = webp_path
+        elif not local_path.exists():
             return ""
 
         icon_img = Image.open(local_path).convert("RGBA")
