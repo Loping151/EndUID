@@ -1,1 +1,1 @@
-EndUID_version = "0.1.0"
+EndUID_version = "1.1.0"
