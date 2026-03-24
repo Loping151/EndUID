@@ -12,6 +12,8 @@
 
 首先参考核心安装：https://docs.sayu-bot.com/
 
+**需要安装额外依赖 [Node.js](https://nodejs.org/)。**
+
 ```bash
 cd gsuid_core/gsuid_core/plugins
 git clone https://github.com/Loping151/EndUID
