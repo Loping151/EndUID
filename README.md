@@ -14,6 +14,14 @@
 
 **需要安装额外依赖 [Node.js](https://nodejs.org/)。**
 
+**建议安装 `playwright`，用于渲染公告、wiki图等功能：**
+```bash
+# Linux/Mac
+source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium
+# Windows
+.venv\Scripts\activate; uv pip install playwright; uv run playwright install chromium
+```
+
 ```bash
 cd gsuid_core/gsuid_core/plugins
 git clone https://github.com/Loping151/EndUID
