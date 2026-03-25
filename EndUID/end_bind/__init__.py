@@ -306,7 +306,7 @@ async def check_cred(
     if ark_count > 0:
         msg_lines.append(f"绑定明日方舟UID {ark_count} 个")
     if endfield_uid:
-        msg_lines.append("将在后台同步抽卡记录")
+        msg_lines.append(f"将在后台同步抽卡记录，请勿立即触发！后续更新抽卡记录使用：{PREFIX}更新抽卡记录")
     await _send_text(bot, ev, "\n".join(msg_lines))
 
     record_uid = endfield_record_uid

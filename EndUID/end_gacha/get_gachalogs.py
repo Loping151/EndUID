@@ -97,6 +97,9 @@ async def get_new_gachalog(
         return await _get_new_gachalog(uid, u8_token, server_id)
 
 
+DUPLICATE_THRESHOLD = 50  # 连续50条记录重合即认为已同步完成
+
+
 async def _get_new_gachalog(
     uid: str,
     u8_token: str,
@@ -114,7 +117,11 @@ async def _get_new_gachalog(
         records = []
         seq_id = None
 
-        for page in range(100):
+        # 构建已有记录的 seqId 集合，用于快速查重
+        old_list = old_pool_data.get(pool_name, [])
+        existing_seq_ids = {r.get("seqId") for r in old_list if r.get("seqId")}
+
+        for page in range(100000):
             res = await end_api.get_gacha_char_record(
                 u8_token=u8_token,
                 server_id=server_id,
@@ -138,7 +145,26 @@ async def _get_new_gachalog(
             if not data_list:
                 break
 
+            # 检查连续重合数量
+            consecutive_duplicates = 0
+            should_stop = False
+            for r in data_list:
+                if r.get("seqId") in existing_seq_ids:
+                    consecutive_duplicates += 1
+                    if consecutive_duplicates >= DUPLICATE_THRESHOLD:
+                        should_stop = True
+                        break
+                else:
+                    consecutive_duplicates = 0
+
             records.extend(data_list)
+
+            if should_stop:
+                logger.info(
+                    f"[EndUID][Gacha] {pool_name} 第{page+1}页检测到"
+                    f"连续{DUPLICATE_THRESHOLD}条记录已存在，停止拉取"
+                )
+                break
             logger.debug(
                 f"[EndUID][Gacha] {pool_name} 第{page+1}页: {len(data_list)}条"
             )
@@ -187,7 +213,11 @@ async def _get_new_gachalog(
         records = []
         seq_id = None
 
-        for page in range(100):
+        # 构建已有记录的 seqId 集合
+        old_list = old_pool_data.get(display_name, [])
+        existing_seq_ids = {r.get("seqId") for r in old_list if r.get("seqId")}
+
+        for page in range(100000): # 能达到的话，您带我走吧
             res = await end_api.get_gacha_weapon_record(
                 u8_token=u8_token,
                 server_id=server_id,
@@ -206,7 +236,26 @@ async def _get_new_gachalog(
             if not data_list:
                 break
 
+            # 检查连续重合数量
+            consecutive_duplicates = 0
+            should_stop = False
+            for r in data_list:
+                if r.get("seqId") in existing_seq_ids:
+                    consecutive_duplicates += 1
+                    if consecutive_duplicates >= DUPLICATE_THRESHOLD:
+                        should_stop = True
+                        break
+                else:
+                    consecutive_duplicates = 0
+
             records.extend(data_list)
+
+            if should_stop:
+                logger.info(
+                    f"[EndUID][Gacha] {display_name} 第{page+1}页检测到"
+                    f"连续{DUPLICATE_THRESHOLD}条记录已存在，停止拉取"
+                )
+                break
 
             if not data.get("hasMore", False):
                 break
