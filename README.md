@@ -14,7 +14,7 @@
 
 **需要安装额外依赖 [Node.js](https://nodejs.org/)。**
 
-**建议安装 `playwright`，用于渲染公告、wiki图等功能。** 插件启动时会自动检测并安装 chromium 浏览器。如果自动安装失败，请手动执行：
+**建议安装 `playwright`，用于渲染公告、wiki图等功能：**
 ```bash
 # Linux/Mac
 source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium
