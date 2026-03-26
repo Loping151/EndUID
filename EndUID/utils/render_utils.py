@@ -28,16 +28,65 @@ class CORSStaticFiles(StaticFiles):
         response.headers["Access-Control-Allow-Methods"] = "GET, HEAD"
         return response
 
+def _ensure_chromium_installed():
+    """检查 Playwright chromium 是否已安装，未安装则自动安装"""
+    import os
+    import sys
+    import subprocess
+    import platform
+    import tempfile
+    from filelock import FileLock
+
+    env_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if env_path:
+        browsers_path = Path(env_path)
+    elif platform.system() == "Darwin":
+        browsers_path = Path.home() / "Library" / "Caches" / "ms-playwright"
+    elif platform.system() == "Windows":
+        browsers_path = Path(os.environ.get("LOCALAPPDATA", "")) / "ms-playwright"
+    else:
+        browsers_path = Path.home() / ".cache" / "ms-playwright"
+
+    if browsers_path.exists():
+        for d in browsers_path.iterdir():
+            if d.is_dir() and d.name.startswith("chromium"):
+                logger.info("[End] Playwright chromium 浏览器已安装")
+                return
+
+    lock_path = Path(tempfile.gettempdir()) / "playwright_install.lock"
+    with FileLock(lock_path, timeout=600):
+        # 拿到锁后再检查一次，可能另一个插件已经装好了
+        if browsers_path.exists():
+            for d in browsers_path.iterdir():
+                if d.is_dir() and d.name.startswith("chromium"):
+                    logger.info("[End] Playwright chromium 浏览器已安装")
+                    return
+
+        logger.info("[End] 未检测到 Playwright chromium 浏览器，正在自动安装...")
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "playwright", "install", "chromium"],
+                capture_output=True, text=True, timeout=300,
+            )
+            if result.returncode == 0:
+                logger.info("[End] Playwright chromium 浏览器安装成功")
+            else:
+                logger.warning(f"[End] Playwright chromium 安装失败: {result.stderr.strip()}")
+        except Exception as e:
+            logger.warning(f"[End] Playwright chromium 自动安装异常: {e}")
+
+
 def _import_playwright():
     try:
         from playwright.async_api import async_playwright
+        _ensure_chromium_installed()
         return async_playwright
     except ImportError:
         if not EndConfig.get_config("RemoteRenderEnable").data:
             logger.warning("[End] 未安装 playwright，无法使用渲染公告、wiki图等功能。")
             logger.warning("[End] 可选择配置外置渲染方法！")
-            logger.info("[End] 安装方法 Linux/Mac: 在当前目录下执行 source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium")
-            logger.info("[End] 安装方法 Windows: 在当前目录下执行 .venv\\Scripts\\activate; uv pip install playwright; uv run playwright install chromium")
+            # logger.info("[End] 安装方法 Linux/Mac: 在当前目录下执行 source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium")
+            # logger.info("[End] 安装方法 Windows: 在当前目录下执行 .venv\\Scripts\\activate; uv pip install playwright; uv run playwright install chromium")
         return None
 
 
