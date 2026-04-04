@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>全部角色别名</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #0f1014;
+        --c-accent: #ffe600;
+        --c-subtext: #8b8b8b;
+        --c-card-bg: rgba(20, 21, 24, 0.9);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        width: 800px;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: #fff;
+        position: relative;
+    }
+
+    .container {
+        position: relative;
+        z-index: 10;
+        padding: 40px;
+        padding-bottom: 80px;
+    }
+
+    .bg-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 0;
+        background: radial-gradient(circle at 50% 20%, #1a1c22 0%, #0f1014 80%);
+    }
+
+    .title {
+        font-size: 32px;
+        font-weight: 900;
+        color: var(--c-accent);
+        margin-bottom: 6px;
+    }
+    .subtitle {
+        font-family: 'JetBrains Mono';
+        font-size: 13px;
+        color: var(--c-subtext);
+        margin-bottom: 24px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .card {
+        background: var(--c-card-bg);
+        border: 1px solid rgba(255,255,255,0.06);
+        padding: 14px 16px;
+        border-radius: 6px;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding-bottom: 8px;
+    }
+
+    .card-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+        background: #222;
+    }
+
+    .card-name {
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+    }
+
+    .card-aliases {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+    }
+
+    .alias-tag {
+        font-size: 12px;
+        color: #aaa;
+        background: rgba(255,255,255,0.06);
+        padding: 2px 8px;
+        border-radius: 3px;
+    }
+
+    .footer {
+        position: absolute;
+        bottom: 0; left: 0; width: 100%;
+        height: 60px;
+        background: rgba(10,10,12,0.98);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 40px;
+        z-index: 50;
+    }
+    .footer-logo { height: 24px; opacity: 0.7; }
+    .footer-text { font-family: 'JetBrains Mono'; font-size: 13px; color: var(--c-subtext); }
+</style>
+</head>
+<body>
+    <div class="bg-layer"></div>
+
+    <div class="container">
+        <div class="title">角色别名表</div>
+        <div class="subtitle">ALIAS TABLE // {{ total }} CHARACTERS</div>
+
+        <div class="grid">
+            {% for item in chars %}
+            <div class="card">
+                <div class="card-header">
+                    {% if item.avatar %}
+                    <img src="{{ item.avatar }}" class="card-avatar">
+                    {% else %}
+                    <div class="card-avatar" style="display:flex;justify-content:center;align-items:center;color:#555;font-size:16px;">?</div>
+                    {% endif %}
+                    <div class="card-name">{{ item.name }}</div>
+                </div>
+                <div class="card-aliases">
+                    {% for a in item.aliases %}
+                    <div class="alias-tag">{{ a }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="footer">
+        {% if end_logo %}<img src="{{ end_logo }}" class="footer-logo">{% endif %}
+        <div class="footer-text">ENDFIELD ALIAS TABLE</div>
+    </div>
+</body>
+</html>

@@ -148,3 +148,61 @@ async def handle_list_alias(bot: Bot, ev: Event):
         return await bot.send(img_bytes)
 
     return await bot.send(f"角色{entry.get('name') or key}别名列表：" + " ".join(alias_list))
+
+
+@sv_list_alias.on_fullmatch("别名", block=True)
+async def handle_all_alias(bot: Bot, ev: Event):
+    """Render all character aliases as a single image."""
+    from PIL import Image
+    import io
+    from gsuid_core.utils.image.convert import convert_img
+
+    data = load_alias_map()
+    if not data:
+        return await bot.send("暂无别名数据")
+
+    chars = []
+    for key, entry in sorted(data.items()):
+        if not isinstance(entry, dict):
+            continue
+        aliases = _format_alias_list(key, entry)
+        other_aliases = aliases[1:] if len(aliases) > 1 else aliases
+
+        avatar = ""
+        avatar_url_raw = (
+            entry.get("avatarSqUrl")
+            or entry.get("avatarRtUrl")
+            or entry.get("illustrationUrl")
+        )
+        if avatar_url_raw:
+            try:
+                avatar = await get_image_b64_with_cache(
+                    avatar_url_raw, AVATAR_CACHE_PATH
+                )
+            except Exception:
+                pass
+
+        chars.append({
+            "name": key,
+            "aliases": other_aliases,
+            "avatar": avatar,
+        })
+
+    bg = _local_b64("bg.png")
+    end_logo = _local_b64("end.png")
+
+    context = {
+        "chars": chars,
+        "total": len(chars),
+        "bg": bg,
+        "end_logo": end_logo,
+    }
+
+    img_bytes = await render_html(
+        end_templates, "end_alias_all.html", context
+    )
+    if img_bytes:
+        return await bot.send(
+            await convert_img(Image.open(io.BytesIO(img_bytes)))
+        )
+    return await bot.send("别名表渲染失败")
