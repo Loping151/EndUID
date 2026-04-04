@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Endfield Weapon Wiki</title>
 <style>
     @import url('{{ font_css_url }}');
@@ -13,229 +12,293 @@
         --c-text: #ffffff;
         --c-subtext: #8b8b8b;
         --c-card-bg: rgba(20, 21, 24, 0.9);
+        --c-rarity: {{ rarity_color }};
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-        width: 1000px;
-        min-height: 800px;
+        width: 800px;
         background-color: var(--c-bg);
         font-family: 'Source Han Sans CN', sans-serif;
         color: var(--c-text);
-        overflow-x: hidden;
         position: relative;
     }
 
     .container {
         position: relative;
         z-index: 10;
-        width: 100%;
-        padding: 50px;
+        padding: 40px;
+        padding-bottom: 80px;
         display: flex;
         flex-direction: column;
-        gap: 30px;
-        padding-bottom: 120px;
+        gap: 20px;
     }
 
     .bg-layer {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
         z-index: 0;
-        background: radial-gradient(circle at 50% 30%, #1e1f24 0%, #0f1014 80%);
-    }
-
-    .grid-deco {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-image: 
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-        background-size: 50px 50px;
-        z-index: 1;
-        mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+        background: linear-gradient(180deg, #0f1014 0%, #0f1014 85%, {{ rarity_color }}18 100%);
     }
 
     /* Header */
     .header {
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding-bottom: 20px;
-    }
-    .rarity-row { display: flex; gap: 2px; margin-bottom: 5px; }
-    .rarity-star { width: 24px; height: 24px; }
-    .weapon-name {
-        font-size: 64px;
-        font-weight: 900;
-        color: white;
-        line-height: 1.1;
-        letter-spacing: -1px;
-    }
-    .type-tag {
-        display: inline-block;
-        margin-top: 10px;
-        padding: 4px 15px;
-        background: #333;
-        color: var(--c-accent);
-        font-family: 'JetBrains Mono';
-        font-weight: 700;
-        transform: skewX(-20deg);
-    }
-    .type-tag span { display: block; transform: skewX(20deg); }
-
-    /* Top Row Layout: Data (Left) + Visual (Right) */
-    .top-row {
-        display: grid;
-        grid-template-columns: 1fr 280px; /* 更多空间给情报，右侧固定宽度放小图标 */
-        gap: 30px;
-    }
-
-    /* Card Common */
-    .card {
-        background: var(--c-card-bg);
-        border: 1px solid rgba(255,255,255,0.1);
-        padding: 25px;
-        height: 100%;
-    }
-
-    .section-title {
-        font-size: 18px;
-        color: var(--c-accent);
-        font-weight: 800;
-        margin-bottom: 15px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding-bottom: 8px;
+        gap: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .section-title span { font-family: 'JetBrains Mono'; font-size: 12px; color: var(--c-subtext); }
 
-    /* Right Mini Visual */
-    .mini-visual {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.1);
+    .weapon-icon-wrap {
+        width: 110px;
+        height: 110px;
+        border-radius: 12px;
+        border: 2px solid {{ rarity_color }}66;
+        background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, {{ rarity_color }}15 100%);
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 20px;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
     }
-    .weapon-img-small {
-        max-width: 100%;
-        max-height: 180px; /* 缩小后的高度控制 */
-        object-fit: contain;
-        filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    .weapon-icon-wrap img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .weapon-icon-bar {
+        position: absolute; bottom: 0; left: 0; width: 100%; height: 3px;
+        background: var(--c-rarity);
     }
 
-    /* Stats Row (Full Width) */
-    .stats-grid {
+    .header-info { flex: 1; }
+    .rarity-row { display: flex; gap: 2px; margin-bottom: 4px; }
+    .rarity-star { width: 22px; height: 22px; }
+    .weapon-name { font-size: 42px; font-weight: 900; line-height: 1.1; }
+    .type-badge {
+        display: inline-block; margin-top: 6px; padding: 3px 12px;
+        background: {{ rarity_color }}15; border-left: 3px solid var(--c-rarity);
+        color: var(--c-rarity); font-family: 'JetBrains Mono'; font-weight: 700; font-size: 13px;
+    }
+
+    /* Section */
+    .section { background: var(--c-card-bg); border: 1px solid rgba(255,255,255,0.06); padding: 18px 22px; }
+    .section-title {
+        font-size: 18px; font-weight: 800; color: var(--c-accent);
+        border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; margin-bottom: 14px;
+        display: flex; align-items: baseline; gap: 8px;
+    }
+    .section-title span { font-family: 'JetBrains Mono'; font-size: 12px; color: var(--c-subtext); font-weight: 400; }
+
+    /* Stats compare */
+    .stats-compare {
         display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 属性占满一行，分三列 */
-        gap: 20px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
     }
-    .stat-item {
-        background: rgba(0,0,0,0.2);
-        padding: 15px 20px;
-        border-left: 2px solid rgba(255,255,255,0.1);
+    .stat-box {
+        background: rgba(0,0,0,0.3); padding: 12px 14px;
+        border-left: 2px solid rgba(255,255,255,0.06);
     }
-    .stat-label { font-size: 14px; color: var(--c-subtext); margin-bottom: 5px; }
-    .stat-main { font-family: 'Oswald'; font-size: 32px; color: white; font-weight: 700; line-height: 1.3; padding-bottom: 6px; }
-    .stat-sub { font-family: 'Oswald'; font-size: 14px; color: var(--c-accent); }
-    .stat-item.full-width { grid-column: 1 / -1; }
+    .stat-label { font-size: 12px; color: var(--c-subtext); margin-bottom: 4px; }
+    .stat-vals { display: flex; align-items: baseline; gap: 12px; }
+    .stat-init { font-family: 'Oswald'; font-size: 24px; font-weight: 700; color: white; }
+    .stat-arrow { color: #555; font-size: 14px; }
+    .stat-max { font-family: 'Oswald'; font-size: 24px; font-weight: 700; color: var(--c-rarity); }
 
-    /* Passive & Text */
-    .desc-text { font-size: 15px; line-height: 1.6; color: #ccc; }
+    /* Passive */
     .passive-block {
-        margin-top: 15px;
-        padding: 15px;
-        background: rgba(255, 230, 0, 0.05);
-        border-left: 3px solid var(--c-accent);
+        padding: 14px 16px; margin-bottom: 10px;
+        border-left: 3px solid var(--c-rarity);
+        background: {{ rarity_color }}08;
     }
-    .passive-name { font-weight: 700; color: white; margin-bottom: 5px; font-size: 18px; }
+    .passive-block.max { border-left-color: #ff9800; background: rgba(255,152,0,0.04); }
+    .passive-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .passive-name { font-size: 17px; font-weight: 800; }
+    .passive-tag {
+        font-family: 'JetBrains Mono'; font-size: 10px; padding: 2px 7px;
+        border-radius: 2px; font-weight: 700;
+    }
+    .passive-tag.init { background: {{ rarity_color }}20; color: var(--c-rarity); }
+    .passive-tag.max { background: rgba(255,152,0,0.15); color: #ff9800; }
+    .passive-desc { font-size: 13px; line-height: 1.7; color: #bbb; white-space: pre-wrap; }
+
+    /* Skill rank table */
+    .rank-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+    .rank-table th {
+        background: rgba(255,230,0,0.06); color: var(--c-accent); font-weight: 700;
+        padding: 5px 3px; text-align: center; font-size: 11px;
+        border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap;
+    }
+    .rank-table th:first-child { text-align: left; padding-left: 10px; min-width: 100px; }
+    .rank-table td {
+        padding: 6px 3px; text-align: center; color: #bbb;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+        font-family: 'JetBrains Mono'; font-size: 11px;
+    }
+    .hl-num { color: var(--c-accent); font-weight: 700; }
+    .rank-table td:first-child {
+        text-align: left; padding-left: 10px;
+        font-family: 'Source Han Sans CN'; color: #999; font-size: 12px;
+    }
 
     /* Footer */
     .footer {
-        position: absolute;
-        bottom: 0; left: 0; width: 100%; height: 70px;
-        background: #000;
-        border-top: 1px solid var(--c-accent);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 40px;
+        position: absolute; bottom: 0; left: 0; width: 100%; height: 60px;
+        background: rgba(10,10,12,0.98);
+        border-top: 2px solid {{ rarity_color }}40;
+        display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 50;
     }
-    .footer-logo { height: 24px; }
-    .footer-text { font-family: 'Oswald'; font-size: 16px; color: var(--c-subtext); }
-
+    .footer-logo { height: 24px; opacity: 0.7; }
+    .footer-text { font-family: 'Oswald'; font-size: 14px; color: var(--c-subtext); }
 </style>
 </head>
 <body>
-    <div class="bg-layer">
-        {% if bg %}<img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.15;">{% endif %}
-    </div>
-    <div class="grid-deco"></div>
+    <div class="bg-layer"></div>
 
     <div class="container">
+
+        <!-- Header -->
         <div class="header">
-            <div class="rarity-row">
-                {% for _ in range(wiki.rarity) %}
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
-                {% endfor %}
+            <div class="weapon-icon-wrap">
+                {% if weapon_img %}<img src="{{ weapon_img }}">{% endif %}
+                <div class="weapon-icon-bar"></div>
             </div>
-            <div class="weapon-name">{{ wiki.name }}</div>
-            <div class="type-tag"><span>{{ wiki.weapon_type }}</span></div>
-        </div>
-
-        <div class="top-row">
-            <div class="card">
-                <div class="section-title">情报 <span>DATA</span></div>
-                <div class="desc-text">{{ wiki.description }}</div>
-                {% if wiki.acquisition %}
-                <div style="margin-top:10px; font-size:13px; color:var(--c-subtext);">
-                    <span style="color:var(--c-accent);">[获取方式]</span> {{ wiki.acquisition }}
+            <div class="header-info">
+                <div class="rarity-row">
+                    {% for _ in range(wiki.rarity) %}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                    {% endfor %}
                 </div>
-                {% endif %}
-                
-                {% if wiki.passive %}
-                <div class="passive-block">
-                    <div class="passive-name">{{ wiki.passive.name }}</div>
-                    <div class="desc-text" style="font-size:14px;">{{ wiki.passive.description }}</div>
-                </div>
-                {% endif %}
-            </div>
-            
-            <div class="mini-visual">
-                {% if weapon_img %}<img src="{{ weapon_img }}" class="weapon-img-small">{% endif %}
+                <div class="weapon-name">{{ wiki.name }}</div>
+                <div class="type-badge">{{ wiki.weapon_type }}</div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="section-title">基础属性 <span>BASE STATISTICS</span></div>
-            <div class="stats-grid">
-                <div class="stat-item">
+        <!-- Base Stats Compare -->
+        <div class="section">
+            <div class="section-title">基础属性 <span>ATTRIBUTES</span></div>
+            <div class="stats-compare">
+                <div class="stat-box">
                     <div class="stat-label">基础攻击力</div>
-                    <div class="stat-main">{{ wiki.base_attack }}</div>
-                    {% if wiki.base_attack_max %}
-                    <div class="stat-sub">MAX: {{ wiki.base_attack_max }}</div>
-                    {% endif %}
+                    <div class="stat-vals">
+                        <div class="stat-init">{{ wiki.base_attack }}</div>
+                        {% if wiki.base_attack_max %}
+                        <div class="stat-arrow">&rarr;</div>
+                        <div class="stat-max">{{ wiki.base_attack_max }}</div>
+                        {% endif %}
+                    </div>
                 </div>
-
-                {% for i in range(wiki.stat_bonuses|length) %}
-                <div class="stat-item{% if i >= 2 %} full-width{% endif %}">
-                    <div class="stat-label">{{ wiki.stat_bonuses[i].name }}</div>
-                    <div class="stat-main">{{ wiki.stat_bonuses[i].value }}</div>
-                    {% if wiki.stat_bonuses_max and wiki.stat_bonuses_max[i] %}
-                    <div class="stat-sub">MAX: {{ wiki.stat_bonuses_max[i].value }}</div>
-                    {% endif %}
+                {% for bonus in wiki.stat_bonuses %}
+                <div class="stat-box">
+                    <div class="stat-label">{{ bonus.name }}</div>
+                    <div class="stat-vals">
+                        <div class="stat-init" style="font-size:20px;">{{ bonus.value }}</div>
+                        {% if wiki.stat_bonuses_max and loop.index0 < wiki.stat_bonuses_max|length %}
+                        <div class="stat-arrow">&rarr;</div>
+                        <div class="stat-max" style="font-size:20px;">{{ wiki.stat_bonuses_max[loop.index0].value }}</div>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>
         </div>
+
+        <!-- Passive Skill -->
+        {% if wiki.passive or wiki.passive_max %}
+        <div class="section">
+            <div class="section-title">附术效果 <span>PASSIVE</span></div>
+            {% if wiki.passive %}
+            <div class="passive-block">
+                <div class="passive-header">
+                    <div class="passive-name">{{ wiki.passive.name }}</div>
+                    <div class="passive-tag init">初始</div>
+                </div>
+                <div class="passive-desc">{{ wiki.passive.description }}</div>
+            </div>
+            {% endif %}
+            {% if wiki.passive_max %}
+            <div class="passive-block max">
+                <div class="passive-header">
+                    <div class="passive-name">{{ wiki.passive_max.name }}</div>
+                    <div class="passive-tag max">满级</div>
+                </div>
+                <div class="passive-desc">{{ wiki.passive_max.description }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Recommended Gems -->
+        {% if gems %}
+        <div class="section">
+            <div class="section-title">基质推荐 <span>RECOMMENDED GEM</span></div>
+            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                {% for gem in gems %}
+                <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.25); padding:10px 16px; border-left:2px solid var(--c-rarity);">
+                    {% if gem.cover %}
+                    <img src="{{ gem.cover }}" style="width:48px; height:48px; border-radius:8px; object-fit:contain; background:rgba(255,255,255,0.03);">
+                    {% endif %}
+                    <div style="font-size:16px; font-weight:700; color:#ddd;">{{ gem.name }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Skill Rank Tables (RANK 5-9 only) -->
+        {% if wiki.skill_ranks %}
+        <div class="section">
+            <div class="section-title">技能数值 <span>SKILL DATA (RANK 5-9)</span></div>
+            {% for skill in wiki.skill_ranks %}
+            <div style="margin-bottom:16px;">
+                <div style="font-size:15px; font-weight:700; color:#ddd; margin-bottom:6px; padding-left:2px;">{{ skill.name }}</div>
+                <table class="rank-table">
+                    <tr>
+                        {% for h in skill.header[4:] | reverse %}
+                        <th>{{ h }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for v in skill.values[4:] | reverse %}
+                        <td>{{ v[:50] | hl_num }}</td>
+                        {% endfor %}
+                    </tr>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Breakthrough Materials -->
+        {% if wiki.breakthroughs %}
+        <div class="section">
+            <div class="section-title">突破材料 <span>BREAKTHROUGH</span></div>
+            {% for bt in wiki.breakthroughs %}
+            <div style="margin-bottom:14px;">
+                <div style="font-size:14px; font-weight:700; color:#aaa; margin-bottom:8px;">{{ bt.level }}</div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                    {% for mat in bt.materials %}
+                    <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:4px;">
+                        {% if mat.cover_url %}
+                        <img src="{{ mat.cover_url }}" style="width:36px; height:36px; border-radius:4px; object-fit:contain;">
+                        {% endif %}
+                        <div>
+                            <div style="font-size:13px; font-weight:700; color:#ddd;">{{ mat.name or mat.item_id }}</div>
+                            <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--c-rarity);">x{{ mat.count }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
     </div>
 
     <div class="footer">
         {% if end_logo %}<img src="{{ end_logo }}" class="footer-logo">{% endif %}
-        <div class="footer-text">PROTOCOL SYSTEM // DATABASE_ID: {{ wiki.name }}</div>
+        <div class="footer-text">WEAPON // {{ wiki.name }}</div>
     </div>
 </body>
 </html>

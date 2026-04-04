@@ -1,13 +1,13 @@
 import io
-import time
+import re
 from pathlib import Path
 from typing import Union
 
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
+from markupsafe import Markup
 
 from gsuid_core.utils.image.convert import convert_img
-from gsuid_core.logger import logger
 
 from ..utils.render_utils import (
     render_html,
@@ -15,13 +15,27 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..utils.alias_map import resolve_alias_entry
-from ..utils.path import WIKI_IMG_CACHE, CHAR_CACHE_PATH, AVATAR_CACHE_PATH
+from ..utils.path import (
+    WIKI_IMG_CACHE, CHAR_CACHE_PATH, AVATAR_CACHE_PATH, SKILL_CACHE_PATH,
+)
 from .models import CharWiki, WeaponWiki, WikiListData
 
 TEXTURE_PATH = Path(__file__).parent.parent / "end_char" / "texture2d"
 TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
 
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
+
+
+def _highlight_numbers(text: str) -> str:
+    """Wrap numbers (including decimals and %) in highlight spans."""
+    return re.sub(
+        r"(\d+\.?\d*%?)",
+        r'<span class="hl-num">\1</span>',
+        text,
+    )
+
+
+end_templates.filters["hl_num"] = lambda s: Markup(_highlight_numbers(s))
 
 
 def _get_property_icon(name: str) -> str:
@@ -45,24 +59,41 @@ async def draw_char_wiki(wiki: CharWiki) -> Union[bytes, str]:
     property_icon = _get_property_icon(wiki.attribute)
     profession_icon = _get_profession_icon(wiki.profession)
 
-    # Look up character images from alias map (game API cache)
     char_img = ""
     char_avatar = ""
-    resolved = resolve_alias_entry(wiki.name)
-    if resolved:
-        _, entry = resolved
-        # Illustration (large portrait)
-        illust_url = entry.get("illustrationUrl") or entry.get("avatarRtUrl")
-        if illust_url:
-            char_img = await get_image_b64_with_cache(
-                illust_url, CHAR_CACHE_PATH
+
+    # 1) Try Skland wiki illustration (from extraInfo)
+    if wiki.illustration_url:
+        char_img = await get_image_b64_with_cache(
+            wiki.illustration_url, CHAR_CACHE_PATH
+        )
+
+    # 2) Fallback: alias map (game API cache)
+    if not char_img:
+        resolved = resolve_alias_entry(wiki.name)
+        if resolved:
+            _, entry = resolved
+            illust_url = entry.get("illustrationUrl") or entry.get(
+                "avatarRtUrl"
             )
-        # Avatar (square icon)
-        avatar_url = entry.get("avatarSqUrl")
-        if avatar_url:
-            char_avatar = await get_image_b64_with_cache(
-                avatar_url, AVATAR_CACHE_PATH
+            if illust_url:
+                char_img = await get_image_b64_with_cache(
+                    illust_url, CHAR_CACHE_PATH
+                )
+            avatar_url = entry.get("avatarSqUrl")
+            if avatar_url:
+                char_avatar = await get_image_b64_with_cache(
+                    avatar_url, AVATAR_CACHE_PATH
+                )
+
+    # Download and cache skill icons → base64
+    for skill in wiki.skills:
+        if skill.icon_url:
+            b64 = await get_image_b64_with_cache(
+                skill.icon_url, SKILL_CACHE_PATH
             )
+            if b64:
+                skill.icon_url = b64
 
     context = {
         "wiki": wiki,
@@ -79,31 +110,92 @@ async def draw_char_wiki(wiki: CharWiki) -> Union[bytes, str]:
     )
     if img_bytes:
         return await convert_img(Image.open(io.BytesIO(img_bytes)))
-    return "❌ Wiki 渲染失败"
+    return "Wiki 渲染失败"
+
+
+RARITY_COLORS = {
+    6: "#ff9d3a",
+    5: "#c084fc",
+    4: "#4a9eff",
+    3: "#4a9eff",
+}
 
 
 async def draw_weapon_wiki(wiki: WeaponWiki) -> Union[bytes, str]:
     """Render weapon wiki detail as image."""
-    from .fetch import ensure_list_data, get_weapon_entry
-
     bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
     end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
 
-    # Look up weapon icon from homepage list data
+    # Weapon image from catalog cover
     weapon_img = ""
-    list_data = await ensure_list_data()
-    if list_data:
-        weapon_entry = get_weapon_entry(list_data, wiki.name)
-        if weapon_entry and weapon_entry.icon_url:
-            weapon_img = await get_image_b64_with_cache(
-                weapon_entry.icon_url, WIKI_IMG_CACHE
-            )
+    if wiki.cover_url:
+        weapon_img = await get_image_b64_with_cache(
+            wiki.cover_url, WIKI_IMG_CACHE
+        )
+
+    rarity_color = RARITY_COLORS.get(wiki.rarity, "#888")
+
+    # Collect all entry IDs that need catalog resolution
+    entry_ids: set[str] = set()
+    for sr in wiki.skill_ranks:
+        if sr.recommended_gem_id:
+            entry_ids.add(sr.recommended_gem_id)
+    for bt in wiki.breakthroughs:
+        for mat in bt.materials:
+            entry_ids.add(mat.item_id)
+
+    # Resolve names/covers from catalog (single cached call)
+    entry_lookup: dict[str, dict] = {}
+    if entry_ids:
+        from .skland_wiki import wiki_client
+
+        # Fetch ALL catalog items at once (cached by wiki_client)
+        all_catalog = await wiki_client.get_catalog_items()
+        for entries in all_catalog.values():
+            for e in entries:
+                eid = str(e.get("itemId", ""))
+                if eid in entry_ids:
+                    entry_lookup[eid] = e
+
+    # Build gems list (deduplicated)
+    gem_ids = set()
+    gems: list[dict] = []
+    for sr in wiki.skill_ranks:
+        gid = sr.recommended_gem_id
+        if gid and gid not in gem_ids:
+            gem_ids.add(gid)
+            entry = entry_lookup.get(gid)
+            if entry:
+                gem_cover = ""
+                cover_url = entry.get("brief", {}).get("cover", "")
+                if cover_url:
+                    gem_cover = await get_image_b64_with_cache(
+                        cover_url, WIKI_IMG_CACHE
+                    )
+                gems.append({
+                    "name": entry.get("name", "").strip(),
+                    "cover": gem_cover,
+                })
+
+    # Resolve breakthrough material names/covers
+    for bt in wiki.breakthroughs:
+        for mat in bt.materials:
+            entry = entry_lookup.get(mat.item_id)
+            if entry:
+                mat.name = entry.get("name", "").strip()
+                cover_url = entry.get("brief", {}).get("cover", "")
+                if cover_url:
+                    mat.cover_url = await get_image_b64_with_cache(
+                        cover_url, WIKI_IMG_CACHE
+                    )
 
     context = {
         "wiki": wiki,
         "bg": bg,
         "end_logo": end_logo,
         "weapon_img": weapon_img,
+        "rarity_color": rarity_color,
+        "gems": gems,
     }
 
     img_bytes = await render_html(
@@ -111,7 +203,7 @@ async def draw_weapon_wiki(wiki: WeaponWiki) -> Union[bytes, str]:
     )
     if img_bytes:
         return await convert_img(Image.open(io.BytesIO(img_bytes)))
-    return "❌ Wiki 渲染失败"
+    return "Wiki 渲染失败"
 
 
 async def draw_char_list(data: WikiListData) -> Union[bytes, str]:
@@ -151,7 +243,7 @@ async def draw_char_list(data: WikiListData) -> Union[bytes, str]:
     )
     if img_bytes:
         return await convert_img(Image.open(io.BytesIO(img_bytes)))
-    return "❌ Wiki 渲染失败"
+    return "Wiki 渲染失败"
 
 
 async def draw_weapon_list(data: WikiListData) -> Union[bytes, str]:
@@ -189,85 +281,9 @@ async def draw_weapon_list(data: WikiListData) -> Union[bytes, str]:
     )
     if img_bytes:
         return await convert_img(Image.open(io.BytesIO(img_bytes)))
-    return "❌ Wiki 渲染失败"
-
-
-def _format_remaining(seconds: float) -> str:
-    """Format seconds into '?天?小时' string."""
-    if seconds <= 0:
-        return ""
-    days = int(seconds // 86400)
-    hours = int((seconds % 86400) // 3600)
-    if days > 0:
-        return f"{days}天{hours}小时"
-    return f"{hours}小时"
+    return "Wiki 渲染失败"
 
 
 async def draw_gacha(data: WikiListData) -> Union[bytes, str]:
-    """Render gacha/banner info as image."""
-    bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
-    end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
-    now = time.time()
-
-    char_banners = [b for b in data.gacha if b.banner_type == "character"]
-    weapon_banners = [b for b in data.gacha if b.banner_type == "weapon"]
-
-    banners = []
-    for i, banner in enumerate(char_banners):
-        icon_b64 = ""
-        if banner.target_icon_url:
-            icon_b64 = await get_image_b64_with_cache(
-                banner.target_icon_url, WIKI_IMG_CACHE
-            )
-
-        started = banner.start_timestamp == 0 or now >= banner.start_timestamp
-        time_text = ""
-        if i == 0 and banner.end_timestamp > 0:
-            remaining = banner.end_timestamp - now
-            time_text = (
-                f"剩余 {_format_remaining(remaining)}"
-                if remaining > 0
-                else "已结束"
-            )
-        elif i > 0 and banner.start_timestamp > 0 and not started:
-            until = banner.start_timestamp - now
-            time_text = f"开启还有 {_format_remaining(until)}"
-
-        banners.append({
-            "banner_name": banner.banner_name,
-            "banner_type": banner.banner_type,
-            "events": banner.events,
-            "target_name": banner.target_name,
-            "target_icon": icon_b64,
-            "started": started,
-            "time_text": time_text,
-        })
-
-    for banner in weapon_banners:
-        icon_b64 = ""
-        if banner.target_icon_url:
-            icon_b64 = await get_image_b64_with_cache(
-                banner.target_icon_url, WIKI_IMG_CACHE
-            )
-        banners.append({
-            "banner_name": banner.banner_name,
-            "banner_type": banner.banner_type,
-            "events": banner.events,
-            "target_name": banner.target_name,
-            "target_icon": icon_b64,
-            "started": True,
-            "time_text": "",
-        })
-
-    context = {
-        "banners": banners,
-        "bg": bg,
-        "end_logo": end_logo,
-    }
-
-    img_bytes = await render_html(
-        end_templates, "end_wiki_gacha.html", context
-    )
-    if img_bytes:
-        return await convert_img(Image.open(io.BytesIO(img_bytes)))
-    return "❌ Wiki 渲染失败"
+    """Gacha rendering — currently disabled (no longer from bilibili)."""
+    return "卡池信息功能维护中"

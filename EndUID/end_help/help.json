@@ -225,7 +225,7 @@
     ]
   },
   "Wiki图鉴": {
-    "desc": "角色/武器Wiki与卡池查询",
+    "desc": "角色/武器Wiki与蓝图查询",
     "data": [
       {
         "name": "角色图鉴",
@@ -260,9 +260,25 @@
         "need_admin": false
       },
       {
-        "name": "卡池",
-        "desc": "查看当前卡池信息",
-        "eg": "卡池",
+        "name": "蓝图",
+        "desc": "搜索系统蓝图",
+        "eg": "蓝图赤铜",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "明信片",
+        "desc": "查看角色潜能明信片",
+        "eg": "洛茜明信片",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "攻略",
+        "desc": "查看角色攻略",
+        "eg": "洛茜攻略",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false

@@ -31,7 +31,7 @@ git clone https://github.com/Loping151/EndUID
 
 可以认为仅支持森空岛扫码登录。因为我不管，都给我去下载森空岛。
 
-催更/反馈/Bug/建议：与 [XWUID](https://github.com/Loping151/XutheringWavesUID) 首页的同一个群吧，不想再建群了。Issue亦会看。
+催更/反馈/Bug/建议：与 [XWUID](https://github.com/Loping151/XutheringWavesUID) 首页的同一个群吧，不想再建群了。Issue亦会看。如果森空岛出了新的可查询内容，并且你希望通过EndUID查看，请告诉我。
 
 ## 丨其他
 

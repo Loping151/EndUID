@@ -11,10 +11,27 @@ from .draw_wiki import (
     draw_weapon_wiki,
     draw_char_list,
     draw_weapon_list,
-    draw_gacha,
 )
+from .models import CharWiki
 
 sv_wiki = SV("End图鉴")
+
+
+async def _send_char_wiki(bot: Bot, wiki: CharWiki):
+    """Send rendered wiki card, then skill GIFs as a follow-up message."""
+    result = await draw_char_wiki(wiki)
+    await bot.send(result)
+
+    # Build skill GIF message
+    gif_msgs: list[str] = []
+    for skill in wiki.skills:
+        if skill.gif_url:
+            label = skill.skill_type or "技能"
+            gif_msgs.append(f"{label}  {skill.name}")
+            gif_msgs.append(skill.gif_url)
+
+    if gif_msgs:
+        await bot.send(gif_msgs)
 
 
 @sv_wiki.on_regex(
@@ -30,29 +47,30 @@ async def wiki_handler(bot: Bot, ev: Event):
 
     logger.info(f"[EndWiki] 查询: {name} {keyword}")
 
-    # Check for weapon alias pattern: "{角色名}专武" or "{角色名}武器"
-    for suffix in ("专武", "武器"):
-        if name.endswith(suffix) or keyword == suffix:
-            char_part = name[: -len(suffix)] if name.endswith(suffix) else name
-            if not char_part:
-                continue
-            # Resolve char alias: "42姐" → "莱万汀"
-            char_resolved = resolve_alias_entry(char_part)
-            char_real = char_resolved[0] if char_resolved else char_part
-            # Build weapon alias and resolve: "莱万汀专武" → "熔铸火焰"
-            weapon_name = resolve_weapon_alias(f"{char_real}专武")
-            if weapon_name:
-                logger.info(
-                    f"[EndWiki] 武器别名: {name} -> {char_real}专武"
-                    f" -> {weapon_name}"
-                )
-                weapon_wiki = await get_weapon_wiki(weapon_name)
-                if weapon_wiki:
-                    result = await draw_weapon_wiki(weapon_wiki)
-                    return await bot.send(result)
-            break
+    # Check for weapon alias pattern: "{角色名}专武"
+    if keyword == "专武":
+        char_resolved = resolve_alias_entry(name)
+        char_real = char_resolved[0] if char_resolved else name
+        weapon_name = resolve_weapon_alias(f"{char_real}专武")
+        if weapon_name:
+            logger.info(
+                f"[EndWiki] 武器别名: {name} -> {char_real}专武"
+                f" -> {weapon_name}"
+            )
+            weapon_wiki = await get_weapon_wiki(weapon_name)
+            if weapon_wiki:
+                result = await draw_weapon_wiki(weapon_wiki)
+                return await bot.send(result)
+        # Also try direct weapon name lookup
+        weapon_wiki = await get_weapon_wiki(char_real)
+        if weapon_wiki:
+            result = await draw_weapon_wiki(weapon_wiki)
+            return await bot.send(result)
+        return await bot.send(
+            f"未找到【{weapon_name or char_real}】的武器图鉴"
+        )
 
-    # Try alias resolution for the full name
+    # Alias resolution
     resolved = resolve_alias_entry(name)
     if resolved:
         real_name = resolved[0]
@@ -60,35 +78,30 @@ async def wiki_handler(bot: Bot, ev: Event):
     else:
         real_name = name
 
-    # Try character first
+    # Try character
     char_wiki = await get_char_wiki(real_name)
     if char_wiki:
-        result = await draw_char_wiki(char_wiki)
-        return await bot.send(result)
+        return await _send_char_wiki(bot, char_wiki)
 
-    # Try weapon (direct name or alias)
+    # Try weapon
     weapon_wiki = await get_weapon_wiki(real_name)
     if weapon_wiki:
         result = await draw_weapon_wiki(weapon_wiki)
         return await bot.send(result)
 
-    # Try weapon alias map directly
+    # Try weapon alias
     weapon_resolved = resolve_weapon_alias(real_name)
     if weapon_resolved and weapon_resolved != real_name:
-        logger.info(
-            f"[EndWiki] 武器别名: {real_name} -> {weapon_resolved}"
-        )
         weapon_wiki = await get_weapon_wiki(weapon_resolved)
         if weapon_wiki:
             result = await draw_weapon_wiki(weapon_wiki)
             return await bot.send(result)
 
-    # Also try original name if alias resolved differently
+    # Retry with original name
     if real_name != name:
         char_wiki = await get_char_wiki(name)
         if char_wiki:
-            result = await draw_char_wiki(char_wiki)
-            return await bot.send(result)
+            return await _send_char_wiki(bot, char_wiki)
 
         weapon_wiki = await get_weapon_wiki(name)
         if weapon_wiki:
@@ -120,12 +133,67 @@ async def weapon_list_handler(bot: Bot, ev: Event):
     return await bot.send(result)
 
 
-@sv_wiki.on_fullmatch(("卡池", "卡池信息", "up角色"), block=True)
-async def gacha_handler(bot: Bot, ev: Event):
-    logger.info("[EndWiki] 查询卡池信息")
-    data = await ensure_list_data()
-    if not data or not data.gacha:
-        return await bot.send("暂无卡池信息")
+# ==================== 明信片 ====================
 
-    result = await draw_gacha(data)
-    return await bot.send(result)
+
+@sv_wiki.on_regex(
+    rf"^(?P<name>{CHAR_NAME_PATTERN})(?:明信片|潜能明信片)$",
+    block=True,
+)
+async def postcard_handler(bot: Bot, ev: Event):
+    name = (ev.regex_dict or {}).get("name", "").strip()
+    if not name:
+        return
+
+    resolved = resolve_alias_entry(name)
+    if resolved:
+        real_name = resolved[0]
+    else:
+        real_name = name
+
+    logger.info(f"[EndWiki] 查询明信片: {real_name}")
+
+    char_wiki = await get_char_wiki(real_name)
+    if not char_wiki and real_name != name:
+        char_wiki = await get_char_wiki(name)
+    if not char_wiki or not char_wiki.postcards:
+        return
+
+    msgs: list = []
+    for pc in char_wiki.postcards:
+        label = pc.title
+        if pc.description:
+            label += f"：{pc.description}"
+        msgs.append(label)
+        msgs.append(pc.image_url)
+
+    await bot.send(msgs)
+
+
+# ==================== 蓝图搜索 ====================
+
+sv_blueprint = SV("End蓝图")
+
+
+@sv_blueprint.on_regex(
+    r"^(?:搜索蓝图|查询蓝图|蓝图)\s*(?P<query>.+)$",
+    block=True,
+)
+async def blueprint_handler(bot: Bot, ev: Event):
+    query = (ev.regex_dict or {}).get("query", "").strip()
+    if not query:
+        return
+
+    # Alias resolution
+    resolved = resolve_alias_entry(query)
+    if resolved:
+        real_query = resolved[0]
+        logger.info(f"[EndWiki] 蓝图别名解析: {query} -> {real_query}")
+    else:
+        real_query = query
+
+    logger.info(f"[EndWiki] 搜索蓝图: {real_query}")
+
+    from .blueprint import handle_blueprint_search
+
+    await handle_blueprint_search(bot, ev, real_query)

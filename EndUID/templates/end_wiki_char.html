@@ -24,7 +24,7 @@
         background-color: var(--c-bg);
         font-family: 'Source Han Sans CN', sans-serif;
         color: var(--c-text);
-        overflow: hidden; /* 防止立绘撑出滚动条 */
+        overflow: hidden;
         position: relative;
     }
 
@@ -32,10 +32,9 @@
         position: relative;
         width: 100%;
         height: 100%;
-        padding-bottom: 90px; /* Footer space */
+        padding-bottom: 90px;
     }
 
-    /* Backgrounds */
     .bg-layer {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -46,7 +45,7 @@
     .grid-deco {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
-        background-image: 
+        background-image:
             linear-gradient(var(--c-grid) 1px, transparent 1px),
             linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
         background-size: 60px 60px;
@@ -71,7 +70,6 @@
         mask-composite: intersect;
     }
 
-    /* Content Wrapper */
     .ui-layer {
         position: relative;
         z-index: 10;
@@ -97,7 +95,7 @@
         height: 24px;
         align-items: center;
     }
-    
+
     .rarity-star {
         width: 24px;
         height: 24px;
@@ -131,7 +129,7 @@
         transform: skewX(-20deg);
         backdrop-filter: blur(5px);
     }
-    
+
     .tag-box span {
         font-family: 'JetBrains Mono', monospace;
         font-weight: 700;
@@ -171,7 +169,7 @@
         color: white;
     }
 
-    /* Scrollable Content Area for Stats/Skills */
+    /* Scrollable Content Area */
     .scroll-content {
         width: 100%;
         display: flex;
@@ -221,7 +219,7 @@
     }
     .stats-table td:first-child { color: #888; font-size: 14px; }
 
-    /* Talents/Skills Cards */
+    /* Generic Feature Cards */
     .feature-card {
         background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
         border-left: 4px solid #444;
@@ -230,7 +228,7 @@
     }
     .feature-name { font-size: 20px; font-weight: 700; color: white; margin-bottom: 5px; }
     .feature-desc { font-size: 15px; line-height: 1.5; color: #ccc; white-space: pre-wrap; }
-    
+
     .phase-badge {
         display: inline-block;
         font-family: 'JetBrains Mono';
@@ -240,6 +238,129 @@
         padding: 2px 6px;
         margin-bottom: 4px;
         border-radius: 2px;
+    }
+
+    /* ========== SKILL CARDS (NEW) ========== */
+    .skill-card {
+        background: var(--c-card-bg);
+        border: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+    .skill-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        background: linear-gradient(90deg, rgba(255,230,0,0.06) 0%, transparent 60%);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .skill-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 8px;
+        border: 2px solid rgba(255,230,0,0.3);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .skill-meta {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .skill-name-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .skill-name {
+        font-size: 22px;
+        font-weight: 800;
+        color: white;
+    }
+
+    .skill-type-badge {
+        font-family: 'JetBrains Mono';
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+    }
+    .skill-type-badge.normal { background: #2a3a2a; color: #7ccc7c; }
+    .skill-type-badge.battle { background: #3a2a2a; color: #e06060; }
+    .skill-type-badge.combo  { background: #2a2a3a; color: #6080e0; }
+    .skill-type-badge.ult    { background: #3a3a1a; color: #e0c040; }
+
+    .skill-desc-text {
+        font-size: 14px;
+        color: #aaa;
+        margin-top: 4px;
+        line-height: 1.5;
+    }
+
+    .skill-body {
+        padding: 16px 20px;
+    }
+
+    /* Skill Stats Table */
+    .skill-stats {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .skill-stats th {
+        background: rgba(255,230,0,0.08);
+        color: var(--c-accent);
+        font-weight: 700;
+        padding: 6px 4px;
+        text-align: center;
+        font-size: 11px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
+    }
+
+    .skill-stats th:first-child {
+        text-align: left;
+        padding-left: 10px;
+        min-width: 90px;
+    }
+
+    .skill-stats td {
+        padding: 5px 4px;
+        text-align: center;
+        color: #ccc;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+    }
+
+    .skill-stats td:first-child {
+        text-align: left;
+        padding-left: 10px;
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: #999;
+        font-size: 12px;
+    }
+
+    .skill-stats tr:hover td {
+        background: rgba(255,255,255,0.02);
+    }
+
+    /* Mastery columns highlighted */
+    .skill-stats td.mastery {
+        color: var(--c-accent);
+        font-weight: 700;
+    }
+    .skill-stats th.mastery {
+        color: var(--c-accent);
     }
 
     /* Potentials */
@@ -252,12 +373,13 @@
         border-bottom: 1px dashed rgba(255,255,255,0.1);
     }
     .p-rank { font-family: 'Oswald'; font-size: 24px; color: var(--c-accent); font-weight: 700; width: 40px; }
+    .p-icon { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
 
     /* Footer */
     .footer {
         position: absolute;
         bottom: 0; left: 0; width: 100%;
-        height: 80px; /* 增加高度 */
+        height: 80px;
         background: rgba(10, 10, 12, 0.98);
         border-top: 1px solid rgba(255,255,255,0.15);
         display: flex;
@@ -265,7 +387,7 @@
         justify-content: space-between;
         padding: 0 40px;
         z-index: 50;
-        box-sizing: border-box; /* 确保padding不撑大 */
+        box-sizing: border-box;
     }
     .footer-logo { height: 32px; opacity: 0.8; }
     .footer-text { font-family: 'Oswald'; font-size: 18px; color: var(--c-subtext); letter-spacing: 1px; }
@@ -279,16 +401,16 @@
     <div class="grid-deco"></div>
 
     <div class="container">
-        
+
         {% if char_img %}
         <img src="{{ char_img }}" class="char-layer">
         {% endif %}
 
         <div class="ui-layer">
-            
+
             <div class="header-group">
                 <div class="char-name">{{ wiki.name }}</div>
-                
+
                 <div class="rarity-row">
                     {% for _ in range(wiki.rarity) %}
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
@@ -323,14 +445,14 @@
                         <div class="info-value">{{ wiki.release_date or '-' }}</div>
                     </div>
                     <div class="info-card">
-                        <div class="info-label">专长 / SPECIALTIES</div>
-                        <div class="info-value" style="font-size:16px;">{{ wiki.specialties | join(' / ') if wiki.specialties else '-' }}</div>
+                        <div class="info-label">生日 / BIRTHDAY</div>
+                        <div class="info-value">{{ wiki.birthday or '-' }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="scroll-content">
-                
+
                 {% if wiki.stats %}
                 <div>
                     <div class="section-title">基础属性 <span>STATS</span></div>
@@ -375,9 +497,43 @@
                 <div>
                     <div class="section-title">技能 <span>SKILLS</span></div>
                     {% for skill in wiki.skills %}
-                    <div class="feature-card">
-                        <div class="feature-name">{{ skill.name }}</div>
-                        <div class="feature-desc">{{ skill.description }}</div>
+                    <div class="skill-card">
+                        <div class="skill-header">
+                            {% if skill.icon_url %}
+                            <img src="{{ skill.icon_url }}" class="skill-icon">
+                            {% endif %}
+                            <div class="skill-meta">
+                                <div class="skill-name-row">
+                                    <div class="skill-name">{{ skill.name }}</div>
+                                    {% if skill.skill_type %}
+                                    <div class="skill-type-badge {% if skill.skill_type == '普通攻击' %}normal{% elif skill.skill_type == '战技' %}battle{% elif skill.skill_type == '连携技' %}combo{% elif skill.skill_type == '终结技' %}ult{% endif %}">{{ skill.skill_type }}</div>
+                                    {% endif %}
+                                </div>
+                                {% if skill.description %}
+                                <div class="skill-desc-text">{{ skill.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="skill-body">
+                            {% if skill.stats_table %}
+                            <table class="skill-stats">
+                                <tr>
+                                    <th></th>
+                                    {% for h in skill.stats_header %}
+                                    <th {% if '专精' in h %}class="mastery"{% endif %}>{{ h }}</th>
+                                    {% endfor %}
+                                </tr>
+                                {% for row in skill.stats_table %}
+                                <tr>
+                                    <td>{{ row.label }}</td>
+                                    {% for val in row.values %}
+                                    <td {% if loop.index > (row.values | length) - 3 %}class="mastery"{% endif %}>{{ val }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </table>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endfor %}
                 </div>

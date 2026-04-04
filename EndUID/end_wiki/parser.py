@@ -1,716 +1,738 @@
-import re
-from datetime import datetime
-
-from bs4 import BeautifulSoup, Tag
-
+"""Parse Skland wiki JSON document format into CharWiki / WeaponWiki models."""
 from gsuid_core.logger import logger
 
+from .constants import (
+    ATTR_ID_MAP,
+    PROF_ID_MAP,
+    RARITY_ID_MAP,
+    WEAPON_TYPE_ID_MAP,
+)
 from .models import (
     BaseSkill,
-    CharListEntry,
-    CharStatRow,
     CharWiki,
-    GachaBanner,
+    MaterialEntry,
+    Postcard,
     Potential,
     SkillInfo,
+    SkillStatRow,
     Talent,
     TalentEffect,
-    WeaponListEntry,
+    WeaponBreakthrough,
     WeaponPassive,
+    WeaponSkillRank,
     WeaponStatBonus,
     WeaponWiki,
-    WikiListData,
 )
 
-RARITY_CHAR_MAP = {
-    "6星.png": 6,
-    "5星.png": 5,
-    "4星.png": 4,
-    "3星.png": 3,
-}
 
-RARITY_WEAPON_MAP = {
-    "橙色.png": 6,
-    "金色.png": 5,
-    "紫色.png": 4,
-    "蓝色.png": 3,
-}
+# ==================== Document block helpers ====================
 
 
-def _best_img_url(img: Tag) -> str:
-    """Extract best resolution image URL from an <img> tag.
-
-    Prefers srcset 2x > 1.5x > src.
-    For thumb URLs smaller than 80px, upscales to 80px.
-    """
-    srcset = img.get("srcset", "")
-    if srcset:
-        best_url = ""
-        best_scale = 0.0
-        for part in srcset.split(","):
-            part = part.strip()
-            pieces = part.rsplit(" ", 1)
-            if len(pieces) == 2:
-                url = pieces[0].strip()
-                scale_str = pieces[1].strip().rstrip("x")
-                try:
-                    scale = float(scale_str)
-                    if scale > best_scale:
-                        best_scale = scale
-                        best_url = url
-                except ValueError:
-                    pass
-        if best_url:
-            return best_url
-
-    src = img.get("src", "")
-    if "/thumb/" in src:
-        m = re.search(r"/(\d+)px-", src)
-        if m and int(m.group(1)) < 120:
-            src = re.sub(r"/\d+px-", "/120px-", src)
-    return src
-
-
-def _text(tag: Tag | None) -> str:
-    if tag is None:
+def _extract_text(doc: dict, block_id: str) -> str:
+    """Extract plain text from a text block."""
+    block = doc.get("blockMap", {}).get(block_id, {})
+    if block.get("kind") != "text":
         return ""
-    return tag.get_text(strip=True)
+    parts: list[str] = []
+    for elem in block.get("text", {}).get("inlineElements", []):
+        if elem.get("kind") == "text":
+            parts.append(elem["text"]["text"])
+    return "".join(parts)
 
 
-def _split_list(text: str) -> list[str]:
-    """Split comma-separated Chinese text."""
-    parts = re.split(r"[,，、]", text)
-    return [p.strip() for p in parts if p.strip()]
+def _extract_doc_text(doc: dict) -> str:
+    """Extract all text from a document (joining blocks with newlines)."""
+    lines: list[str] = []
+    for block_id in doc.get("blockIds", []):
+        text = _extract_text(doc, block_id)
+        if text.strip():
+            lines.append(text.strip())
+    return "\n".join(lines)
 
 
-def _safe_int(text: str, default: int = 0) -> int:
-    text = text.strip().replace(",", "")
-    try:
-        return int(text)
-    except (ValueError, TypeError):
-        return default
+def _extract_text_kind(doc: dict, block_id: str) -> str:
+    """Get the text kind (heading3, body, etc.) of a block."""
+    block = doc.get("blockMap", {}).get(block_id, {})
+    if block.get("kind") != "text":
+        return ""
+    return block.get("text", {}).get("kind", "")
 
 
-def _find_table_with_header(
-    tables: list[Tag], header_text: str
-) -> Tag | None:
-    """Find a wikitable whose first row TH contains header_text."""
-    for table in tables:
-        first_row = table.find("tr")
-        if first_row:
-            th = first_row.find("th")
-            if th and header_text in _text(th):
-                return table
-    return None
+def _parse_table_block(doc: dict, block_id: str) -> list[list[str]]:
+    """Parse a table block into a 2D list of cell texts."""
+    block = doc.get("blockMap", {}).get(block_id, {})
+    if block.get("kind") != "table":
+        return []
+
+    table = block.get("table", {})
+    row_ids = table.get("rowIds", [])
+    col_ids = table.get("columnIds", [])
+    cell_map = table.get("cellMap", {})
+    block_map = doc.get("blockMap", {})
+
+    rows: list[list[str]] = []
+    for row_id in row_ids:
+        row: list[str] = []
+        for col_id in col_ids:
+            cell_key = f"{row_id}_{col_id}"
+            cell = cell_map.get(cell_key, {})
+            cell_texts: list[str] = []
+            for child_id in cell.get("childIds", []):
+                child = block_map.get(child_id, {})
+                if child.get("kind") == "text":
+                    for elem in child.get("text", {}).get(
+                        "inlineElements", []
+                    ):
+                        if elem.get("kind") == "text":
+                            cell_texts.append(elem["text"]["text"])
+            row.append("".join(cell_texts))
+        rows.append(row)
+    return rows
 
 
-def _parse_basic_info(table: Tag) -> dict:
-    """Parse the first wikitable with basic character info."""
-    info: dict = {}
-    for row in table.find_all("tr"):
-        cells = row.find_all(["th", "td"])
-        i = 0
-        while i < len(cells):
-            cell = cells[i]
-            if cell.name == "th":
-                key = _text(cell)
-                if i + 1 < len(cells) and cells[i + 1].name == "td":
-                    val = _text(cells[i + 1])
-                    info[key] = val
-                    i += 2
-                    continue
-            i += 1
-    return info
+# ==================== Skland wiki item -> CharWiki ====================
 
 
-def _parse_rarity_char(soup: BeautifulSoup) -> int:
-    """Extract character rarity from star image alt text."""
-    output = soup.find("div", class_="mw-parser-output")
-    if not output:
-        return 0
-    for img in output.find_all("img"):
-        alt = img.get("alt", "")
-        if alt in RARITY_CHAR_MAP:
-            return RARITY_CHAR_MAP[alt]
-    return 0
+def _find_widget(
+    chapter_group: list, widget_common_map: dict, title: str
+) -> tuple[str, dict]:
+    """Find a widget by its title in chapterGroup."""
+    for group in chapter_group:
+        for w in group.get("widgets", []):
+            if w.get("title") == title:
+                wid = w["id"]
+                return wid, widget_common_map.get(wid, {})
+    return "", {}
 
 
-def _parse_stats_and_talents(table: Tag) -> tuple[
-    list[CharStatRow], list[Talent]
-]:
-    """Parse the combined stats + talents table."""
-    stats: list[CharStatRow] = []
-    talents: list[Talent] = []
-
-    rows = table.find_all("tr")
-    section = None
-    current_talent: Talent | None = None
-
-    for row in rows:
-        cells = row.find_all(["th", "td"])
-        if not cells:
-            continue
-
-        first_cell = cells[0]
-        first_text = _text(first_cell)
-
-        # Section headers
-        if first_cell.name == "th" and len(cells) == 1:
-            if "能力值" in first_text:
-                section = "stats"
-                continue
-            elif "天赋" in first_text:
-                section = "talents"
-                continue
-
-        if section == "stats":
-            # Skip the header row (等级, 力量, ...)
-            if first_cell.name == "th" and "等级" in first_text:
-                continue
-            # Skip non-level rows like 满信赖加成
-            if first_cell.name == "td" and "级" in first_text:
-                if len(cells) >= 8:
-                    stats.append(
-                        CharStatRow(
-                            level=first_text,
-                            strength=_safe_int(_text(cells[1])),
-                            agility=_safe_int(_text(cells[2])),
-                            intelligence=_safe_int(_text(cells[3])),
-                            will=_safe_int(_text(cells[4])),
-                            base_attack=_safe_int(_text(cells[5])),
-                            base_hp=_safe_int(_text(cells[6])),
-                            base_defense=_safe_int(_text(cells[7])),
-                        )
-                    )
-
-        elif section == "talents":
-            # Talent rows have: [talent_name (rowspan), phase, description]
-            # or continuation rows: [phase, description]
-            if len(cells) >= 3 and first_cell.get("rowspan"):
-                # New talent
-                talent_name = first_text
-                # Extract name from image alt if text is from image
-                img = first_cell.find("img")
-                if img:
-                    alt = img.get("alt", "")
-                    name_from_alt = alt.replace(".png", "")
-                    if name_from_alt:
-                        talent_name = name_from_alt
-
-                current_talent = Talent(name=talent_name, effects=[])
-                talents.append(current_talent)
-
-                phase = _text(cells[1])
-                desc = _text(cells[2])
-                if phase and desc:
-                    current_talent.effects.append(
-                        TalentEffect(phase=phase, description=desc)
-                    )
-            elif len(cells) >= 2 and current_talent is not None:
-                phase = _text(cells[0])
-                desc = _text(cells[1])
-                if phase and ("阶效果" in phase or "阶" in phase):
-                    current_talent.effects.append(
-                        TalentEffect(phase=phase, description=desc)
-                    )
-
-    return stats, talents
-
-
-def _parse_skills(soup: BeautifulSoup) -> list[SkillInfo]:
-    """Parse skills from d-tab section."""
+def _parse_skills(
+    widget: dict, document_map: dict
+) -> list[SkillInfo]:
+    """Parse 战斗技能 widget into SkillInfo list."""
     skills: list[SkillInfo] = []
-    output = soup.find("div", class_="mw-parser-output")
-    if not output:
-        return skills
+    tab_list = widget.get("tabList", [])
+    tab_data_map = widget.get("tabDataMap", {})
 
-    # Skills are in the first d-tab (titles are skill names)
-    dtabs = output.find_all("div", class_="d-tab")
-    for dtab in dtabs:
-        titles_div = dtab.find("div", class_="d-tab-titles")
-        if not titles_div:
+    for tab in tab_list:
+        tab_id = tab.get("tabId", "")
+        tab_data = tab_data_map.get(tab_id, {})
+        intro = tab_data.get("intro")
+        if not intro:
             continue
 
-        title_elems = titles_div.find_all("div", class_="d-tab-title")
-        title_texts = [_text(t) for t in title_elems]
+        name = intro.get("name", "")
+        skill_type = intro.get("type", "")
+        gif_url = intro.get("imgUrl", "")
+        icon_url = tab.get("icon", "")
 
-        # Check if this is a skill tab (not 档案 tab)
-        if not title_texts:
-            continue
-        # Skip tabs that look like archive/document tabs
-        if any("档案" in t for t in title_texts):
-            continue
+        # Description from intro.description -> documentMap
+        desc_doc_id = intro.get("description", "")
+        description = ""
+        if desc_doc_id and desc_doc_id in document_map:
+            description = _extract_doc_text(document_map[desc_doc_id])
 
-        contents = dtab.find_all("div", class_="tab-content")
-        for i, content in enumerate(contents):
-            name = title_texts[i] if i < len(title_texts) else f"技能{i + 1}"
+        # Stats table from content -> documentMap
+        content_doc_id = tab_data.get("content", "")
+        stats_header: list[str] = []
+        stats_table: list[SkillStatRow] = []
 
-            # Get description text, but filter out 文件: lines and GIF refs
-            text = content.get_text("\n", strip=True)
-            lines = []
-            for line in text.split("\n"):
-                line = line.strip()
-                if not line:
+        if content_doc_id and content_doc_id in document_map:
+            doc = document_map[content_doc_id]
+            # Find the first table block after "技能数据" heading
+            found_data_heading = False
+            for block_id in doc.get("blockIds", []):
+                text = _extract_text(doc, block_id)
+                kind = _extract_text_kind(doc, block_id)
+                if kind == "heading3" and "技能数据" in text:
+                    found_data_heading = True
                     continue
-                if line.startswith("文件:") or line.endswith(".gif"):
-                    continue
-                lines.append(line)
+                if kind == "heading3" and found_data_heading:
+                    break  # Next section
+                if found_data_heading:
+                    block = doc.get("blockMap", {}).get(block_id, {})
+                    if block.get("kind") == "table":
+                        rows = _parse_table_block(doc, block_id)
+                        if rows:
+                            stats_header = rows[0][1:]  # Skip "技能等级"
+                            for row in rows[1:]:
+                                if row and row[0]:
+                                    stats_table.append(
+                                        SkillStatRow(
+                                            label=row[0],
+                                            values=row[1:],
+                                        )
+                                    )
+                        break
 
-            desc = "\n".join(lines)
-            if desc:
-                skills.append(SkillInfo(name=name, description=desc))
-
-        if skills:
-            break
+        skills.append(
+            SkillInfo(
+                name=name,
+                description=description,
+                skill_type=skill_type,
+                icon_url=icon_url,
+                gif_url=gif_url,
+                stats_table=stats_table,
+                stats_header=stats_header,
+            )
+        )
 
     return skills
 
 
-def _parse_base_skills(table: Tag) -> list[BaseSkill]:
-    """Parse base skills (后勤技能) table."""
+def _parse_talents(
+    widget: dict, document_map: dict
+) -> tuple[list[Talent], list[BaseSkill]]:
+    """Parse 天赋阵列 widget into Talent and BaseSkill lists."""
+    talents: list[Talent] = []
     base_skills: list[BaseSkill] = []
-    rows = table.find_all("tr")
-    for row in rows:
-        cells = row.find_all(["th", "td"])
-        # Skip header row
-        if any(c.name == "th" for c in cells):
-            continue
-        if len(cells) >= 2:
-            name = _text(cells[0])
-            desc = _text(cells[1])
-            if name and desc:
-                base_skills.append(BaseSkill(name=name, description=desc))
-    return base_skills
+    tab_list = widget.get("tabList", [])
+    tab_data_map = widget.get("tabDataMap", {})
 
+    for tab in tab_list:
+        tab_id = tab.get("tabId", "")
+        tab_data = tab_data_map.get(tab_id, {})
+        content_doc_id = tab_data.get("content", "")
+        icon_url = tab.get("icon", "")
 
-def _parse_potentials(table: Tag) -> list[Potential]:
-    """Parse potentials (潜能) table."""
-    potentials: list[Potential] = []
-    rows = table.find_all("tr")
-    for row in rows:
-        cells = row.find_all(["th", "td"])
-        # Skip header row
-        if any(c.name == "th" for c in cells):
-            continue
-        if len(cells) >= 3:
-            rank_text = _text(cells[0])
-            match = re.search(r"(\d+)", rank_text)
-            rank = int(match.group(1)) if match else 0
-            name = _text(cells[1])
-            desc = _text(cells[2])
-            if rank and name:
-                potentials.append(
-                    Potential(rank=rank, name=name, description=desc)
-                )
-    return potentials
-
-
-def parse_char_wiki(html: str, char_name: str) -> CharWiki | None:
-    """Parse character wiki page HTML into CharWiki model."""
-    try:
-        soup = BeautifulSoup(html, "lxml")
-        output = soup.find("div", class_="mw-parser-output")
-        if not output:
-            logger.warning(f"[EndWiki] 未找到角色页面内容: {char_name}")
-            return None
-
-        tables = output.find_all("table", class_="wikitable")
-        if not tables:
-            logger.warning(f"[EndWiki] 未找到角色信息表格: {char_name}")
-            return None
-
-        # Basic info from first table
-        basic_info = _parse_basic_info(tables[0])
-
-        # Rarity
-        rarity = _parse_rarity_char(soup)
-
-        # Stats + talents from the table with "能力值" header
-        stats: list[CharStatRow] = []
-        talents: list[Talent] = []
-        stats_table = _find_table_with_header(tables, "能力值")
-        if stats_table:
-            stats, talents = _parse_stats_and_talents(stats_table)
-
-        # Skills
-        skills = _parse_skills(soup)
-
-        # Base skills
-        base_skills: list[BaseSkill] = []
-        base_skill_table = _find_table_with_header(tables, "后勤技能")
-        if base_skill_table:
-            base_skills = _parse_base_skills(base_skill_table)
-
-        # Potentials
-        potentials: list[Potential] = []
-        potential_table = _find_table_with_header(tables, "潜能")
-        if potential_table:
-            potentials = _parse_potentials(potential_table)
-
-        return CharWiki(
-            name=char_name,
-            rarity=rarity,
-            profession=basic_info.get("职业", ""),
-            attribute=basic_info.get("属性", ""),
-            tags=_split_list(basic_info.get("TAG", "")),
-            faction=basic_info.get("阵营", ""),
-            race=basic_info.get("种族", ""),
-            specialties=_split_list(basic_info.get("专长", "")),
-            hobbies=_split_list(basic_info.get("爱好", "")),
-            operator_preference=basic_info.get("干员偏好", ""),
-            release_date=basic_info.get("实装日期", ""),
-            stats=stats,
-            talents=talents,
-            skills=skills,
-            base_skills=base_skills,
-            potentials=potentials,
-        )
-    except Exception as e:
-        logger.error(f"[EndWiki] 解析角色页面失败 {char_name}: {e}")
-        return None
-
-
-def _parse_weapon_tab_content(
-    table: Tag,
-) -> tuple[int, list[WeaponStatBonus], WeaponPassive | None]:
-    """Parse a single tab-content table for weapon stats."""
-    base_attack = 0
-    bonuses: list[WeaponStatBonus] = []
-    passive: WeaponPassive | None = None
-
-    rows = table.find_all("tr")
-    for row in rows:
-        cells = row.find_all(["th", "td"])
-        if len(cells) < 2:
+        if not content_doc_id or content_doc_id not in document_map:
             continue
 
-        th_text = _text(cells[0])
-        td_text = _text(cells[1])
+        doc = document_map[content_doc_id]
 
-        if "基础攻击力" in th_text:
-            base_attack = _safe_int(td_text)
-        elif "附术" in th_text:
-            passive = WeaponPassive(name=th_text, description=td_text)
-        else:
-            # Stat bonus rows may have 2 or 4 cells (2 bonuses per row)
-            if cells[0].name == "th" and th_text:
-                bonuses.append(
-                    WeaponStatBonus(name=th_text, value=td_text)
-                )
-            if len(cells) >= 4:
-                th2 = _text(cells[2])
-                td2 = _text(cells[3])
-                if cells[2].name == "th" and th2 and "附术" not in th2:
-                    bonuses.append(
-                        WeaponStatBonus(name=th2, value=td2)
-                    )
+        # Extract name and category from text blocks
+        name = ""
+        category = ""
+        for block_id in doc.get("blockIds", []):
+            kind = _extract_text_kind(doc, block_id)
+            text = _extract_text(doc, block_id)
+            if kind == "heading3" and not name:
+                name = text.strip()
+            elif kind == "body" and not category:
+                category = text.strip()
 
-    return base_attack, bonuses, passive
-
-
-# ==================== 首页解析 ====================
-
-STAR_RARITY_MAP = {
-    "6星": 6, "5星": 5, "4星": 4, "3星": 3,
-}
-
-STAR_IMG_RARITY_MAP = {
-    "居中6星.png": 6, "居中5星.png": 5, "居中4星.png": 4, "居中3星.png": 3,
-}
-
-
-def parse_homepage(html: str) -> WikiListData | None:
-    """Parse homepage HTML into WikiListData."""
-    try:
-        soup = BeautifulSoup(html, "lxml")
-        output = soup.find("div", class_="mw-parser-output")
-        if not output:
-            logger.warning("[EndWiki] 首页未找到 .mw-parser-output")
-            return None
-
-        characters = _parse_homepage_characters(output)
-        weapons = _parse_homepage_weapons(output)
-        gacha = _parse_homepage_gacha(output)
-
-        return WikiListData(
-            characters=characters,
-            weapons=weapons,
-            gacha=gacha,
-        )
-    except Exception as e:
-        logger.error(f"[EndWiki] 解析首页失败: {e}")
-        return None
-
-
-def _parse_homepage_characters(
-    output: Tag,
-) -> dict[str, list[CharListEntry]]:
-    """Parse character list from homepage d-tab.shouyeGanyuan.
-
-    Groups characters by their data-param3 attribute (attribute name).
-    Each entry is a div.divsort with:
-      data-param1: "6星"/"5星"/... (rarity)
-      data-param2: "重装"/"突击"/... (profession)
-      data-param3: "灼热"/"寒冷"/... (attribute)
-    """
-    char_tab = output.find(
-        "div", class_=re.compile(r"d-tab.*shouyeGanyuan")
-    )
-    if not char_tab:
-        return {}
-
-    result: dict[str, list[CharListEntry]] = {}
-
-    for div in char_tab.find_all("div", class_="divsort"):
-        rarity_str = div.get("data-param1", "")
-        profession = div.get("data-param2", "")
-        attribute = div.get("data-param3", "")
-
-        rarity = STAR_RARITY_MAP.get(rarity_str, 0)
-
-        link = div.find("a")
-        name = link.get("title", "") if link else ""
         if not name:
             continue
 
-        avatar_url = ""
-        img = div.find("img")
-        if img:
-            avatar_url = _best_img_url(img)
+        # Check if there's a table with talent phases
+        effects: list[TalentEffect] = []
+        for block_id in doc.get("blockIds", []):
+            block = doc.get("blockMap", {}).get(block_id, {})
+            if block.get("kind") == "table":
+                rows = _parse_table_block(doc, block_id)
+                for row in rows[1:]:  # Skip header
+                    if len(row) >= 2:
+                        phase = row[0]
+                        desc = row[1]
+                        if phase and desc:
+                            effects.append(
+                                TalentEffect(
+                                    phase=phase, description=desc
+                                )
+                            )
 
-        entry = CharListEntry(
+        if category in ("后勤技能",):
+            # Extract description from effects or text
+            desc = effects[0].description if effects else category
+            base_skills.append(BaseSkill(name=name, description=desc))
+        elif (
+            category in ("能力值提升", "装备适配")
+            or name in ("能力值提升", "装备适配")
+        ):
+            # These are stat bonuses, not displayed as talents
+            pass
+        else:
+            talents.append(
+                Talent(
+                    name=name,
+                    effects=effects,
+                    icon_url=icon_url,
+                    category=category,
+                )
+            )
+
+    return talents, base_skills
+
+
+def _parse_potentials(
+    widget: dict, document_map: dict
+) -> list[Potential]:
+    """Parse 干员潜能 widget into Potential list."""
+    potentials: list[Potential] = []
+    tab_list = widget.get("tabList", [])
+    tab_data_map = widget.get("tabDataMap", {})
+
+    for i, tab in enumerate(tab_list):
+        tab_id = tab.get("tabId", "")
+        tab_data = tab_data_map.get(tab_id, {})
+        content_doc_id = tab_data.get("content", "")
+        icon_url = tab.get("icon", "")
+
+        if not content_doc_id or content_doc_id not in document_map:
+            continue
+
+        doc = document_map[content_doc_id]
+
+        name = ""
+        desc = ""
+        for block_id in doc.get("blockIds", []):
+            kind = _extract_text_kind(doc, block_id)
+            text = _extract_text(doc, block_id)
+            if kind == "heading3" and not name:
+                name = text.strip()
+            elif kind == "body" and not desc:
+                desc = text.strip()
+
+        if name:
+            potentials.append(
+                Potential(
+                    rank=i + 1,
+                    name=name,
+                    description=desc,
+                    icon_url=icon_url,
+                )
+            )
+
+    return potentials
+
+
+def _parse_postcards(
+    widget: dict, document_map: dict
+) -> list[Postcard]:
+    """Parse 潜能明信片 widget into Postcard list."""
+    postcards: list[Postcard] = []
+    tab_list = widget.get("tabList", [])
+    tab_data_map = widget.get("tabDataMap", {})
+
+    for tab in tab_list:
+        tab_id = tab.get("tabId", "")
+        tab_data = tab_data_map.get(tab_id, {})
+        content_doc_id = tab_data.get("content", "")
+        title = tab.get("title", "")
+
+        if not content_doc_id or content_doc_id not in document_map:
+            continue
+
+        doc = document_map[content_doc_id]
+        image_url = ""
+        desc = ""
+
+        for block_id in doc.get("blockIds", []):
+            block = doc.get("blockMap", {}).get(block_id, {})
+            if block.get("kind") == "image" and not image_url:
+                image_url = block.get("image", {}).get("url", "")
+            elif block.get("kind") == "text":
+                text = _extract_text(doc, block_id)
+                if text.strip() and not desc:
+                    desc = text.strip()
+
+        if image_url:
+            postcards.append(
+                Postcard(
+                    title=title,
+                    image_url=image_url,
+                    description=desc,
+                )
+            )
+
+    return postcards
+
+
+def _resolve_tag_value(
+    catalog: dict | None,
+    tag_value: str,
+    fallback_map: dict,
+) -> str:
+    """Resolve a tag value (e.g. 'rarity_6') to display name using
+    the catalog filter tree, with a fallback static map."""
+    # Fast path: check static map
+    if tag_value in fallback_map:
+        return str(fallback_map[tag_value])
+
+    if not catalog:
+        return tag_value
+
+    # Search catalog filterTagTree
+    for cat in catalog.get("catalog", []):
+        for sub in cat.get("typeSub", []):
+            for tree in sub.get("filterTagTree", []):
+                for child in tree.get("children", []):
+                    if child.get("value") == tag_value:
+                        return child.get("name", tag_value)
+
+    return tag_value
+
+
+def parse_skland_char_wiki(
+    item: dict,
+    catalog: dict | None = None,
+) -> CharWiki | None:
+    """Parse a Skland wiki item JSON into CharWiki model."""
+    try:
+        name = item.get("name", "")
+        brief = item.get("brief", {})
+        document = item.get("document", {})
+        document_map = document.get("documentMap", {})
+        chapter_group = document.get("chapterGroup", [])
+        widget_common_map = document.get("widgetCommonMap", {})
+        extra_info = document.get("extraInfo", {})
+
+        # Resolve rarity/attribute/profession from subTypeList
+        sub_type_list = brief.get("subTypeList", [])
+        rarity = 0
+        attribute = ""
+        profession = ""
+        for st in sub_type_list:
+            sid = st.get("subTypeId", "")
+            val = st.get("value", "")
+            if sid == "10000":  # 星级
+                rarity = RARITY_ID_MAP.get(val, 0)
+            elif sid == "10100":  # 属性
+                attribute = ATTR_ID_MAP.get(val, val)
+            elif sid == "10200":  # 职业
+                profession = PROF_ID_MAP.get(val, val)
+
+        # Basic info from tableList in 干员资料 widget
+        _, info_widget = _find_widget(
+            chapter_group, widget_common_map, "干员资料"
+        )
+        table_list = info_widget.get("tableList", [])
+        info_map: dict[str, str] = {}
+        for entry in table_list:
+            info_map[entry.get("label", "")] = entry.get("value", "")
+
+        faction = info_map.get("身份认证", "")
+        race = info_map.get("种族", "")
+        birthday = info_map.get("生日", "")
+        tags_str = info_map.get("词缀", "")
+        tags = [t.strip() for t in tags_str.split("；") if t.strip()] if tags_str else []
+        release_date = info_map.get("上线时间", "")
+
+        # Skills
+        _, skill_widget = _find_widget(
+            chapter_group, widget_common_map, "战斗技能"
+        )
+        skills = _parse_skills(skill_widget, document_map)
+
+        # Talents + base skills
+        _, talent_widget = _find_widget(
+            chapter_group, widget_common_map, "天赋阵列"
+        )
+        talents, base_skills = _parse_talents(talent_widget, document_map)
+
+        # Potentials
+        _, potential_widget = _find_widget(
+            chapter_group, widget_common_map, "干员潜能"
+        )
+        potentials = _parse_potentials(potential_widget, document_map)
+
+        # Postcards
+        _, postcard_widget = _find_widget(
+            chapter_group, widget_common_map, "潜能明信片"
+        )
+        postcards = _parse_postcards(postcard_widget, document_map)
+
+        # Illustration
+        illustration_url = extra_info.get("illustration", "")
+
+        return CharWiki(
             name=name,
             rarity=rarity,
             profession=profession,
             attribute=attribute,
-            avatar_url=avatar_url,
+            tags=tags,
+            faction=faction,
+            race=race,
+            specialties=[],
+            hobbies=[],
+            operator_preference="",
+            release_date=release_date,
+            stats=[],
+            talents=talents,
+            skills=skills,
+            base_skills=base_skills,
+            potentials=potentials,
+            postcards=postcards,
+            birthday=birthday,
+            wiki_item_id=int(item.get("itemId", 0)),
+            illustration_url=illustration_url,
         )
+    except Exception as e:
+        logger.error(
+            f"[EndWiki] Failed to parse Skland wiki item: {e}"
+        )
+        return None
 
-        if attribute not in result:
-            result[attribute] = []
-        result[attribute].append(entry)
 
-    return result
+# ==================== Weapon wiki parsing ====================
 
 
-def _parse_homepage_weapons(
-    output: Tag,
-) -> dict[str, list[WeaponListEntry]]:
-    """Parse weapon list from homepage d-tab.shouyeWuqi.
+def _parse_weapon_tab(
+    intro: dict, content_id: str, document_map: dict
+) -> tuple[int, list[WeaponStatBonus], WeaponPassive | None]:
+    """Parse one weapon tab (level 1 or max) from intro + content doc.
 
-    Groups weapons by their data-param1 attribute (weapon type).
-    Each entry is a div.divsort with:
-      data-param1: "单手剑"/"双手剑"/... (weapon type)
-    Rarity is inferred from "居中X星.png" image alt.
+    Returns (base_attack, stat_bonuses, passive).
     """
-    weapon_tab = output.find(
-        "div", class_=re.compile(r"d-tab.*shouyeWuqi")
-    )
-    if not weapon_tab:
-        return {}
+    import re
 
-    result: dict[str, list[WeaponListEntry]] = {}
-
-    for div in weapon_tab.find_all("div", class_="divsort"):
-        weapon_type = div.get("data-param1", "")
-
-        link = div.find("a")
-        name = link.get("title", "") if link else ""
-        if not name:
-            continue
-
-        # Icon URL from the first non-star img
-        icon_url = ""
-        for img in div.find_all("img"):
-            alt = img.get("alt", "")
-            if alt not in STAR_IMG_RARITY_MAP:
-                icon_url = _best_img_url(img)
+    # Base attack from intro.description doc
+    base_attack = 0
+    desc_id = intro.get("description", "")
+    if desc_id and desc_id in document_map:
+        doc = document_map[desc_id]
+        for bid in doc.get("blockIds", []):
+            text = _extract_text(doc, bid)
+            m = re.search(r"基础攻击力\s*(\d+)", text)
+            if m:
+                base_attack = int(m.group(1))
                 break
 
-        # Rarity from "居中X星.png" image
-        rarity = 0
-        for img in div.find_all("img"):
-            alt = img.get("alt", "")
-            if alt in STAR_IMG_RARITY_MAP:
-                rarity = STAR_IMG_RARITY_MAP[alt]
-                break
+    # Stats and passive from content doc
+    bonuses: list[WeaponStatBonus] = []
+    passive: WeaponPassive | None = None
 
-        entry = WeaponListEntry(
-            name=name,
-            rarity=rarity,
-            weapon_type=weapon_type,
-            icon_url=icon_url,
-        )
+    if not content_id or content_id not in document_map:
+        return base_attack, bonuses, passive
 
-        if weapon_type not in result:
-            result[weapon_type] = []
-        result[weapon_type].append(entry)
+    doc = document_map[content_id]
+    blocks = doc.get("blockIds", [])
 
-    return result
+    i = 0
+    while i < len(blocks):
+        bid = blocks[i]
+        kind = _extract_text_kind(doc, bid)
+        text = _extract_text(doc, bid)
 
+        if kind == "body" and text:
+            # Stat bonus name line, e.g. "敏捷提升·大 1/3"
+            # Next block(s) (heading3) have the value(s)
+            bonus_name = text.strip()
+            if i + 1 < len(blocks):
+                next_text = _extract_text(doc, blocks[i + 1])
+                next_kind = _extract_text_kind(doc, blocks[i + 1])
+                if next_kind == "heading3" and next_text:
+                    # Count consecutive heading3 blocks
+                    h3_lines = [next_text.strip()]
+                    j = i + 2
+                    while j < len(blocks):
+                        jk = _extract_text_kind(doc, blocks[j])
+                        jt = _extract_text(doc, blocks[j])
+                        if jk == "heading3" and jt:
+                            h3_lines.append(jt.strip())
+                            j += 1
+                        else:
+                            break
 
-BANNER_CYCLE_SECONDS = 15 * 86400  # 15 days
+                    if len(h3_lines) == 1:
+                        # Single heading3 → stat bonus
+                        bonuses.append(
+                            WeaponStatBonus(
+                                name=bonus_name,
+                                value=h3_lines[0].rstrip("。."),
+                            )
+                        )
+                    else:
+                        # Multiple heading3 → passive skill
+                        passive = WeaponPassive(
+                            name=bonus_name,
+                            description="\n".join(h3_lines),
+                        )
+                    i = j
+                    continue
+        i += 1
 
-
-def _parse_event_timer(div: Tag) -> tuple[float, float]:
-    """Parse start/end timestamps from span.eventTimer."""
-    timer = div.find("span", class_="eventTimer")
-    if not timer:
-        return 0.0, 0.0
-    start_raw = timer.get("data-start", "")
-    end_raw = timer.get("data-end", "")
-    start_ts = 0.0
-    end_ts = 0.0
-    try:
-        if start_raw:
-            start_ts = datetime.strptime(start_raw, "%Y/%m/%d %H:%M").timestamp()
-    except ValueError:
-        pass
-    try:
-        if end_raw:
-            end_ts = datetime.strptime(end_raw, "%Y/%m/%d %H:%M").timestamp()
-    except ValueError:
-        pass
-    return start_ts, end_ts
-
-
-def _fill_char_banner_times(banners: list[GachaBanner]) -> None:
-    """Fill start/end timestamps for character banners.
-
-    Only the first character banner has a real end_timestamp from HTML.
-    The 2nd ends 15 days after the 1st, the 3rd ends 15 days after the 2nd.
-    """
-    char_banners = [b for b in banners if b.banner_type == "character"]
-    if not char_banners or char_banners[0].end_timestamp == 0:
-        return
-
-    for i in range(1, len(char_banners)):
-        prev = char_banners[i - 1]
-        char_banners[i].start_timestamp = prev.end_timestamp
-        char_banners[i].end_timestamp = prev.end_timestamp + BANNER_CYCLE_SECONDS
+    return base_attack, bonuses, passive
 
 
-def _parse_homepage_gacha(output: Tag) -> list[GachaBanner]:
-    """Parse gacha/banner info from homepage."""
-    banners: list[GachaBanner] = []
+def _extract_entry_id_from_table(
+    doc: dict, table_block_id: str
+) -> str:
+    """Extract the first entry ID from a table block's cells."""
+    block = doc.get("blockMap", {}).get(table_block_id, {})
+    if block.get("kind") != "table":
+        return ""
+    tbl = block.get("table", {})
+    block_map = doc.get("blockMap", {})
+    for rid in tbl.get("rowIds", []):
+        for cid in tbl.get("columnIds", []):
+            cell = tbl.get("cellMap", {}).get(f"{rid}_{cid}", {})
+            for child_id in cell.get("childIds", []):
+                child = block_map.get(child_id, {})
+                if child.get("kind") == "text":
+                    for elem in child.get("text", {}).get(
+                        "inlineElements", []
+                    ):
+                        if elem.get("kind") == "entry":
+                            return elem["entry"].get("id", "")
+    return ""
 
-    for div in output.find_all("div", class_="characterActivity"):
-        activity_list = div.find("div", class_="activityList")
-        if not activity_list:
+
+def _parse_weapon_skill_ranks(
+    widget: dict, document_map: dict
+) -> list[WeaponSkillRank]:
+    """Parse 武器技能和基质 widget → per-skill RANK 1-9 values + gem."""
+    ranks: list[WeaponSkillRank] = []
+    tab_list = widget.get("tabList", [])
+    tab_data_map = widget.get("tabDataMap", {})
+
+    for tab in tab_list:
+        tab_id = tab.get("tabId", "")
+        skill_name = tab.get("title", "")
+        td = tab_data_map.get(tab_id, {})
+        content_id = td.get("content", "")
+
+        if not content_id or content_id not in document_map:
             continue
 
-        text = _text(activity_list)
-        banner_name = ""
-        events: list[str] = []
+        doc = document_map[content_id]
+        header: list[str] = []
+        values: list[str] = []
+        gem_id = ""
+        table_idx = 0
 
-        bm = re.search(r"(特许寻访·[^\s限]+)", text)
-        if bm:
-            banner_name = bm.group(1)
+        for bid in doc.get("blockIds", []):
+            block = doc.get("blockMap", {}).get(bid, {})
+            if block.get("kind") != "table":
+                continue
+            table_idx += 1
+            if table_idx == 1:
+                # 武器技能数值
+                rows = _parse_table_block(doc, bid)
+                if rows and len(rows) >= 2:
+                    header = rows[0]
+                    values = rows[1]
+            elif table_idx == 2:
+                # 基质推荐
+                gem_id = _extract_entry_id_from_table(doc, bid)
+                break
 
-        for m in re.finditer(r"(限时签到·[^\s作]+|作战演练·\S+)", text):
-            events.append(m.group(1))
-
-        target_name = ""
-        target_icon_url = ""
-        img_div = div.find("div", class_="activityImage")
-        if img_div:
-            a = img_div.find("a")
-            if a:
-                target_name = a.get("title", "")
-            img = img_div.find("img")
-            if img:
-                target_icon_url = _best_img_url(img)
-
-        start_ts, end_ts = _parse_event_timer(div)
-
-        if banner_name or target_name:
-            banners.append(
-                GachaBanner(
-                    banner_name=banner_name,
-                    banner_type="character",
-                    events=events,
-                    target_name=target_name,
-                    target_icon_url=target_icon_url,
-                    start_timestamp=start_ts,
-                    end_timestamp=end_ts,
+        if header:
+            ranks.append(
+                WeaponSkillRank(
+                    name=skill_name,
+                    header=header,
+                    values=values,
+                    recommended_gem_id=gem_id,
                 )
             )
 
-    for div in output.find_all("div", class_="weaponActivity"):
-        activity_list = div.find("div", class_="activityList")
-        if not activity_list:
+    return ranks
+
+
+def _parse_weapon_breakthroughs(
+    widget: dict, document_map: dict
+) -> list[WeaponBreakthrough]:
+    """Parse 突破材料 widget → material entries per level."""
+    results: list[WeaponBreakthrough] = []
+    tab_list = widget.get("tabList", [])
+    tab_data_map = widget.get("tabDataMap", {})
+
+    for tab in tab_list:
+        tab_id = tab.get("tabId", "")
+        level_name = tab.get("title", "")
+        td = tab_data_map.get(tab_id, {})
+        content_id = td.get("content", "")
+
+        if not content_id or content_id not in document_map:
             continue
 
-        text = _text(activity_list)
-        text = re.sub(r"MediaWiki:EventTimer.*", "", text)
+        doc = document_map[content_id]
+        materials: list[MaterialEntry] = []
 
-        banner_name = ""
-        bm = re.search(r"(武库申领·[^\s距]+)", text)
-        if bm:
-            banner_name = bm.group(1)
+        for bid in doc.get("blockIds", []):
+            block = doc.get("blockMap", {}).get(bid, {})
+            if block.get("kind") != "table":
+                continue
+            tbl = block.get("table", {})
+            block_map = doc.get("blockMap", {})
 
-        target_name = ""
-        target_icon_url = ""
-        img_div = div.find("div", class_="activityImage")
-        if img_div:
-            a = img_div.find("a")
-            if a:
-                target_name = a.get("title", "")
-            img = img_div.find("img")
-            if img:
-                target_icon_url = _best_img_url(img)
+            # Material entries are in row index 1
+            if len(tbl.get("rowIds", [])) < 2:
+                break
+            mat_row_id = tbl["rowIds"][1]
+            for col_id in tbl.get("columnIds", []):
+                cell = tbl.get("cellMap", {}).get(
+                    f"{mat_row_id}_{col_id}", {}
+                )
+                for child_id in cell.get("childIds", []):
+                    child = block_map.get(child_id, {})
+                    if child.get("kind") == "text":
+                        for elem in child.get("text", {}).get(
+                            "inlineElements", []
+                        ):
+                            if elem.get("kind") == "entry":
+                                e = elem["entry"]
+                                materials.append(
+                                    MaterialEntry(
+                                        item_id=e.get("id", ""),
+                                        count=e.get("count", "0"),
+                                    )
+                                )
+            break  # Only first table per tab
 
-        start_ts, end_ts = _parse_event_timer(div)
-
-        if banner_name or target_name:
-            banners.append(
-                GachaBanner(
-                    banner_name=banner_name,
-                    banner_type="weapon",
-                    events=[],
-                    target_name=target_name,
-                    target_icon_url=target_icon_url,
-                    start_timestamp=start_ts,
-                    end_timestamp=end_ts,
+        if materials:
+            results.append(
+                WeaponBreakthrough(
+                    level=level_name,
+                    materials=materials,
                 )
             )
 
-    _fill_char_banner_times(banners)
-    return banners
+    return results
 
 
-# ==================== 武器详情解析 ====================
-
-
-def parse_weapon_wiki(html: str, weapon_name: str) -> WeaponWiki | None:
-    """Parse weapon wiki page HTML into WeaponWiki model."""
+def parse_skland_weapon_wiki(
+    item: dict,
+) -> WeaponWiki | None:
+    """Parse a Skland wiki weapon item JSON into WeaponWiki model."""
     try:
-        soup = BeautifulSoup(html, "lxml")
-        output = soup.find("div", class_="mw-parser-output")
-        if not output:
-            logger.warning(f"[EndWiki] 未找到武器页面内容: {weapon_name}")
-            return None
+        name = item.get("name", "")
+        brief = item.get("brief", {})
+        document = item.get("document", {})
+        document_map = document.get("documentMap", {})
+        chapter_group = document.get("chapterGroup", [])
+        widget_common_map = document.get("widgetCommonMap", {})
 
-        # Main info table
-        main_table = output.find("table", class_="wikitable")
-        if not main_table:
-            logger.warning(f"[EndWiki] 未找到武器信息表格: {weapon_name}")
-            return None
-
-        basic_info = _parse_basic_info(main_table)
-
-        # Rarity from image
+        # Rarity and weapon type from subTypeList
+        sub_type_list = brief.get("subTypeList", [])
         rarity = 0
-        for img in main_table.find_all("img"):
-            alt = img.get("alt", "")
-            if alt in RARITY_WEAPON_MAP:
-                rarity = RARITY_WEAPON_MAP[alt]
+        weapon_type = ""
+        for st in sub_type_list:
+            sid = st.get("subTypeId", "")
+            val = st.get("value", "")
+            if sid == "10000":
+                rarity = RARITY_ID_MAP.get(val, 0)
+            elif sid == "10223":
+                weapon_type = WEAPON_TYPE_ID_MAP.get(val, val)
+
+        # Cover image from brief
+        cover_url = brief.get("cover", "")
+
+        # Find 基本信息 widget (first widget with tabs)
+        info_widget: dict = {}
+        for group in chapter_group:
+            for w in group.get("widgets", []):
+                wid = w["id"]
+                wdata = widget_common_map.get(wid, {})
+                if wdata.get("tabList"):
+                    info_widget = wdata
+                    break
+            if info_widget:
                 break
 
-        # Description
-        description = basic_info.get("描述", "")
+        tab_list = info_widget.get("tabList", [])
+        tab_data_map = info_widget.get("tabDataMap", {})
 
-        # Parse d-tab.shuxing for initial and max stats
+        # Weapon type from intro (fallback)
+        if not weapon_type and tab_list:
+            first_tab = tab_data_map.get(
+                tab_list[0].get("tabId", ""), {}
+            )
+            intro = first_tab.get("intro", {})
+            if intro:
+                weapon_type = intro.get("type", "")
+
+        # Tab 0 = initial stats, Tab 1 = max stats
         base_attack = 0
         base_attack_max = 0
         stat_bonuses: list[WeaponStatBonus] = []
@@ -718,37 +740,60 @@ def parse_weapon_wiki(html: str, weapon_name: str) -> WeaponWiki | None:
         passive: WeaponPassive | None = None
         passive_max: WeaponPassive | None = None
 
-        dtab = output.find("div", class_="d-tab")
-        if dtab:
-            tab_contents = dtab.find_all("div", class_="tab-content")
-            for i, content in enumerate(tab_contents):
-                inner_table = content.find("table", class_="wikitable")
-                if not inner_table:
-                    continue
+        for i, tab in enumerate(tab_list[:2]):
+            tid = tab.get("tabId", "")
+            td = tab_data_map.get(tid, {})
+            intro = td.get("intro", {})
+            content_id = td.get("content", "")
 
-                atk, bonuses, pas = _parse_weapon_tab_content(inner_table)
+            if not intro:
+                continue
 
-                if i == 0:  # Initial
-                    base_attack = atk
-                    stat_bonuses = bonuses
-                    passive = pas
-                elif i == 1:  # Max level
-                    base_attack_max = atk
-                    stat_bonuses_max = bonuses
-                    passive_max = pas
+            atk, bonuses, pas = _parse_weapon_tab(
+                intro, content_id, document_map
+            )
+
+            if i == 0:
+                base_attack = atk
+                stat_bonuses = bonuses
+                passive = pas
+            elif i == 1:
+                base_attack_max = atk
+                stat_bonuses_max = bonuses
+                passive_max = pas
+
+        # Skill rank tables from 武器技能和基质 widget
+        _, skill_widget = _find_widget(
+            chapter_group, widget_common_map, "技能详情"
+        )
+        skill_ranks = _parse_weapon_skill_ranks(
+            skill_widget, document_map
+        )
+
+        # Breakthroughs from 突破材料 → 材料一览 widget
+        _, bt_widget = _find_widget(
+            chapter_group, widget_common_map, "材料一览"
+        )
+        breakthroughs = _parse_weapon_breakthroughs(
+            bt_widget, document_map
+        )
 
         return WeaponWiki(
-            name=weapon_name,
-            weapon_type=basic_info.get("武器种类", ""),
+            name=name,
+            weapon_type=weapon_type,
             rarity=rarity,
-            description=description,
+            cover_url=cover_url,
             base_attack=base_attack,
             base_attack_max=base_attack_max,
             stat_bonuses=stat_bonuses,
             stat_bonuses_max=stat_bonuses_max,
             passive=passive,
             passive_max=passive_max,
+            skill_ranks=skill_ranks,
+            breakthroughs=breakthroughs,
         )
     except Exception as e:
-        logger.error(f"[EndWiki] 解析武器页面失败 {weapon_name}: {e}")
+        logger.error(
+            f"[EndWiki] Failed to parse Skland weapon wiki: {e}"
+        )
         return None

@@ -88,6 +88,14 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "https://github.com/Loping151/EndUID/raw/main/EndUID/end_gacha/EndUIDGacha.exe",
     ),
 
+    # ==================== 蓝图配置 ====================
+    "BlueprintMaxResults": GsIntConfig(
+        "蓝图搜索最大结果数",
+        "搜索蓝图时最多显示的结果数量",
+        5,
+        max_value=50,
+    ),
+
     # ==================== 渲染配置 ====================
     "UseHtmlRender": GsBoolConfig(
         "使用HTML渲染",

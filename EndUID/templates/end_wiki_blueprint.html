@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Blueprint</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #0f1014;
+        --c-accent: #4fc3f7;
+        --c-text: #ffffff;
+        --c-subtext: #8b8b8b;
+        --c-card-bg: rgba(20, 21, 24, 0.9);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        width: 700px;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: var(--c-text);
+        position: relative;
+    }
+
+    .container {
+        position: relative;
+        padding: 30px;
+        padding-bottom: 70px;
+    }
+
+    .bg-layer {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 0;
+        background: linear-gradient(135deg, #0a1628 0%, #0f1014 50%, #0a1420 100%);
+    }
+
+    .content {
+        position: relative;
+        z-index: 10;
+    }
+
+    /* Header */
+    .bp-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .bp-cover {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        border: 2px solid rgba(79, 195, 247, 0.3);
+        object-fit: cover;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .bp-title {
+        font-size: 32px;
+        font-weight: 900;
+        color: white;
+    }
+
+    .bp-badge {
+        font-family: 'JetBrains Mono';
+        font-size: 12px;
+        background: rgba(79, 195, 247, 0.15);
+        color: var(--c-accent);
+        padding: 3px 10px;
+        border-radius: 3px;
+        margin-top: 6px;
+        display: inline-block;
+    }
+
+    /* Info rows */
+    .bp-info {
+        background: var(--c-card-bg);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 16px 20px;
+        margin-bottom: 16px;
+    }
+
+    .bp-row {
+        display: flex;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .bp-row:last-child { border-bottom: none; }
+
+    .bp-label {
+        font-size: 14px;
+        color: var(--c-subtext);
+        min-width: 100px;
+        flex-shrink: 0;
+    }
+
+    .bp-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: #ddd;
+    }
+
+    .bp-value.product {
+        color: var(--c-accent);
+        font-weight: 800;
+    }
+
+    .bp-value.material {
+        color: #f0c060;
+    }
+
+    /* Preview */
+    .bp-preview {
+        margin-top: 16px;
+        text-align: center;
+    }
+
+    .bp-preview img {
+        max-width: 100%;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .bp-preview-label {
+        font-size: 12px;
+        color: var(--c-subtext);
+        margin-bottom: 8px;
+        text-align: left;
+        font-family: 'JetBrains Mono';
+    }
+
+    /* Footer */
+    .footer {
+        position: absolute;
+        bottom: 0; left: 0; width: 100%;
+        height: 50px;
+        background: rgba(10, 10, 12, 0.98);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 30px;
+        z-index: 50;
+    }
+    .footer-logo { height: 24px; opacity: 0.6; }
+    .footer-text { font-family: 'JetBrains Mono'; font-size: 13px; color: var(--c-subtext); }
+</style>
+</head>
+<body>
+    <div class="bg-layer"></div>
+
+    <div class="container">
+        <div class="content">
+
+            <div class="bp-header">
+                {% if bp.cover %}
+                <img src="{{ bp.cover }}" class="bp-cover">
+                {% endif %}
+                <div>
+                    <div class="bp-title">{{ bp.name }}</div>
+                    {% if bp.size %}
+                    <div class="bp-badge">{{ bp.size }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bp-info">
+                {% if bp.products %}
+                <div class="bp-row">
+                    <div class="bp-label">最终产物</div>
+                    <div class="bp-value product">{{ bp.products }}</div>
+                </div>
+                {% endif %}
+                {% if bp.intermediates %}
+                <div class="bp-row">
+                    <div class="bp-label">中间产物</div>
+                    <div class="bp-value">{{ bp.intermediates }}</div>
+                </div>
+                {% endif %}
+                {% if bp.materials %}
+                <div class="bp-row">
+                    <div class="bp-label">原料</div>
+                    <div class="bp-value material">{{ bp.materials }}</div>
+                </div>
+                {% endif %}
+                {% if bp.unlock %}
+                <div class="bp-row">
+                    <div class="bp-label">解锁条件</div>
+                    <div class="bp-value" style="font-size:13px;color:#aaa;">{{ bp.unlock }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if bp.preview_url %}
+            <div class="bp-preview">
+                <div class="bp-preview-label">BLUEPRINT PREVIEW</div>
+                <img src="{{ bp.preview_url }}">
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <div class="footer">
+        {% if end_logo %}<img src="{{ end_logo }}" class="footer-logo">{% endif %}
+        <div class="footer-text">BLUEPRINT // {{ bp.name }}</div>
+    </div>
+</body>
+</html>
