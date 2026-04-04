@@ -35,8 +35,8 @@ class SklandWikiClient:
         self._token: str = ""
         self._token_time: float = 0
         self._session: Optional[aiohttp.ClientSession] = None
-        self._catalog_cache: list[dict] = []
-        self._catalog_cache_time: float = 0
+        self._catalog_cache: dict[int, list[dict]] = {}
+        self._catalog_cache_time: dict[int, float] = {}
 
     # ---- session ----
 
@@ -175,20 +175,20 @@ class SklandWikiClient:
         One API call returns ALL items for all subTypes.
         Result is cached in memory for 1 hour.
         """
-        if (
-            self._catalog_cache
-            and (time.time() - self._catalog_cache_time) < 3600
-        ):
-            return self._catalog_cache
+        cached = self._catalog_cache.get(type_main_id)
+        cache_time = self._catalog_cache_time.get(type_main_id, 0)
+        if cached and (time.time() - cache_time) < 3600:
+            return cached
 
         data = await self._get(
             WIKI_ITEM_CATALOG, f"typeMainId={type_main_id}"
         )
         if data:
-            self._catalog_cache = data.get("catalog", [])
-            self._catalog_cache_time = time.time()
-            return self._catalog_cache
-        return self._catalog_cache or []
+            result = data.get("catalog", [])
+            self._catalog_cache[type_main_id] = result
+            self._catalog_cache_time[type_main_id] = time.time()
+            return result
+        return cached or []
 
     async def get_catalog_items(
         self,
