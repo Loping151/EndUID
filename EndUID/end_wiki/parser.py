@@ -1,4 +1,6 @@
 """Parse Skland wiki JSON document format into CharWiki / WeaponWiki models."""
+import re
+
 from gsuid_core.logger import logger
 
 from .constants import (
@@ -473,7 +475,6 @@ def _parse_weapon_tab(
 
     Returns (base_attack, stat_bonuses, passive).
     """
-    import re
 
     # Base attack from intro.description doc
     base_attack = 0
@@ -506,7 +507,7 @@ def _parse_weapon_tab(
         if kind == "body" and text:
             # Stat bonus name line, e.g. "敏捷提升·大 1/3"
             # Next block(s) (heading3) have the value(s)
-            bonus_name = text.strip()
+            bonus_name = re.sub(r"\s*\d+/\d+\s*$", "", text.strip())
             if i + 1 < len(blocks):
                 next_text = _extract_text(doc, blocks[i + 1])
                 next_kind = _extract_text_kind(doc, blocks[i + 1])

@@ -204,27 +204,16 @@
         </div>
 
         <!-- Passive Skill -->
-        {% if wiki.passive or wiki.passive_max %}
+        {% if wiki.passive_max or wiki.passive %}
+        {% set pas = wiki.passive_max or wiki.passive %}
         <div class="section">
-            <div class="section-title">附术效果 <span>PASSIVE</span></div>
-            {% if wiki.passive %}
+            <div class="section-title">附术效果 <span>PASSIVE (MAX)</span></div>
             <div class="passive-block">
                 <div class="passive-header">
-                    <div class="passive-name">{{ wiki.passive.name }}</div>
-                    <div class="passive-tag init">初始</div>
+                    <div class="passive-name">{{ pas.name }}</div>
                 </div>
-                <div class="passive-desc">{{ wiki.passive.description }}</div>
+                <div class="passive-desc">{{ pas.description }}</div>
             </div>
-            {% endif %}
-            {% if wiki.passive_max %}
-            <div class="passive-block max">
-                <div class="passive-header">
-                    <div class="passive-name">{{ wiki.passive_max.name }}</div>
-                    <div class="passive-tag max">满级</div>
-                </div>
-                <div class="passive-desc">{{ wiki.passive_max.description }}</div>
-            </div>
-            {% endif %}
         </div>
         {% endif %}
 
@@ -248,19 +237,19 @@
         <!-- Skill Rank Tables (RANK 5-9 only) -->
         {% if wiki.skill_ranks %}
         <div class="section">
-            <div class="section-title">技能数值 <span>SKILL DATA (RANK 5-9)</span></div>
+            <div class="section-title">技能数值 <span>SKILL DATA</span></div>
             {% for skill in wiki.skill_ranks %}
             <div style="margin-bottom:16px;">
                 <div style="font-size:15px; font-weight:700; color:#ddd; margin-bottom:6px; padding-left:2px;">{{ skill.name }}</div>
-                <table class="rank-table">
+                <table class="rank-table" style="direction:rtl;">
                     <tr>
-                        {% for h in skill.header[4:] | reverse %}
-                        <th>{{ h }}</th>
+                        {% for h in skill.header[4:] %}
+                        <th style="direction:ltr;">{{ h }}</th>
                         {% endfor %}
                     </tr>
                     <tr>
-                        {% for v in skill.values[4:] | reverse %}
-                        <td>{{ v[:50] | hl_num }}</td>
+                        {% for v in skill.values[4:] %}
+                        <td style="direction:ltr;">{{ v[:50] | hl_num }}</td>
                         {% endfor %}
                     </tr>
                 </table>
