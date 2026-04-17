@@ -87,6 +87,15 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "用于提取抽卡链接的小工具下载地址",
         "https://github.com/Loping151/EndUID/raw/main/EndUID/end_gacha/EndUIDGacha.exe",
     ),
+    "GachaRequestIntervalMs": GsIntConfig(
+        "抽卡记录请求间隔(毫秒)",
+        "拉取抽卡记录时两次API请求之间的等待间隔(毫秒)。"
+        "值越小拉取越快，但也越容易触发服务器限流或风控。"
+        "默认100ms(约每秒10次请求)，建议保持默认；如遇报错可适当调大。"
+        "修改后立即生效，无需重启。",
+        100,
+        max_value=10000,
+    ),
 
     # ==================== 蓝图配置 ====================
     "BlueprintMaxResults": GsIntConfig(

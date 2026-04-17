@@ -10,6 +10,16 @@ from gsuid_core.logger import logger
 
 from ..utils.api.requests import end_api
 from ..utils.path import PLAYER_PATH
+from ..end_config.config_default import EndConfig
+
+
+def _get_request_interval() -> float:
+    """抽卡记录请求间隔（秒），来自配置项"""
+    try:
+        ms = int(EndConfig.get_config("GachaRequestIntervalMs").data)
+    except Exception:
+        ms = 100
+    return max(0, ms) / 1000.0
 
 
 _uid_locks: dict[str, asyncio.Lock] = {}
@@ -111,6 +121,7 @@ async def _get_new_gachalog(
     new_pool_data = {}
     total_new = 0
     first_error = ""
+    request_interval = _get_request_interval()
 
     for pool_type, pool_name in CHAR_POOL_TYPE_MAP.items():
         logger.info(f"[EndUID][Gacha] 拉取 {pool_name} (pool_type={pool_type})")
@@ -176,7 +187,9 @@ async def _get_new_gachalog(
             if not seq_id:
                 break
 
-            await asyncio.sleep(0.1)  # 避免请求过快
+            # 配置项 GachaRequestIntervalMs 控制的请求间隔，避免请求过快
+            if request_interval > 0:
+                await asyncio.sleep(request_interval)
 
         if records:
             old_list = old_pool_data.get(pool_name, [])
@@ -264,7 +277,8 @@ async def _get_new_gachalog(
             if not seq_id:
                 break
 
-            await asyncio.sleep(0.1)
+            if request_interval > 0:
+                await asyncio.sleep(request_interval)
 
         if records:
             old_list = old_pool_data.get(display_name, [])
