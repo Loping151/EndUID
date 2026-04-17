@@ -163,6 +163,7 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
                 "item_id": item_id,
                 "avatar": "",
                 "is_up": is_up,
+                "gacha_ts": record.get("gachaTs", ""),
             })
             pull_counter = 0
 
@@ -262,6 +263,7 @@ def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
             "short_name": short_name,
             "total": ps["total"],
             "pity": ps["pity"],
+            "remain": ps["remain"],
             "six_star_count": ps["six_star_count"],
         })
 
@@ -292,6 +294,24 @@ def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
         time_parts.sort()
         time_range = f"{time_parts[0]} - {time_parts[-1]}"
 
+    # 仅保留 UP 武器；非 UP 的抽数已通过 color_pulls 累计到下一把 UP 上
+    # 按抽卡时间从新到旧排序
+    def _ts_key(it: dict) -> int:
+        ts = it.get("gacha_ts", "")
+        try:
+            n = int(ts)
+            if n > 1e12:
+                n //= 1000
+            return n
+        except (ValueError, TypeError):
+            try:
+                return int(datetime.fromisoformat(ts[:19]).timestamp())
+            except Exception:
+                return 0
+
+    display_items = [it for it in all_six_star_items if it.get("is_up")]
+    display_items.sort(key=_ts_key, reverse=True)
+
     return {
         "pool_name": merged_name,
         "pool_type": "weapon",
@@ -305,7 +325,7 @@ def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
         "time_range": time_range,
         "level": level,
         "level_tag": LUCK_LEVELS[level],
-        "six_star_items": all_six_star_items,
+        "six_star_items": display_items,
         "sub_pools": sub_pools,
     }
 

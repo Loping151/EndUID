@@ -509,7 +509,7 @@
                 <div class="sub-pool-chip">
                     <span class="sp-name">{{ sp.short_name }}</span>
                     <span class="sp-stat">{{ sp.total }}抽</span>
-                    <span class="sp-pity {% if sp.pity >= 60 %}pull-unlucky{% elif sp.pity >= 40 %}pull-normal{% else %}pull-lucky{% endif %}">距六★ {{ sp.pity }}</span>
+                    <span class="sp-pity {% if sp.remain >= 60 %}pull-unlucky{% elif sp.remain >= 30 %}pull-normal{% else %}pull-lucky{% endif %}">未出UP {{ sp.remain }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -561,7 +561,7 @@
                         {% endif %}
 
                         <div class="pull-badge">
-                            <div class="pull-num {% if pool.pool_type == 'weapon' %}{% if not item.is_up %}pull-normal{% elif item.color_pulls >= 50 %}pull-unlucky{% elif item.color_pulls >= 20 %}pull-normal{% else %}pull-lucky{% endif %}{% else %}{% if item.color_pulls >= 80 %}pull-unlucky{% elif item.color_pulls >= 50 %}pull-normal{% else %}pull-lucky{% endif %}{% endif %}">{{ item.pull_count }}</div>
+                            <div class="pull-num {% if pool.pool_type == 'weapon' %}{% if item.color_pulls >= 50 %}pull-unlucky{% elif item.color_pulls >= 20 %}pull-normal{% else %}pull-lucky{% endif %}{% else %}{% if item.color_pulls >= 80 %}pull-unlucky{% elif item.color_pulls >= 50 %}pull-normal{% else %}pull-lucky{% endif %}{% endif %}">{% if pool.pool_type == 'weapon' %}{{ item.color_pulls }}{% else %}{{ item.pull_count }}{% endif %}</div>
                         </div>
                     </div>
 
