@@ -155,7 +155,7 @@ async def import_gacha_record(bot: Bot, ev: Event):
 
 @sv_gacha_record.on_fullmatch(("抽卡记录", "ckjl"), block=True)
 async def send_gacha_record(bot: Bot, ev: Event):
-    im = await draw_gacha_card(ev)
+    im = await draw_gacha_card(bot, ev)
     await bot.send(im)
 
 

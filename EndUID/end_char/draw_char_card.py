@@ -94,7 +94,10 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         return
 
     # 2. 获取用户绑定信息
-    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
+    from ..utils.at_help import ruser_id
+    target_user_id = ruser_id(ev)
+
+    uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
     if not uid:
         return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
@@ -106,7 +109,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         # 自动刷新一次
         logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
         from . import refresh_card_data
-        success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+        success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
         if not success:
             return error_msg
 
@@ -302,6 +305,11 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     user_avatar = ""
     if base_info and base_info.avatarUrl:
         user_avatar = await get_image_b64_with_cache(base_info.avatarUrl, AVATAR_CACHE_PATH)
+
+    from ..utils.at_help import get_at_avatar_b64
+    at_avatar = await get_at_avatar_b64(ev)
+    if at_avatar:
+        user_avatar = at_avatar
 
     # 加载属性和职业图标
     property_icon = ""

@@ -9,6 +9,7 @@ import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
+from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 from gsuid_core.logger import logger
 from gsuid_core.utils.image.convert import convert_img
@@ -330,7 +331,76 @@ def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
     }
 
 
-async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
+async def _load_card_maps(uid: str) -> tuple:
+    """读取 card_detail.json 并构建头像映射
+    返回 (name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok)
+    """
+    name = uid
+    level = 0
+    avatar_b64 = ""
+    illustration_b64 = ""
+    char_map: dict[str, str] = {}
+    weapon_map: dict[str, str] = {}
+    ok = False
+
+    card_path = PLAYER_PATH / uid / "card_detail.json"
+    if not card_path.exists():
+        return name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok
+
+    try:
+        async with aiofiles.open(card_path, "r", encoding="utf-8") as f:
+            raw = await f.read()
+        card_res = json.loads(raw)
+        if card_res.get("code") == 0:
+            detail = CardDetailResponse.model_validate(card_res).data.detail
+            base = detail.base
+            if base:
+                name = base.name or uid
+                level = base.level
+                if base.avatarUrl:
+                    avatar_b64 = await get_image_b64_with_cache(
+                        base.avatarUrl, AVATAR_CACHE_PATH
+                    )
+
+            last_up_illustration = ""
+            for char in detail.chars:
+                cd = char.charData
+                if cd:
+                    if cd.name and cd.avatarSqUrl:
+                        char_map[cd.name] = cd.avatarSqUrl
+                    if cd.labelType == "label_type_up" and cd.illustrationUrl:
+                        last_up_illustration = cd.illustrationUrl
+
+                wd = char.weapon.weaponData if char.weapon else None
+                if wd and wd.name and wd.iconUrl:
+                    weapon_map[wd.name] = wd.iconUrl
+
+            if last_up_illustration:
+                illustration_b64 = await get_image_b64_with_cache(
+                    last_up_illustration, CHAR_CACHE_PATH
+                )
+            ok = True
+    except Exception as e:
+        logger.warning(f"[EndUID][Gacha] 读取卡片详情失败: {e}")
+
+    return name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok
+
+
+def _collect_gacha_char_names(pool_data: dict) -> set:
+    """收集抽卡记录中所有六星角色名"""
+    names: set = set()
+    for pn, records in pool_data.items():
+        if pn.startswith("武器寻访"):
+            continue
+        for r in records:
+            if r.get("rarity") == 6:
+                cn = r.get("charName")
+                if cn:
+                    names.add(cn)
+    return names
+
+
+async def draw_gacha_card(bot: Bot, ev: Event) -> Union[bytes, str]:
     """绘制抽卡记录卡片"""
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
@@ -344,60 +414,46 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     if not pool_data:
         return "抽卡记录为空"
 
-    # 读取玩家基础信息 + UP 角色立绘 + 角色/武器头像映射
-    name = uid
-    level = 0
-    avatar_b64 = ""
-    illustration_b64 = ""
-    # name -> avatarUrl 映射（角色和武器）
-    char_avatar_map: dict[str, str] = {}
-    weapon_icon_map: dict[str, str] = {}
-
     card_path = PLAYER_PATH / uid / "card_detail.json"
+
+    # card_detail.json 不存在时先刷新一次
     if not card_path.exists():
-        # Auto-refresh to download character avatars
         try:
             from ..end_char import refresh_card_data
             await refresh_card_data(ev.user_id, ev.bot_id)
         except Exception as e:
             logger.debug(f"[EndUID][Gacha] 自动刷新失败: {e}")
-    if card_path.exists():
+
+    (
+        name, level, avatar_b64, illustration_b64,
+        char_avatar_map, weapon_icon_map, _ok,
+    ) = await _load_card_maps(uid)
+
+    # 若抽卡记录中存在 card_detail 里没有的六星角色，触发一次刷新并重新加载
+    gacha_char_names = _collect_gacha_char_names(pool_data)
+    missing_chars = gacha_char_names - set(char_avatar_map.keys())
+    if missing_chars:
+        logger.info(
+            f"[EndUID][Gacha] 六星角色头像缺失 {missing_chars}，触发刷新"
+        )
         try:
-            async with aiofiles.open(card_path, "r", encoding="utf-8") as f:
-                raw = await f.read()
-            card_res = json.loads(raw)
-            if card_res.get("code") == 0:
-                detail = CardDetailResponse.model_validate(card_res).data.detail
-                base = detail.base
-                if base:
-                    name = base.name or uid
-                    level = base.level
-                    if base.avatarUrl:
-                        avatar_b64 = await get_image_b64_with_cache(
-                            base.avatarUrl, AVATAR_CACHE_PATH
-                        )
-
-                # 查找最后一个 UP 角色的立绘 + 构建头像映射
-                last_up_illustration = ""
-                for char in detail.chars:
-                    cd = char.charData
-                    if cd:
-                        if cd.name and cd.avatarSqUrl:
-                            char_avatar_map[cd.name] = cd.avatarSqUrl
-                        if cd.labelType == "label_type_up" and cd.illustrationUrl:
-                            last_up_illustration = cd.illustrationUrl
-
-                    # 武器头像映射
-                    wd = char.weapon.weaponData if char.weapon else None
-                    if wd and wd.name and wd.iconUrl:
-                        weapon_icon_map[wd.name] = wd.iconUrl
-
-                if last_up_illustration:
-                    illustration_b64 = await get_image_b64_with_cache(
-                        last_up_illustration, CHAR_CACHE_PATH
+            from ..end_char import refresh_card_data
+            ok_refresh, _err = await refresh_card_data(ev.user_id, ev.bot_id)
+            if ok_refresh:
+                (
+                    name, level, avatar_b64, illustration_b64,
+                    char_avatar_map, weapon_icon_map, _ok,
+                ) = await _load_card_maps(uid)
+                try:
+                    at_sender = True if ev.group_id else False
+                    await bot.send(
+                        "检测到抽卡记录中有新的六星角色，已自动刷新角色数据",
+                        at_sender=at_sender,
                     )
+                except Exception:
+                    pass
         except Exception as e:
-            logger.warning(f"[EndUID][Gacha] 读取卡片详情失败: {e}")
+            logger.debug(f"[EndUID][Gacha] 刷新头像失败: {e}")
 
     # 武器池分组合并
     weapon_up_stats = []

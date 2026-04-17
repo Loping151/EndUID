@@ -56,12 +56,15 @@ def _format_awaken_time(ts: str) -> str:
 
 async def draw_card(ev: Event) -> Union[bytes, str]:
     """绘制终末地卡片（本地数据）"""
-    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
+    from ..utils.at_help import ruser_id, get_at_avatar_b64
+    target_user_id = ruser_id(ev)
+
+    uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
     if not uid:
         return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
 
     from . import refresh_card_data
-    success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+    success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
     if not success:
         return error_msg
 
@@ -105,6 +108,10 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         base_avatar_b64 = await get_image_b64_with_cache(
             base.avatarUrl, AVATAR_CACHE_PATH
         )
+
+    at_avatar = await get_at_avatar_b64(ev)
+    if at_avatar:
+        base_avatar_b64 = at_avatar
 
     chars: List[Dict] = []
     for char in detail.chars:

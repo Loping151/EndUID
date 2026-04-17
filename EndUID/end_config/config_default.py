@@ -16,6 +16,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "本地代理地址",
         "",
     ),
+    "AtCheck": GsBoolConfig(
+        "允许@查询他人",
+        "开启后，查询类指令若@了他人则查询被@用户的数据，头像也取被@用户的；关闭则始终查询发送者自己。",
+        True,
+    ),
     "NeedProxyFunc": GsListStrConfig(
         "需要代理的函数",
         "需要代理的函数",

@@ -103,10 +103,27 @@ async def send_char_card_handler(bot: Bot, ev: Event):
 
 @sv_refresh.on_command(("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"), block=True)
 async def refresh_card_detail_handler(bot: Bot, ev: Event):
-    success, error_msg = await refresh_card_data(ev.user_id, ev.bot_id)
+    from ..utils.at_help import ruser_id
+    at_sender = True if ev.group_id else False
+    target_user_id = ruser_id(ev)
+    target_uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
+    success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
     if not success:
-        return await bot.send(error_msg)
-    return await bot.send("✅ 刷新成功")
+        return await bot.send(error_msg, at_sender=at_sender)
+
+    role_name = ""
+    try:
+        card_path = PLAYER_PATH / target_uid / "card_detail.json"
+        async with aiofiles.open(card_path, "r", encoding="utf-8") as f:
+            raw = await f.read()
+        detail = CardDetailResponse.model_validate(json.loads(raw)).data.detail
+        if detail.base and detail.base.name:
+            role_name = detail.base.name
+    except Exception as e:
+        logger.debug(f"[EndUID] 读取角色名失败: {e}")
+
+    label = f"{role_name}({target_uid})" if role_name else str(target_uid)
+    return await bot.send(f"✅ 刷新成功 {label}", at_sender=at_sender)
 
 
 @sv_card.on_command(("卡片", "kp", "card"), block=True)

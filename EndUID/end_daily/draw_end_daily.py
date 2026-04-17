@@ -83,11 +83,14 @@ def _format_recovery_time(
 
 
 async def draw_end_daily_img(ev: Event, uid: str):
-    _, cred = await end_api.get_ck_result(uid, ev.user_id, ev.bot_id)
+    from ..utils.at_help import ruser_id, get_at_avatar_b64
+    target_user_id = ruser_id(ev)
+
+    _, cred = await end_api.get_ck_result(uid, target_user_id, ev.bot_id)
     if not cred:
         return f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
 
-    user_record = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
+    user_record = await EndUser.select_end_user(uid, target_user_id, ev.bot_id)
     server_id = user_record.server_id if user_record and user_record.server_id else "1"
     skland_user_id = user_record.skland_user_id if user_record and user_record.skland_user_id else None
     res = await end_api.get_card_detail(
@@ -95,7 +98,7 @@ async def draw_end_daily_img(ev: Event, uid: str):
         uid,
         server_id=server_id,
         user_id=skland_user_id,
-        qq_user_id=ev.user_id,
+        qq_user_id=target_user_id,
         bot_id=ev.bot_id,
     )
     if not res:
@@ -133,6 +136,10 @@ async def draw_end_daily_img(ev: Event, uid: str):
     avatar_url = ""
     if base.avatarUrl:
         avatar_url = await get_image_b64_with_cache(base.avatarUrl, AVATAR_CACHE_PATH)
+
+    at_avatar = await get_at_avatar_b64(ev)
+    if at_avatar:
+        avatar_url = at_avatar
 
     # 角色立绘
     pile_url = ""
