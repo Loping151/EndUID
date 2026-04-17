@@ -26,43 +26,15 @@ from .draw_char_card import end_templates
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
 
 
-def _get_property_icon(property_name: str) -> str:
-    if not property_name:
+# texture2d/ 中已有的 icon（来源 end_wiki/constants.py ATTR_ID_MAP / PROF_ID_MAP）：
+#   属性：灼热 / 电磁 / 寒冷 / 自然 / 物理
+#   职业：近卫 / 术师 / 突击 / 先锋 / 重装 / 辅助
+# 新属性/职业上线时补对应 {name}.png 即可，找不到静默返回 ""
+def _get_texture_icon(name: str) -> str:
+    if not name:
         return ""
-
-    icon_map = {
-        "物理": TEXTURE_PATH / "物理.png",
-        "自然": TEXTURE_PATH / "自然.png",
-        "电磁": TEXTURE_PATH / "电磁.png",
-        "寒冷": TEXTURE_PATH / "寒冷.png",
-        "灼热": TEXTURE_PATH / "灼热.png",
-    }
-
-    icon_path = icon_map.get(property_name)
-    if not icon_path or not icon_path.exists():
-        return ""
-
-    return image_to_base64(icon_path)
-
-
-def _get_profession_icon(profession_name: str) -> str:
-    if not profession_name:
-        return ""
-
-    icon_map = {
-        "先锋": TEXTURE_PATH / "先锋.png",
-        "突击": TEXTURE_PATH / "突击.png",
-        "近卫": TEXTURE_PATH / "近卫.png",
-        "重装": TEXTURE_PATH / "重装.png",
-        "辅助": TEXTURE_PATH / "辅助.png",
-        "术师": TEXTURE_PATH / "术师.png",
-    }
-
-    icon_path = icon_map.get(profession_name)
-    if not icon_path or not icon_path.exists():
-        return ""
-
-    return image_to_base64(icon_path)
+    path = TEXTURE_PATH / f"{name}.png"
+    return image_to_base64(path) if path.exists() else ""
 
 
 def _format_awaken_time(ts: str) -> str:
@@ -158,8 +130,8 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
                 "potentialLevel": char.potentialLevel if hasattr(char, "potentialLevel") else 0,
                 "property": property_value,
                 "profession": profession_value,
-                "property_icon": _get_property_icon(property_value),
-                "profession_icon": _get_profession_icon(profession_value),
+                "property_icon": _get_texture_icon(property_value),
+                "profession_icon": _get_texture_icon(profession_value),
             }
         )
 

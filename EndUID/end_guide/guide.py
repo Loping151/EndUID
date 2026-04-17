@@ -20,7 +20,8 @@ from ..utils.path import WIKI_CACHE_PATH, WIKI_GUIDE_CACHE
 
 GUIDE_MAP_PATH = WIKI_CACHE_PATH / "guide_map.json"
 GUIDE_CACHE_PATH = WIKI_GUIDE_CACHE
-GUIDE_MAP_REFRESH_SECONDS = 86400  # 1 day
+GUIDE_MAP_REFRESH_SECONDS = 86400  # 1 day — normal refresh interval
+GUIDE_MAP_RETRY_BACKOFF = 300  # 5 min — min gap between refresh attempts
 GUIDE_DETAIL_EXPIRE_SECONDS = 259200  # 3 days
 
 GUIDE_WIKI_URL = (
@@ -29,7 +30,7 @@ GUIDE_WIKI_URL = (
 )
 
 _guide_map: dict | None = None
-_guide_map_time: float = 0
+_guide_map_last_attempt: float = 0
 
 
 def _load_guide_map() -> dict | None:
@@ -62,41 +63,43 @@ def _extract_char_name(guide_name: str) -> str:
     return guide_name
 
 
-async def _ensure_guide_map() -> dict:
-    """Get or refresh the guide name->ID mapping."""
-    global _guide_map, _guide_map_time
+async def _try_refresh_guide_map() -> bool:
+    """Attempt a guide catalog refresh, honoring retry backoff.
 
-    if _guide_map and (time.time() - _guide_map_time) < GUIDE_MAP_REFRESH_SECONDS:
-        return _guide_map
-
-    loaded = _load_guide_map()
-    if loaded:
-        ft = loaded.get("fetch_time", 0)
-        if (time.time() - ft) < GUIDE_MAP_REFRESH_SECONDS:
-            _guide_map = loaded
-            _guide_map_time = time.time()
-            return _guide_map
-
-    # Scan guide items
+    Returns True only when the in-memory map was successfully replaced.
+    """
+    global _guide_map, _guide_map_last_attempt
+    now = time.time()
+    if (now - _guide_map_last_attempt) < GUIDE_MAP_RETRY_BACKOFF:
+        return False
+    _guide_map_last_attempt = now
     logger.info("[EndGuide] Refreshing guide ID map...")
     try:
         items = await _fetch_guide_items()
-        if items:
-            data = {"items": items, "fetch_time": time.time()}
-            await _save_guide_map(data)
-            _guide_map = data
-            _guide_map_time = time.time()
-            logger.info(f"[EndGuide] Guide map refreshed: {len(items)} guides")
-            return _guide_map
+        if not items:
+            return False
+        data = {"items": items, "fetch_time": time.time()}
+        await _save_guide_map(data)
+        _guide_map = data
+        logger.info(f"[EndGuide] Guide map refreshed: {len(items)} guides")
+        return True
     except Exception as e:
         logger.error(f"[EndGuide] Failed to refresh guide map: {e}")
+        return False
 
-    if loaded:
-        _guide_map = loaded
-        _guide_map_time = time.time()
-        return _guide_map
 
-    return {}
+async def _ensure_guide_map() -> dict:
+    """Return the guide name->ID catalog, refreshing if stale."""
+    global _guide_map
+
+    if _guide_map is None:
+        _guide_map = _load_guide_map()
+
+    fetch_time = (_guide_map or {}).get("fetch_time", 0)
+    if (time.time() - fetch_time) >= GUIDE_MAP_REFRESH_SECONDS:
+        await _try_refresh_guide_map()
+
+    return _guide_map or {}
 
 
 async def _fetch_guide_items() -> dict[str, dict]:
@@ -312,6 +315,13 @@ async def get_guide(
     # Also try original name if alias-resolved name didn't match
     if item_id is None and original_name and original_name != char_name:
         item_id = _find_guide_id(guide_map, original_name)
+
+    # Unknown name — may be a newly launched guide; try a fresh pull
+    if item_id is None and await _try_refresh_guide_map():
+        gm = _guide_map or {}
+        item_id = _find_guide_id(gm, char_name)
+        if item_id is None and original_name and original_name != char_name:
+            item_id = _find_guide_id(gm, original_name)
 
     if item_id is None:
         return

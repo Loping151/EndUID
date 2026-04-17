@@ -38,14 +38,11 @@ def _highlight_numbers(text: str) -> str:
 end_templates.filters["hl_num"] = lambda s: Markup(_highlight_numbers(s))
 
 
-def _get_property_icon(name: str) -> str:
-    if not name:
-        return ""
-    path = TEXTURE_PATH / f"{name}.png"
-    return image_to_base64(path) if path.exists() else ""
-
-
-def _get_profession_icon(name: str) -> str:
+# 共用 end_char/texture2d/ 下的 icon（详见 end_wiki/constants.py ATTR_ID_MAP / PROF_ID_MAP）：
+#   属性：灼热 / 电磁 / 寒冷 / 自然 / 物理
+#   职业：近卫 / 术师 / 突击 / 先锋 / 重装 / 辅助
+# 新属性/职业上线时补对应 {name}.png 即可，找不到静默返回 ""
+def _get_texture_icon(name: str) -> str:
     if not name:
         return ""
     path = TEXTURE_PATH / f"{name}.png"
@@ -56,8 +53,8 @@ async def draw_char_wiki(wiki: CharWiki) -> Union[bytes, str]:
     """Render character wiki detail as image."""
     bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
     end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
-    property_icon = _get_property_icon(wiki.attribute)
-    profession_icon = _get_profession_icon(wiki.profession)
+    property_icon = _get_texture_icon(wiki.attribute)
+    profession_icon = _get_texture_icon(wiki.profession)
 
     char_img = ""
     char_avatar = ""
@@ -224,8 +221,8 @@ async def draw_char_list(data: WikiListData) -> Union[bytes, str]:
                 "name": entry.name,
                 "rarity": entry.rarity,
                 "avatar": avatar_b64,
-                "property_icon": _get_property_icon(entry.attribute),
-                "profession_icon": _get_profession_icon(entry.profession),
+                "property_icon": _get_texture_icon(entry.attribute),
+                "profession_icon": _get_texture_icon(entry.profession),
             })
         groups[attr] = chars
 

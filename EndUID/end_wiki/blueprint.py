@@ -23,7 +23,8 @@ from .skland_wiki import wiki_client
 
 BP_MAP_PATH = WIKI_CACHE_PATH / "blueprint_map.json"
 BP_RENDER_CACHE = WIKI_BP_RENDER_CACHE
-BP_MAP_REFRESH_SECONDS = 86400  # 1 day
+BP_MAP_REFRESH_SECONDS = 86400  # 1 day — normal refresh interval
+BP_MAP_RETRY_BACKOFF = 300  # 5 min — min gap between refresh attempts
 BP_DETAIL_EXPIRE_SECONDS = 259200  # 3 days
 
 TEXTURE_PATH = Path(__file__).parent.parent / "end_char" / "texture2d"
@@ -33,7 +34,7 @@ bp_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 # ==================== 蓝图索引 ====================
 
 _bp_map: dict | None = None
-_bp_map_time: float = 0
+_bp_map_last_attempt: float = 0
 
 
 def _load_bp_map() -> dict | None:
@@ -136,40 +137,43 @@ async def _fetch_blueprints() -> dict[str, dict]:
     return items
 
 
-async def _ensure_bp_map() -> dict:
-    """Get or refresh the blueprint map."""
-    global _bp_map, _bp_map_time
+async def _try_refresh_bp_map() -> bool:
+    """Attempt a blueprint catalog refresh, honoring retry backoff.
 
-    if _bp_map and (time.time() - _bp_map_time) < BP_MAP_REFRESH_SECONDS:
-        return _bp_map
-
-    loaded = _load_bp_map()
-    if loaded:
-        ft = loaded.get("fetch_time", 0)
-        if (time.time() - ft) < BP_MAP_REFRESH_SECONDS:
-            _bp_map = loaded
-            _bp_map_time = time.time()
-            return _bp_map
-
+    Returns True only when the in-memory map was successfully replaced.
+    """
+    global _bp_map, _bp_map_last_attempt
+    now = time.time()
+    if (now - _bp_map_last_attempt) < BP_MAP_RETRY_BACKOFF:
+        return False
+    _bp_map_last_attempt = now
     logger.info("[EndBP] Refreshing blueprint map...")
     try:
         items = await _fetch_blueprints()
-        if items:
-            data = {"items": items, "fetch_time": time.time()}
-            await _save_bp_map(data)
-            _bp_map = data
-            _bp_map_time = time.time()
-            logger.info(f"[EndBP] Blueprint map refreshed: {len(items)}")
-            return _bp_map
+        if not items:
+            return False
+        data = {"items": items, "fetch_time": time.time()}
+        await _save_bp_map(data)
+        _bp_map = data
+        logger.info(f"[EndBP] Blueprint map refreshed: {len(items)}")
+        return True
     except Exception as e:
         logger.error(f"[EndBP] Failed to refresh blueprint map: {e}")
+        return False
 
-    if loaded:
-        _bp_map = loaded
-        _bp_map_time = time.time()
-        return _bp_map
 
-    return {}
+async def _ensure_bp_map() -> dict:
+    """Return the blueprint catalog, refreshing if stale."""
+    global _bp_map
+
+    if _bp_map is None:
+        _bp_map = _load_bp_map()
+
+    fetch_time = (_bp_map or {}).get("fetch_time", 0)
+    if (time.time() - fetch_time) >= BP_MAP_REFRESH_SECONDS:
+        await _try_refresh_bp_map()
+
+    return _bp_map or {}
 
 
 # ==================== 搜索 ====================

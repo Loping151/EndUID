@@ -1,9 +1,4 @@
-def get_main_url() -> str:
-    """获取 API 基础 URL"""
-    return "https://zonai.skland.com/"
-
-
-MAIN_URL = get_main_url()
+MAIN_URL = "https://zonai.skland.com/"
 API_VERSION = "v1"
 
 # 平台和游戏 ID
@@ -38,7 +33,6 @@ USER_INFO_URL = f"{MAIN_URL}api/{API_VERSION}/user"
 
 # 签到相关
 GAME_ATTENDANCE_URL = f"{MAIN_URL}api/{API_VERSION}/game/attendance"
-GAME_ATTENDANCE_QUERY_URL = f"{MAIN_URL}api/{API_VERSION}/game/attendance"
 
 # 卡片信息
 GAME_CARDS_URL = f"{MAIN_URL}api/{API_VERSION}/game/cards"
@@ -69,30 +63,3 @@ GACHA_WEAPON_POOL_LIST_URL = f"{GACHA_BASE_URL_CN}/api/record/weapon/pool"
 GACHA_WEAPON_RECORD_URL = f"{GACHA_BASE_URL_CN}/api/record/weapon"
 
 
-API_MAP = {
-    # 认证相关
-    "oauth": OAUTH_API,
-    "cred": CRED_API,
-    "scan_login": SCAN_LOGIN_API,
-    "scan_status": SCAN_STATUS_API,
-    "token_by_scan": TOKEN_BY_SCAN_CODE_API,
-    "refresh_token": REFRESH_TOKEN_URL,
-
-    # 通用数据
-    "binding": BINDING_URL,
-    "player_info": GAME_PLAYER_INFO_URL,
-    "user_info": USER_INFO_URL,
-    "attendance": GAME_ATTENDANCE_URL,
-    "attendance_query": GAME_ATTENDANCE_QUERY_URL,
-    "cards": GAME_CARDS_URL,
-    "card_detail": CARD_DETAIL_URL,
-
-    # 终末地专属
-    "endfield_attendance": ENDFIELD_ATTENDANCE_URL,
-    "endfield_enums": ENDFIELD_ENUMS_URL,
-
-    # 抽卡记录
-    "gacha_char_record": GACHA_CHAR_RECORD_URL,
-    "gacha_weapon_pool_list": GACHA_WEAPON_POOL_LIST_URL,
-    "gacha_weapon_record": GACHA_WEAPON_RECORD_URL,
-}

@@ -21,10 +21,11 @@ from .skland_wiki import wiki_client
 # ==================== Catalog cache (name -> ID) ====================
 
 ID_MAP_PATH = WIKI_CACHE_PATH / "id_map.json"
-ID_MAP_REFRESH_SECONDS = 86400  # 1 day
+ID_MAP_REFRESH_SECONDS = 86400  # 1 day — normal refresh interval
+ID_MAP_RETRY_BACKOFF = 300  # 5 min — min gap between refresh attempts
 
 _id_map: dict | None = None
-_id_map_time: float = 0
+_id_map_last_attempt: float = 0  # time of last refresh attempt (success or fail)
 
 
 def _load_id_map() -> dict | None:
@@ -86,35 +87,36 @@ async def _refresh_id_map() -> dict:
     return data
 
 
-async def _ensure_id_map() -> dict:
-    """Get or refresh the name->ID mapping."""
-    global _id_map, _id_map_time
+async def _try_refresh_id_map() -> bool:
+    """Attempt a catalog refresh, honoring retry backoff.
 
-    if _id_map and (time.time() - _id_map_time) < ID_MAP_REFRESH_SECONDS:
-        return _id_map
-
-    loaded = _load_id_map()
-    if loaded:
-        ft = loaded.get("fetch_time", 0)
-        if (time.time() - ft) < ID_MAP_REFRESH_SECONDS:
-            _id_map = loaded
-            _id_map_time = time.time()
-            return _id_map
-
+    Returns True only when the in-memory map was successfully replaced.
+    """
+    global _id_map, _id_map_last_attempt
+    now = time.time()
+    if (now - _id_map_last_attempt) < ID_MAP_RETRY_BACKOFF:
+        return False
+    _id_map_last_attempt = now
     try:
-        refreshed = await _refresh_id_map()
-        _id_map = refreshed
-        _id_map_time = time.time()
-        return _id_map
+        _id_map = await _refresh_id_map()
+        return True
     except Exception as e:
         logger.error(f"[EndWiki] Failed to refresh ID map: {e}")
+        return False
 
-    if loaded:
-        _id_map = loaded
-        _id_map_time = time.time()
-        return _id_map
 
-    return {}
+async def _ensure_id_map() -> dict:
+    """Return the name->ID catalog, refreshing if stale."""
+    global _id_map
+
+    if _id_map is None:
+        _id_map = _load_id_map()
+
+    fetch_time = (_id_map or {}).get("fetch_time", 0)
+    if (time.time() - fetch_time) >= ID_MAP_REFRESH_SECONDS:
+        await _try_refresh_id_map()
+
+    return _id_map or {}
 
 
 def _find_item_id(
@@ -197,38 +199,6 @@ async def ensure_list_data() -> WikiListData | None:
     )
 
 
-def find_char_in_list(data: WikiListData, name: str) -> bool:
-    for entries in data.characters.values():
-        for entry in entries:
-            if entry.name == name:
-                return True
-    return False
-
-
-def find_weapon_in_list(data: WikiListData, name: str) -> bool:
-    for entries in data.weapons.values():
-        for entry in entries:
-            if entry.name == name:
-                return True
-    return False
-
-
-def get_char_entry(data: WikiListData, name: str) -> CharListEntry | None:
-    for entries in data.characters.values():
-        for entry in entries:
-            if entry.name == name:
-                return entry
-    return None
-
-
-def get_weapon_entry(data: WikiListData, name: str) -> WeaponListEntry | None:
-    for entries in data.weapons.values():
-        for entry in entries:
-            if entry.name == name:
-                return entry
-    return None
-
-
 async def get_char_wiki(
     char_name: str, force_refresh: bool = False
 ) -> CharWiki | None:
@@ -236,7 +206,11 @@ async def get_char_wiki(
     id_map = await _ensure_id_map()
     item_id = _find_item_id(id_map, char_name, "干员")
     if item_id is None:
-        return None
+        # Unknown name — may be a newly launched character; try a fresh pull
+        if await _try_refresh_id_map():
+            item_id = _find_item_id(_id_map or {}, char_name, "干员")
+        if item_id is None:
+            return None
 
     cache_path = WIKI_CHAR_CACHE / f"{char_name}.json"
 
@@ -279,7 +253,10 @@ async def get_weapon_wiki(
     id_map = await _ensure_id_map()
     item_id = _find_item_id(id_map, weapon_name, "武器")
     if item_id is None:
-        return None
+        if await _try_refresh_id_map():
+            item_id = _find_item_id(_id_map or {}, weapon_name, "武器")
+        if item_id is None:
+            return None
 
     cache_path = WIKI_WEAPON_CACHE / f"{weapon_name}.json"
 
