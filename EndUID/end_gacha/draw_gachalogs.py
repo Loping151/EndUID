@@ -9,7 +9,6 @@ import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
-from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 from gsuid_core.logger import logger
 from gsuid_core.utils.image.convert import convert_img
@@ -400,7 +399,7 @@ def _collect_gacha_char_names(pool_data: dict) -> set:
     return names
 
 
-async def draw_gacha_card(bot: Bot, ev: Event) -> Union[bytes, str]:
+async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     """绘制抽卡记录卡片"""
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
@@ -444,14 +443,6 @@ async def draw_gacha_card(bot: Bot, ev: Event) -> Union[bytes, str]:
                     name, level, avatar_b64, illustration_b64,
                     char_avatar_map, weapon_icon_map, _ok,
                 ) = await _load_card_maps(uid)
-                try:
-                    at_sender = True if ev.group_id else False
-                    await bot.send(
-                        "检测到抽卡记录中有新的六星角色，已自动刷新角色数据",
-                        at_sender=at_sender,
-                    )
-                except Exception:
-                    pass
         except Exception as e:
             logger.debug(f"[EndUID][Gacha] 刷新头像失败: {e}")
 
