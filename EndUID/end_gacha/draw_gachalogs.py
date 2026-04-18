@@ -182,6 +182,10 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
         else 0
     )
 
+    # UP 平均抽数 (total / up_count)
+    up_count = sum(1 for it in six_star_items if it["is_up"])
+    avg_up_pulls = round(total / up_count, 1) if up_count > 0 else 0
+
     # 运气等级
     if six_star_count == 0:
         level = 2
@@ -229,7 +233,9 @@ def _calc_pool_stats(pool_name: str, records: list) -> dict:
         "has_up": has_up,
         "total": total,
         "six_star_count": six_star_count,
+        "up_count": up_count,
         "avg_pulls": avg_pulls,
+        "avg_up_pulls": avg_up_pulls,
         "remain": remain,
         "pity": pull_counter,
         "time_range": time_range,

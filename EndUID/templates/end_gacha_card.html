@@ -523,8 +523,13 @@
                     <div class="stat-label">总抽数</div>
                 </div>
                 <div class="stat-card">
+                    {% if pool.has_up %}
+                    <div class="stat-num">{{ pool.avg_up_pulls }}</div>
+                    <div class="stat-label">平均每UP</div>
+                    {% else %}
                     <div class="stat-num">{{ pool.six_star_count }}</div>
                     <div class="stat-label">六星数</div>
+                    {% endif %}
                 </div>
                 <div class="stat-card">
                     <div class="stat-num">{{ pool.avg_pulls }}</div>
