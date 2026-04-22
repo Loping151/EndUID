@@ -25,6 +25,7 @@ from .request_util import (
     SKLAND_APP_PLATFORM,
     SIGN_VNAME,
     ARK_SIGN_VNAME,
+    WEB_USER_AGENT,
     RespCode,
 )
 from ..database.models import EndUser
@@ -1096,28 +1097,147 @@ class EndApi:
 
     ANN_LIST_CACHE_DURATION = 600  # 公告列表缓存有效期：10分钟（600秒）
 
+    # 森空岛公开 Web API 使用独立短期 token（非用户 cred token），由 /web/v1/auth/refresh 颁发
+    _web_public_token: str = ""
+    _web_public_token_time: float = 0
+    WEB_PUBLIC_TOKEN_TTL = 1500  # 25 分钟，到期前主动刷新
+
+    async def _web_public_refresh_token(self, force: bool = False) -> Optional[str]:
+        """获取森空岛公开 Web API 使用的 token。
+
+        该 token 由 /web/v1/auth/refresh 直接颁发，无需用户登录。
+        首次调用时使用空 token 签名，服务端会返回一个短期 token，
+        后续对 /web/v1/home/index、/web/v1/item 等公开接口的请求使用该 token 作为 HMAC 密钥。
+        """
+        current_time = time.time()
+        if (
+            not force
+            and EndApi._web_public_token
+            and (current_time - EndApi._web_public_token_time) < self.WEB_PUBLIC_TOKEN_TTL
+        ):
+            return EndApi._web_public_token
+
+        path = "/web/v1/auth/refresh"
+        sign_data = generate_sign(
+            token="",
+            path=path,
+            query_or_body="",
+            platform="3",
+            vname=SIGN_VNAME,
+            did="",
+        )
+        headers = {
+            "platform": "3",
+            "timestamp": sign_data["timestamp"],
+            "dId": "",
+            "vName": SIGN_VNAME,
+            "sign": sign_data["sign"],
+            "User-Agent": WEB_USER_AGENT,
+            "Referer": "https://www.skland.com/",
+            "Accept": "application/json",
+        }
+
+        session = await self.get_session()
+        try:
+            async with session.get(
+                SKLAND_WEB_REFRESH_URL,
+                headers=headers,
+                proxy=self._get_proxy(),
+            ) as resp:
+                res = await resp.json()
+        except Exception as e:
+            logger.error(f"[EndUID][Ann] 获取 web token 异常: {e}")
+            return None
+
+        if res.get("code") != 0:
+            logger.error(f"[EndUID][Ann] 获取 web token 失败: {res}")
+            return None
+
+        token = res.get("data", {}).get("token")
+        if not token:
+            logger.error(f"[EndUID][Ann] 获取 web token 响应缺少 token 字段: {res}")
+            return None
+
+        EndApi._web_public_token = token
+        EndApi._web_public_token_time = current_time
+        logger.info("[EndUID][Ann] 刷新 web token 成功")
+        return token
+
+    async def _web_public_get(
+        self,
+        path: str,
+        params: Optional[dict] = None,
+    ) -> Optional[dict]:
+        """调用公开 Web API（自动获取 token 并签名，token 失效自动刷新重试一次）"""
+        query_string = ""
+        if params:
+            query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        url = f"https://zonai.skland.com{path}" + (f"?{query_string}" if query_string else "")
+
+        async def do_request(token: str) -> Optional[dict]:
+            sign_data = generate_sign(
+                token=token,
+                path=path,
+                query_or_body=query_string,
+                platform="3",
+                vname=SIGN_VNAME,
+                did="",
+            )
+            headers = {
+                "platform": "3",
+                "timestamp": sign_data["timestamp"],
+                "dId": "",
+                "vName": SIGN_VNAME,
+                "sign": sign_data["sign"],
+                "User-Agent": WEB_USER_AGENT,
+                "Referer": "https://www.skland.com/",
+                "Accept": "application/json",
+            }
+            session = await self.get_session()
+            try:
+                async with session.get(
+                    url,
+                    headers=headers,
+                    proxy=self._get_proxy(),
+                ) as resp:
+                    return await resp.json()
+            except Exception as e:
+                logger.error(f"[EndUID][Ann] 请求 {path} 异常: {e}")
+                return None
+
+        token = await self._web_public_refresh_token()
+        if not token:
+            return None
+
+        res = await do_request(token)
+        if res is None:
+            return None
+
+        # token 失效时服务端返回 code=10000 "请求异常"，刷新 token 后再试一次
+        if res.get("code") == RespCode.REQUEST_ERROR:
+            logger.info(f"[EndUID][Ann] token 可能已失效，强制刷新后重试: {path}")
+            token = await self._web_public_refresh_token(force=True)
+            if not token:
+                return None
+            res = await do_request(token)
+
+        return res
+
     async def get_ann_list(self, is_cache: bool = False, page_size: int = 18) -> list:
-        """获取森空岛公告列表（使用 Playwright 绕过签名验证）
+        """获取森空岛公告列表（纯 HTTP 签名调用）
 
         Args:
             is_cache: 是否使用缓存
-            page_size: 每页数量
+            page_size: 目标条数（通过分页累计）
 
         Returns:
             公告列表
         """
-        from .api import (
-            SKLAND_GAME_ID_ENDFIELD,
-            SKLAND_CATE_ID_ENDFIELD,
-        )
-
-        # 检查缓存是否有效（10分钟内）
         current_time = time.time()
         cache_valid = (
             self.ann_list_data
             and (current_time - self.ann_list_cache_time) < self.ANN_LIST_CACHE_DURATION
         )
-
         if is_cache and cache_valid:
             logger.debug(
                 f"[EndUID][Ann] 使用缓存的公告列表（距上次请求 "
@@ -1125,118 +1245,85 @@ class EndApi:
             )
             return self.ann_list_data
 
-        try:
-            from playwright.async_api import async_playwright
+        # 服务端 pageSize 上限为 10，超过即 400 参数错误，需要分页累计
+        per_page = 10
+        collected_raw: list = []
+        page_token = ""
 
-            api_responses = {}
+        while len(collected_raw) < page_size:
+            params: Dict[str, str] = {"pageSize": str(per_page)}
+            if page_token:
+                params["pageToken"] = page_token
+            params["sortType"] = "2"
+            params["gameId"] = str(SKLAND_GAME_ID_ENDFIELD)
+            params["cateId"] = str(SKLAND_CATE_ID_ENDFIELD)
 
-            async def handle_response(response):
-                url = response.url
-                if 'home/index' in url and f'gameId={SKLAND_GAME_ID_ENDFIELD}' in url:
-                    try:
-                        body = await response.json()
-                        api_responses[url] = body
-                    except Exception:
-                        pass
+            res = await self._web_public_get("/web/v1/home/index", params)
+            if not res or res.get("code") != 0:
+                logger.error(f"[EndUID][Ann] 获取公告列表失败: {res}")
+                break
 
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                page = await browser.new_page()
-                page.on('response', handle_response)
+            data = res.get("data", {}) or {}
+            page_items = data.get("list", []) or []
+            if not page_items:
+                break
+            collected_raw.extend(page_items)
 
-                try:
-                    await page.goto(
-                        f'https://www.skland.com/game/endfield?cateId={SKLAND_CATE_ID_ENDFIELD}',
-                        timeout=30000
-                    )
-                    await page.wait_for_timeout(3000)
+            page_token = data.get("pageToken", "") or ""
+            if not page_token:
+                break
 
-                    # 滚动页面多次以加载更多公告（确保获取18条以上）
-                    for _ in range(6):
-                        await page.evaluate("window.scrollBy(0, 1000)")
-                        await page.wait_for_timeout(1200)
+        # 转换为与旧实现一致的结构
+        formatted: list = []
+        for entry in collected_raw:
+            item = entry.get("item", {}) or {}
+            user = entry.get("user", {}) or {}
+            if not item.get("id"):
+                continue
 
-                except Exception as e:
-                    logger.warning(f"[EndUID][Ann] 页面加载异常: {e}")
+            cover_url = ""
+            if item.get("imageCover"):
+                cover_url = item["imageCover"].get("url", "")
+            elif item.get("imageListSlice"):
+                cover_url = item["imageListSlice"][0].get("url", "")
+            elif item.get("videoListSlice"):
+                video = item["videoListSlice"][0]
+                cover_url = video.get("cover", {}).get("url", "")
 
-                await browser.close()
+            created_ts = (
+                item.get("publishedAtTs")
+                or item.get("timestamp")
+                or 0
+            )
 
-            # 处理获取到的数据
-            self.ann_list_data = []
-            for url, res in api_responses.items():
-                if res.get("code") != 0:
-                    continue
+            formatted.append({
+                "id": item.get("id"),
+                "title": item.get("title", ""),
+                "coverUrl": cover_url,
+                "createdAtTs": created_ts,
+                "userName": user.get("nickname", ""),
+                "userAvatar": user.get("avatar", ""),
+                "userIpLocation": user.get("latestIpLocation", ""),
+                "viewKind": item.get("viewKind"),
+                "gameId": item.get("gameId"),
+                "cateId": item.get("cateId"),
+            })
 
-                data = res.get("data", {})
-                items = data.get("list", [])
+        seen_ids = set()
+        unique_list = []
+        for it in formatted:
+            if it["id"] in seen_ids:
+                continue
+            seen_ids.add(it["id"])
+            unique_list.append(it)
 
-                for entry in items:
-                    item = entry.get("item", {})
-                    user = entry.get("user", {})
-                    if not item.get("id"):
-                        continue
+        self.ann_list_data = unique_list[:page_size]
+        self.ann_list_cache_time = time.time()
+        logger.info(f"[EndUID][Ann] 获取到 {len(self.ann_list_data)} 条公告")
+        return self.ann_list_data
 
-                    # 获取封面图
-                    cover_url = ""
-                    if item.get("imageCover"):
-                        cover_url = item["imageCover"].get("url", "")
-                    elif item.get("imageListSlice"):
-                        cover_url = item["imageListSlice"][0].get("url", "")
-                    elif item.get("videoListSlice"):
-                        video = item["videoListSlice"][0]
-                        cover_url = video.get("cover", {}).get("url", "")
-
-                    created_ts = (
-                        item.get("publishedAtTs")
-                        or item.get("timestamp")
-                        or 0
-                    )
-
-                    if not self.ann_list_data:
-                        logger.debug(
-                            f"[EndUID][Ann] 首条公告 item keys: {list(item.keys())}"
-                        )
-                        logger.debug(
-                            f"[EndUID][Ann] 首条公告 user keys: {list(user.keys())}"
-                        )
-
-                    self.ann_list_data.append({
-                        "id": item.get("id"),
-                        "title": item.get("title", ""),
-                        "coverUrl": cover_url,
-                        "createdAtTs": created_ts,
-                        "userName": user.get("nickname", ""),
-                        "userAvatar": user.get("avatar", ""),
-                        "userIpLocation": user.get("latestIpLocation", ""),
-                        "viewKind": item.get("viewKind"),
-                        "gameId": item.get("gameId"),
-                        "cateId": item.get("cateId"),
-                    })
-
-            # 去重并限制数量
-            seen_ids = set()
-            unique_list = []
-            for item in self.ann_list_data:
-                if item["id"] not in seen_ids:
-                    seen_ids.add(item["id"])
-                    unique_list.append(item)
-            self.ann_list_data = unique_list[:page_size]
-
-            # 更新缓存时间
-            self.ann_list_cache_time = time.time()
-
-            logger.info(f"[EndUID][Ann] 获取到 {len(self.ann_list_data)} 条公告")
-            return self.ann_list_data
-
-        except ImportError:
-            logger.error("[EndUID][Ann] Playwright 未安装，无法获取公告列表")
-            return []
-        except Exception as e:
-            logger.error(f"[EndUID][Ann] 获取公告列表异常: {e}")
-            return []
-
-    async def get_ann_detail(self, post_id: str) -> Optional[dict]:
-        """获取公告详情（使用 Playwright 绕过签名验证）
+    async def get_ann_detail(self, post_id) -> Optional[dict]:
+        """获取公告详情（纯 HTTP 签名调用）
 
         Args:
             post_id: 公告 ID
@@ -1244,105 +1331,85 @@ class EndApi:
         Returns:
             公告详情
         """
-        if post_id in self.ann_map:
-            return self.ann_map[post_id]
+        post_id_str = str(post_id)
+        if post_id_str in self.ann_map:
+            return self.ann_map[post_id_str]
 
-        try:
-            from playwright.async_api import async_playwright
-
-            api_responses = {}
-
-            async def handle_response(response):
-                url = response.url
-                if 'item' in url and f'id={post_id}' in url:
-                    try:
-                        body = await response.json()
-                        api_responses[url] = body
-                    except Exception:
-                        pass
-
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                page = await browser.new_page()
-                page.on('response', handle_response)
-
-                try:
-                    await page.goto(
-                        f'https://www.skland.com/article?id={post_id}',
-                        timeout=30000
-                    )
-                    await page.wait_for_timeout(5000)
-                except Exception as e:
-                    logger.warning(f"[EndUID][Ann] 页面加载异常: {e}")
-
-                await browser.close()
-
-            # 处理获取到的数据
-            for url, res in api_responses.items():
-                if res.get("code") != 0:
-                    continue
-
-                data = res.get("data", {})
-                item = data.get("item", {})
-                user = data.get("user", {})
-
-                # 处理图片列表
-                images = []
-                for img in item.get("imageListSlice", []):
-                    images.append({
-                        "url": img.get("url", ""),
-                        "width": img.get("width", 0),
-                        "height": img.get("height", 0),
-                    })
-
-                # 处理视频列表
-                videos = []
-                for video in item.get("videoListSlice", []):
-                    videos.append({
-                        "url": video.get("url", ""),
-                        "coverUrl": video.get("cover", {}).get("url", ""),
-                    })
-
-                # 处理文本内容
-                text_content = []
-                for text in item.get("textSlice", []):
-                    text_content.append(text.get("c", ""))
-
-                created_ts = (
-                    item.get("publishedAtTs")
-                    or item.get("timestamp")
-                    or 0
-                )
-
-                logger.debug(
-                    f"[EndUID][Ann] 详情 item keys: {list(item.keys())}, "
-                    f"createdAtTs={created_ts}"
-                )
-
-                result = {
-                    "id": item.get("id"),
-                    "title": item.get("title", ""),
-                    "createdAtTs": created_ts,
-                    "userName": user.get("nickname", ""),
-                    "userAvatar": user.get("avatar", ""),
-                    "userIpLocation": user.get("latestIpLocation", ""),
-                    "images": images,
-                    "videos": videos,
-                    "textContent": text_content,
-                    "format": item.get("format", ""),
-                }
-
-                self.ann_map[post_id] = result
-                return result
-
+        res = await self._web_public_get("/web/v1/item", {"id": post_id_str})
+        if not res or res.get("code") != 0:
+            logger.error(f"[EndUID][Ann] 获取公告详情失败 id={post_id}: {res}")
             return None
 
-        except ImportError:
-            logger.error("[EndUID][Ann] Playwright 未安装，无法获取公告详情")
-            return None
-        except Exception as e:
-            logger.error(f"[EndUID][Ann] 获取公告详情异常: {e}")
-            return None
+        data = res.get("data", {}) or {}
+        item = data.get("item", {}) or {}
+        user = data.get("user", {}) or {}
+
+        images = [
+            {
+                "url": img.get("url", ""),
+                "width": img.get("width", 0),
+                "height": img.get("height", 0),
+            }
+            for img in item.get("imageListSlice", []) or []
+        ]
+        videos = [
+            {
+                "url": v.get("url", ""),
+                "coverUrl": v.get("cover", {}).get("url", ""),
+            }
+            for v in item.get("videoListSlice", []) or []
+        ]
+
+        # textSlice 的存储顺序是乱的，真实显示顺序在 format 字段里。
+        # 按 format.data 遍历段落，拼接每个段落内的 text/link 片段（contentId 指向 textSlice.id），
+        # 得到与原帖一致的阅读顺序。
+        text_lookup = {
+            str(t.get("id")): t.get("c", "")
+            for t in item.get("textSlice", []) or []
+        }
+        ordered_text: list = []
+        fmt_raw = item.get("format", "") or ""
+        if fmt_raw:
+            try:
+                fmt_obj = json.loads(fmt_raw)
+                for node in fmt_obj.get("data", []) or []:
+                    if node.get("type") != "paragraph":
+                        continue
+                    parts = []
+                    for c in node.get("contents", []) or []:
+                        if c.get("type") in ("text", "link"):
+                            cid = c.get("contentId")
+                            if cid is not None:
+                                parts.append(text_lookup.get(str(cid), ""))
+                    ordered_text.append("".join(parts))
+            except Exception as e:
+                logger.warning(f"[EndUID][Ann] format 解析失败 id={post_id}: {e}")
+                ordered_text = []
+        if not ordered_text:
+            # 兜底：format 缺失或解析失败时退回原始存储顺序
+            ordered_text = [t.get("c", "") for t in item.get("textSlice", []) or []]
+
+        created_ts = (
+            item.get("publishedAtTs")
+            or item.get("timestamp")
+            or 0
+        )
+
+        result = {
+            "id": item.get("id"),
+            "title": item.get("title", ""),
+            "createdAtTs": created_ts,
+            "userName": user.get("nickname", ""),
+            "userAvatar": user.get("avatar", ""),
+            "userIpLocation": user.get("latestIpLocation", ""),
+            "images": images,
+            "videos": videos,
+            "textContent": ordered_text,
+            "format": item.get("format", ""),
+        }
+
+        self.ann_map[post_id_str] = result
+        return result
 
 
 # 创建全局实例

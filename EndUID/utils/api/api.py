@@ -51,6 +51,7 @@ CARD_DETAIL_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/detail"
 # 公告相关
 SKLAND_ANN_LIST_URL = "https://zonai.skland.com/web/v1/home/index"
 SKLAND_ANN_DETAIL_URL = "https://zonai.skland.com/web/v1/item"
+SKLAND_WEB_REFRESH_URL = "https://zonai.skland.com/web/v1/auth/refresh"
 SKLAND_GAME_ID_ENDFIELD = 3  # 终末地在森空岛的游戏 ID
 SKLAND_CATE_ID_ENDFIELD = 12  # 终末地公告分类 ID
 
