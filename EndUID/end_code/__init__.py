@@ -1,7 +1,7 @@
 import re
 import json
 import time
-import urllib.parse
+from datetime import datetime
 
 import httpx
 
@@ -14,7 +14,7 @@ sv_end_code = SV("终末地兑换码")
 
 invalid_code_list = ()
 
-url = "https://a.4399.cn/endfield/tools/codes"
+url = "https://newsimg.5054399.com/comm/mlcxqcommon/static/wap/js/data_171.js?{}&callback=?&_={}"
 
 
 @sv_end_code.on_fullmatch(("code", "兑换码", "兌換碼"))
@@ -23,68 +23,74 @@ async def get_code_func(bot: Bot, ev: Event):
     if not code_list:
         return await bot.send("[获取兑换码失败] 请稍后再试")
 
-    now_ms = int(time.time() * 1000)
     msgs = []
-    for item in code_list:
-        code = item.get("code", "")
-        if not code or code in invalid_code_list:
+    for code in code_list:
+        is_fail = code.get("is_fail", "0")
+        if is_fail == "1":
             continue
-        e_time = item.get("e_time") or 0
-        if e_time and e_time < now_ms:
+        order = code.get("order", "")
+        if order in invalid_code_list or not order:
             continue
-        award = _strip_html(urllib.parse.unquote(item.get("award", "")))
-        desc = item.get("desc", "")
-        msg = [f"兑换码: {code}", f"奖励: {award}"]
-        if desc:
-            msg.append(desc)
+        reward = code.get("reward", "")
+        label = code.get("label", "")
+        msg = [f"兑换码: {order}", f"奖励: {reward}", label]
         msgs.append("\n".join(msg))
-
-    if not msgs:
-        return await bot.send("暂无可用兑换码")
 
     await bot.send(msgs)
 
 
-def _strip_html(text: str) -> str:
-    text = re.sub(r"<[^>]+>", "", text)
-    text = (
-        text.replace("&nbsp;", " ")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", '"')
-    )
-    return text.strip()
-
-
 async def get_code_list():
     try:
-        async with httpx.AsyncClient(timeout=None, follow_redirects=True) as client:
-            res = await client.get(
-                url,
-                timeout=10,
-                headers={"User-Agent": "Mozilla/5.0"},
-            )
-        m = re.search(
-            r'<script id="__NEXT_DATA__"[^>]*>(.+?)</script>',
-            res.text,
-            re.DOTALL,
-        )
-        if not m:
-            logger.error("[获取兑换码失败] __NEXT_DATA__ 未找到")
-            return None
-        data = json.loads(m.group(1))
-        info_data = data.get("props", {}).get("pageProps", {}).get("infoData", [])
-        for block in info_data:
-            opts = block.get("options", {}) if isinstance(block, dict) else {}
-            code_block = opts.get("Code") if isinstance(opts, dict) else None
-            if code_block and "codes" in code_block:
-                logger.debug(
-                    f"[获取兑换码] url:{url}, codeList:{code_block.get('codes', [])}"
-                )
-                return code_block.get("codes", [])
-        logger.error("[获取兑换码失败] infoData 中未找到 Code 块")
-        return None
+        now = datetime.now()
+        time_string = f"{now.year - 1900}{now.month - 1}{now.day}{now.hour}{now.minute}"
+        now_time = int(time.time() * 1000)
+        new_url = url.format(time_string, now_time)
+        async with httpx.AsyncClient(timeout=None) as client:
+            res = await client.get(new_url, timeout=10)
+            json_data = res.text.split("=", 1)[1].strip().rstrip(";")
+            logger.debug(f"[获取兑换码] url:{new_url}, codeList:{json_data}")
+            return json.loads(json_data)
+
     except Exception as e:
         logger.exception("[获取兑换码失败] ", e)
-        return None
+        return
+
+
+def is_code_expired(label: str) -> bool:
+    if not label:
+        return False
+
+    # 使用正则提取月份和日期
+    pattern = r"(\d{1,2})月(\d{1,2})日(\d{1,2})点"
+    match = re.search(pattern, label)
+    if not match:
+        return False
+
+    expire_month = int(match.group(1))
+    expire_day = int(match.group(2))
+    expire_hour = int(match.group(2))
+
+    now = datetime.now()
+    current_month = now.month
+
+    expire_year = now.year
+    # 处理跨年的情况
+    if current_month < expire_month:
+        expire_year -= 1
+    elif current_month == expire_month:
+        if now.day > expire_day:
+            expire_year += 1
+    else:
+        pass
+
+    if expire_hour == 24:
+        expire_hour = 23
+        expire_min = 59
+        expire_sec = 59
+    else:
+        expire_min = 0
+        expire_sec = 0
+
+    expire_date = datetime(expire_year, expire_month, expire_day, expire_hour, expire_min, expire_sec)
+
+    return now > expire_date
