@@ -104,6 +104,14 @@
         "need_admin": false
       },
       {
+        "name": "兑换码",
+        "desc": "查看当前可用兑换码",
+        "eg": "兑换码/code",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
         "name": "别名列表",
         "desc": "查看角色别名",
         "eg": "莱万汀别名",
