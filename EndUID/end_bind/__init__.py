@@ -203,6 +203,9 @@ async def check_cred(
                 server_id = str(default_role.get("serverId", "1"))
             else:
                 # 方舟等游戏可能没有 roles/defaultRole，UID 在外层
+                # 终末地外层 uid 是森空岛账号 UID（defaultUid），不是 roleId，跳过
+                if entry_game_id == ENDFIELD_GAME_ID:
+                    continue
                 role_id = bind_entry.get("uid")
                 if not role_id:
                     continue
