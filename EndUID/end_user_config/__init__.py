@@ -4,7 +4,6 @@ from gsuid_core.models import Event
 
 from ..utils.alias_map import get_alias_display_name, resolve_alias_entry
 from ..utils.database.models import EndBind, EndUser
-from ..utils.hide_uid_pref import set_pref as _set_hide_uid_pref
 from ..utils.util import hide_uid as _mask_uid
 
 
@@ -33,7 +32,7 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
         return f"{GAME_TITLE} 配置项不存在"
 
     if func == "隐藏UID":
-        # value 已是 "on"/"off" (由调度层判定); 直接落库 + 同步缓存
+        # value 已是 "on"/"off" (由调度层判定); 落库即可, hide_uid 用 value 即时回显
         await EndUser.update_data_by_data(
             select_data={
                 "user_id": ev.user_id,
@@ -42,9 +41,8 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
             },
             update_data={f"{field}_value": value},
         )
-        _set_hide_uid_pref(uid, value)
         action = "已开启" if value == "on" else "已关闭"
-        return f"{GAME_TITLE} {action}隐藏UID!\nUID[{_mask_uid(uid)}]"
+        return f"{GAME_TITLE} {action}隐藏UID!\nUID[{_mask_uid(uid, user_pref=value)}]"
 
     if not value:
         await EndUser.update_data_by_data(

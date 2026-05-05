@@ -56,10 +56,6 @@ async def _activity_flush_loop():
 
 _flush_task = asyncio.get_event_loop().create_task(_activity_flush_loop())
 
-# 启动时载入 hide_uid 用户偏好缓存
-from .utils.hide_uid_pref import init_from_db as _init_hide_uid_pref
-asyncio.get_event_loop().create_task(_init_hide_uid_pref())
-
 
 @on_core_shutdown
 async def _flush_on_shutdown():
