@@ -35,40 +35,17 @@ class SigningState:
             return None
 
     @staticmethod
-    def set_state(
-        sign_type: SignType,
-        total: Optional[int] = None,
-        completed: int = 0,
-    ):
+    def set_state(sign_type: SignType):
         state = {
             "type": sign_type,
             "start_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        if total is not None:
-            state["total"] = total
-            state["completed"] = completed
-
         try:
             with open(STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(state, f, ensure_ascii=False, indent=2)
-            logger.info(
-                f"[EndUID][SignState] 创建状态文件: type={sign_type}, total={total}"
-            )
+            logger.info(f"[EndUID][SignState] 创建状态文件: type={sign_type}")
         except Exception as e:
             logger.error(f"[EndUID][SignState] 创建状态文件失败: {e}")
-
-    @staticmethod
-    def update_progress(completed: int):
-        state = SigningState.get_state()
-        if not state:
-            return
-        state["completed"] = completed
-        state["update_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        try:
-            with open(STATE_FILE, "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"[EndUID][SignState] 更新进度失败: {e}")
 
     @staticmethod
     def clear_state():
