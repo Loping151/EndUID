@@ -1,6 +1,6 @@
 """EndUID 数据库模型"""
 import time
-from typing import List, Optional, Type
+from typing import Dict, List, Optional, Type
 
 from sqlmodel import Field, select, col
 from datetime import datetime
@@ -27,6 +27,7 @@ exec_list.extend(
         "ALTER TABLE EndUser ADD COLUMN game_id INTEGER DEFAULT 3 NOT NULL",
         'ALTER TABLE EndBind ADD COLUMN ark_uid TEXT DEFAULT ""',
         'ALTER TABLE EndUser ADD COLUMN hg_token TEXT DEFAULT ""',
+        'ALTER TABLE EndUser ADD COLUMN hide_uid_self_value TEXT DEFAULT ""',
     ]
 )
 
@@ -287,6 +288,7 @@ class EndUser(User, table=True):
     # 配置
     bbs_sign_switch: str = Field(default="off", title="签到开关")
     stamina_bg_value: str = Field(default="", title="体力背景")
+    hide_uid_self_value: str = Field(default="", title="隐藏UID")
 
     # 时间戳
     created_time: Optional[int] = Field(default=None, title="创建时间（秒）")
@@ -309,6 +311,22 @@ class EndUser(User, table=True):
         result = await session.execute(sql)
         data = result.scalars().all()
         return data[0] if data else None
+
+    @classmethod
+    @with_session
+    async def get_all_hide_uid_prefs(
+        cls,
+        session: AsyncSession,
+    ) -> Dict[str, str]:
+        """返回所有非空 hide_uid_self_value 的 {uid: pref} 映射, 启动时载入缓存。"""
+        sql = select(cls).where(col(cls.hide_uid_self_value) != "")
+        result = await session.execute(sql)
+        rows = result.scalars().all()
+        return {
+            row.uid: row.hide_uid_self_value
+            for row in rows
+            if row.uid and row.hide_uid_self_value
+        }
 
     @classmethod
     @with_session

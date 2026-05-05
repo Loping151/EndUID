@@ -229,6 +229,14 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
+      },
+      {
+        "name": "设置(取消)隐藏UID",
+        "desc": "开启/关闭自己UID在所有渲染卡片中的隐藏(前2位+****+后2位); 未设置时跟随全局HideUid",
+        "eg": "设置(取消)隐藏uid",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
       }
     ]
   },

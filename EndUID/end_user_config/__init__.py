@@ -4,6 +4,8 @@ from gsuid_core.models import Event
 
 from ..utils.alias_map import get_alias_display_name, resolve_alias_entry
 from ..utils.database.models import EndBind, EndUser
+from ..utils.hide_uid_pref import set_pref as _set_hide_uid_pref
+from ..utils.util import hide_uid as _mask_uid
 
 
 GAME_TITLE = "「终末地」"
@@ -11,6 +13,7 @@ PREFIX = get_plugin_available_prefix("EndUID")
 
 END_USER_MAP = {
     "体力背景": "stamina_bg",
+    "隐藏UID": "hide_uid_self",
 }
 
 end_user_config = SV("End用户配置")
@@ -28,6 +31,20 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
     field = END_USER_MAP.get(func)
     if not field:
         return f"{GAME_TITLE} 配置项不存在"
+
+    if func == "隐藏UID":
+        # value 已是 "on"/"off" (由调度层判定); 直接落库 + 同步缓存
+        await EndUser.update_data_by_data(
+            select_data={
+                "user_id": ev.user_id,
+                "bot_id": ev.bot_id,
+                "uid": uid,
+            },
+            update_data={f"{field}_value": value},
+        )
+        _set_hide_uid_pref(uid, value)
+        action = "已开启" if value == "on" else "已关闭"
+        return f"{GAME_TITLE} {action}隐藏UID!\nUID[{_mask_uid(uid)}]"
 
     if not value:
         await EndUser.update_data_by_data(
@@ -77,6 +94,10 @@ async def handle_end_user_config(bot: Bot, ev: Event):
     if "体力背景" in text:
         func = "体力背景"
         value = text.replace("体力背景", "").strip()
+    elif "隐藏uid" in text.lower():
+        func = "隐藏UID"
+        # 设置隐藏UID → on; 设置取消隐藏UID → off
+        value = "off" if "取消" in text else "on"
     if not func:
         return
 
@@ -84,6 +105,13 @@ async def handle_end_user_config(bot: Bot, ev: Event):
     if not uid:
         msg = f"{GAME_TITLE} 未绑定终末地账号，请先使用「{PREFIX}登录」"
         return await _send_text(bot, ev, msg)
+
+    if func == "隐藏UID":
+        # 登录前置: 必须存在该 uid 的 EndUser 行
+        end_user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
+        if not end_user:
+            msg = f"{GAME_TITLE} 当前UID[{_mask_uid(uid)}]未登录终末地, 请先使用「{PREFIX}登录」"
+            return await _send_text(bot, ev, msg)
 
     msg = await _set_end_user_value(ev, func, uid, value)
     return await _send_text(bot, ev, msg)
