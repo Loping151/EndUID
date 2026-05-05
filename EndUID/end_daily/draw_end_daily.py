@@ -23,6 +23,7 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..utils.alias_map import get_alias_url, update_alias_map_from_chars
+from ..utils.util import hide_uid
 from ..end_config import PREFIX
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
 
@@ -192,8 +193,8 @@ async def draw_end_daily_img(ev: Event, uid: str):
         "bg_url": bg_url,
         "logo_url": logo_url,
         "avatar_url": avatar_url,
-        "user_name": base.name or uid,
-        "uid": base.roleId or uid,
+        "user_name": base.name or hide_uid(uid),
+        "uid": hide_uid(base.roleId or uid),
         "user_level": base.level or 0,
         "world_level": base.worldLevel or 0,
         "stamina_icon_url": _local_b64("理智.png"),

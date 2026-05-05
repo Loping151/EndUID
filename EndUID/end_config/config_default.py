@@ -21,6 +21,11 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "开启后，查询类指令若@了他人则查询被@用户的数据，头像也取被@用户的；关闭则始终查询发送者自己。",
         True,
     ),
+    "HideUid": GsBoolConfig(
+        "隐藏uid",
+        "开启后，所有渲染卡片中显示的UID将以 前2位 + **** + 后2位 的形式显示",
+        False,
+    ),
     "NeedProxyFunc": GsListStrConfig(
         "需要代理的函数",
         "需要代理的函数",

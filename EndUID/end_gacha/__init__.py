@@ -11,6 +11,7 @@ from ..end_config import PREFIX
 from ..end_config.config_default import EndConfig
 from ..utils.database.models import EndBind, EndUser
 from ..utils.api.requests import end_api
+from ..utils.util import hide_uid
 from .get_gachalogs import (
     get_new_gachalog,
     is_uid_locked,
@@ -198,6 +199,6 @@ async def delete_gacha_record(bot: Bot, ev: Event):
 
     success = await delete_gachalogs(uid)
     if success:
-        await bot.send(f"已删除UID {uid} 的抽卡记录")
+        await bot.send(f"已删除UID {hide_uid(uid)} 的抽卡记录")
     else:
-        await bot.send(f"未找到 UID {uid} 的抽卡记录")
+        await bot.send(f"未找到 UID {hide_uid(uid)} 的抽卡记录")

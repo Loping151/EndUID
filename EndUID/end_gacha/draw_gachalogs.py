@@ -14,6 +14,7 @@ from gsuid_core.logger import logger
 from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.database.models import EndBind
+from ..utils.util import hide_uid
 from ..utils.api.model import CardDetailResponse
 from ..utils.render_utils import (
     render_html,
@@ -360,7 +361,7 @@ async def _load_card_maps(uid: str) -> tuple:
             detail = CardDetailResponse.model_validate(card_res).data.detail
             base = detail.base
             if base:
-                name = base.name or uid
+                name = base.name or hide_uid(uid)
                 level = base.level
                 if base.avatarUrl:
                     avatar_b64 = await get_image_b64_with_cache(
@@ -516,7 +517,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
 
     context = {
         "name": name,
-        "uid": uid,
+        "uid": hide_uid(uid),
         "avatar": avatar_b64,
         "level": level,
         "pools": pools,

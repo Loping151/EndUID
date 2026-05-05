@@ -13,6 +13,7 @@ from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.api.model import CardDetailResponse
 from ..utils.database.models import EndBind
+from ..utils.util import hide_uid
 from ..utils.render_utils import (
     render_html,
     image_to_base64,
@@ -97,8 +98,8 @@ async def draw_explore(ev: Event) -> Union[bytes, str]:
     domains.sort(key=lambda x: x.get("domainId", ""))
 
     context = {
-        "roleId": base.roleId if base else uid,
-        "name": base.name if base and base.name else uid,
+        "roleId": hide_uid(base.roleId if base else uid),
+        "name": base.name if base and base.name else hide_uid(uid),
         "createTime": _format_awaken_time(base.createTime) if base else "",
         "avatar": base_avatar_b64,
         "level": base.level if base else 0,

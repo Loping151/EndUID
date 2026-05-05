@@ -13,6 +13,7 @@ from gsuid_core.models import Event
 from gsuid_core.logger import logger
 
 from ..utils.alias_map import resolve_alias_entry, update_alias_map_from_chars
+from ..utils.util import hide_uid
 from ..utils.database.models import EndBind
 from ..utils.api.model import CardDetailResponse
 from ..utils.render_utils import (
@@ -346,8 +347,8 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         "profession_icon": profession_icon,
 
         # 用户信息
-        "user_name": base_info.name if base_info and base_info.name else uid,
-        "user_uid": base_info.roleId if base_info and base_info.roleId else uid,
+        "user_name": base_info.name if base_info and base_info.name else hide_uid(uid),
+        "user_uid": hide_uid(base_info.roleId if base_info and base_info.roleId else uid),
         "user_level": base_info.level if base_info and base_info.level else 0,
         "world_level": base_info.worldLevel if base_info and base_info.worldLevel else 0,
         "user_avatar": user_avatar,

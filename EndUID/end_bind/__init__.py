@@ -13,6 +13,7 @@ from ..end_config import PREFIX
 from ..utils.api.requests import end_api
 from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
 from ..utils.database.models import EndBind, EndUser
+from ..utils.util import hide_uid
 
 GAME_TITLE = "「终末地」"
 
@@ -304,7 +305,7 @@ async def check_cred(
     if endfield_role:
         msg_lines.append(f"游戏昵称: {endfield_role['nickname']}")
         msg_lines.append(f"服务器: {endfield_role['channel']}")
-        msg_lines.append(f"UID: {endfield_role['role_id']}")
+        msg_lines.append(f"UID: {hide_uid(endfield_role['role_id'])}")
     ark_count = sum(1 for r in roles if r["game_id"] == ARKNIGHTS_GAME_ID)
     if ark_count > 0:
         msg_lines.append(f"绑定明日方舟UID {ark_count} 个")
@@ -421,7 +422,7 @@ async def del_bind(bot: Bot, ev: Event):
     res_ark = await EndBind.remove_ark_uid(ev.user_id, ev.bot_id, target_uid)
 
     if res_uid != 0 and not res_ark and not deleted_any:
-        return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该UID[{target_uid}]")
+        return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该UID[{hide_uid(target_uid)}]")
 
     return await _send_text(bot, ev, f"{GAME_TITLE} 删除成功")
 
@@ -439,14 +440,14 @@ async def switch_or_view_uid(bot: Bot, ev: Event):
         if retcode == 0:
             uid_list = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
             current_uid = uid_list[0] if uid_list else None
-            msg = f"{GAME_TITLE} 切换 UID 成功！\n当前 UID: {current_uid}"
+            msg = f"{GAME_TITLE} 切换 UID 成功！\n当前 UID: {hide_uid(current_uid)}"
             return await _send_text(bot, ev, msg)
         elif retcode == -1:
             return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定任何 UID")
         elif retcode == -3:
             return await _send_text(bot, ev, f"{GAME_TITLE} 只绑定了一个 UID，无需切换")
         else:
-            return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该 UID[{target_uid}]")
+            return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该 UID[{hide_uid(target_uid)}]")
     elif "查看" in ev.command:
         bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
         uid_list = bind_data.uid.split('_') if bind_data and bind_data.uid else []
@@ -461,11 +462,11 @@ async def switch_or_view_uid(bot: Bot, ev: Event):
         idx = 1
         for uid in uid_list:
             current = " (当前)" if idx == 1 else ""
-            lines.append(f"{idx}. [终末地] {uid}{current}")
+            lines.append(f"{idx}. [终末地] {hide_uid(uid)}{current}")
             idx += 1
         if uid_list and ark_uid_list:
             lines.append("--------------------------------")
         for uid in ark_uid_list:
-            lines.append(f"{idx}. [明日方舟] {uid}")
+            lines.append(f"{idx}. [明日方舟] {hide_uid(uid)}")
             idx += 1
         return await _send_text(bot, ev, "\n".join(lines))
