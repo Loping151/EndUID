@@ -13,6 +13,7 @@ from gsuid_core.app_life import app as fastapi_app
 from fastapi.staticfiles import StaticFiles
 from .path import TEMP_PATH
 from ..end_config import EndConfig
+from ..end_config.config_default import CONFIG_DEFAULT
 
 logging.getLogger("uvicorn.access").addFilter(
     lambda record: "/end/fonts" not in record.getMessage()
@@ -61,6 +62,13 @@ _pool_generation = 0  # Incremented on browser restart to invalidate stale pages
 
 _FONT_CSS_NAME = "fonts.css"
 _FONTS_DIR = TEMP_PATH / "fonts"
+
+
+def _get_font_css_url() -> str:
+    url = EndConfig.get_config("FontCssUrl").data
+    if not url or not str(url).strip():
+        return CONFIG_DEFAULT["FontCssUrl"].data
+    return url
 
 
 def _mount_fonts() -> None:
@@ -248,7 +256,7 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
 
         if remote_render_enable and remote_url:
             try:
-                font_css_url = EndConfig.get_config("FontCssUrl").data
+                font_css_url = _get_font_css_url()
                 context["font_css_url"] = font_css_url
                 html_content = template.render(**context)
                 logger.debug(f"[End] 使用在线字体渲染 HTML: {template_name}")
@@ -268,8 +276,7 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
             if font_css_path.exists():
                 context["font_css_url"] = f"{base_url}/end/fonts/{_FONT_CSS_NAME}"
             else:
-                font_css_url = EndConfig.get_config("FontCssUrl").data
-                context["font_css_url"] = font_css_url
+                context["font_css_url"] = _get_font_css_url()
 
             html_content = template.render(**context)
             logger.debug(f"[End] 使用本地字体渲染 HTML: {template_name}")
