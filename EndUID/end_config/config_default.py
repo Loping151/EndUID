@@ -35,6 +35,14 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         ],
     ),
 
+    # ==================== 攻略配置 ====================
+    "EndGuideMaxSize": GsIntConfig(
+        "攻略图片最大大小(M)",
+        "发送攻略图片前会自动转为jpg格式，若超过此大小则自动压缩，单位MB",
+        2,
+        max_value=50,
+    ),
+
     "SigninMaster": GsBoolConfig(
         "全部开启签到",
         "开启后自动帮登录的人签到",

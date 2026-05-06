@@ -15,6 +15,7 @@ from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
+from ..end_config import EndConfig
 from ..end_wiki.skland_wiki import wiki_client
 from ..utils.image import pic_download_from_url
 from ..utils.path import TEMP_PATH, WIKI_CACHE_PATH, WIKI_GUIDE_CACHE
@@ -39,6 +40,7 @@ GUIDE_WIKI_URL = (
     "https://wiki.skland.com/endfield/detail"
     "?mainTypeId=2&subTypeId=11&gameEntryId={item_id}"
 )
+JPG_MAX_DIMENSION = 65535
 
 _guide_map: dict | None = None
 _guide_map_last_attempt: float = 0
@@ -115,6 +117,60 @@ async def _ensure_guide_map() -> dict:
         await _try_refresh_guide_map()
 
     return _guide_map or {}
+
+
+def resize_for_jpg(img: Image.Image) -> Image.Image:
+    """如果图片尺寸超过 JPG 限制，按比例缩放。"""
+    width, height = img.size
+    if width <= JPG_MAX_DIMENSION and height <= JPG_MAX_DIMENSION:
+        return img
+
+    scale = min(JPG_MAX_DIMENSION / width, JPG_MAX_DIMENSION / height)
+    new_width = int(width * scale)
+    new_height = int(height * scale)
+    logger.info(
+        f"[EndGuide] 攻略图尺寸{width}x{height}超过JPG限制，"
+        f"缩放至{new_width}x{new_height}"
+    )
+    return img.resize((new_width, new_height), Image.LANCZOS)
+
+
+def compress_image_to_jpg(img: Image.Image, max_size_mb: int) -> bytes:
+    """将图片转为 JPG，若超过 max_size_mb 则逐步降低质量压缩。"""
+    max_size_bytes = max_size_mb * 1024 * 1024
+
+    img = resize_for_jpg(img)
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG", quality=95)
+    result = buffer.getvalue()
+
+    if len(result) <= max_size_bytes:
+        return result
+
+    for quality in range(90, 10, -5):
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=quality)
+        result = buffer.getvalue()
+        if len(result) <= max_size_bytes:
+            logger.info(
+                f"[EndGuide] 攻略图压缩至quality={quality}, "
+                f"大小={len(result) / 1024 / 1024:.2f}MB"
+            )
+            return result
+
+    logger.warning(
+        f"[EndGuide] 攻略图压缩至最低质量仍超过{max_size_mb}MB, "
+        f"当前大小={len(result) / 1024 / 1024:.2f}MB"
+    )
+    return result
+
+
+def compress_image_bytes_to_jpg(image_bytes: bytes, max_size_mb: int) -> bytes:
+    with Image.open(io.BytesIO(image_bytes)) as img:
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        return compress_image_to_jpg(img, max_size_mb)
 
 
 async def _fetch_guide_items() -> dict[str, dict]:
@@ -434,6 +490,7 @@ GUIDE_IMG_CACHE = WIKI_GUIDE_CACHE / "img"
 
 async def _download_and_stitch(
     image_urls: list[str],
+    max_size_mb: int,
 ) -> Union[bytes, None]:
     """Download images and stitch them vertically into one."""
     GUIDE_IMG_CACHE.mkdir(parents=True, exist_ok=True)
@@ -450,9 +507,7 @@ async def _download_and_stitch(
         return None
 
     if len(images) == 1:
-        buf = io.BytesIO()
-        images[0].save(buf, format="JPEG", quality=85)
-        return buf.getvalue()
+        return compress_image_to_jpg(images[0], max_size_mb)
 
     max_width = max(img.width for img in images)
     total_height = 0
@@ -470,9 +525,7 @@ async def _download_and_stitch(
         canvas.paste(img, (0, y))
         y += img.height
 
-    buf = io.BytesIO()
-    canvas.save(buf, format="JPEG", quality=85)
-    return buf.getvalue()
+    return compress_image_to_jpg(canvas, max_size_mb)
 
 
 # ==================== HTML 渲染（多文本路径） ====================
@@ -521,7 +574,7 @@ def _render_struct_html(blocks: list[dict]) -> str:
 
 
 async def _render_rich_tab(
-    tab: dict, char_name: str, source_url: str
+    tab: dict, char_name: str, source_url: str, max_size_mb: int
 ) -> Optional[bytes]:
     """Render a text-heavy tab (text + images + tables) to a single image."""
     body_html = _render_struct_html(tab.get("blocks", []))
@@ -535,9 +588,10 @@ async def _render_rich_tab(
         "source_url": source_url,
     }
     try:
-        return await render_html(
+        rendered = await render_html(
             _guide_templates, "end_guide_card.html", context
         )
+        return compress_image_bytes_to_jpg(rendered, max_size_mb)
     except Exception as e:
         logger.warning(f"[EndGuide] Rich render failed: {e}")
         return None
@@ -573,6 +627,7 @@ async def get_guide(
         return
 
     wiki_url = GUIDE_WIKI_URL.format(item_id=item_id)
+    max_size_mb = EndConfig.get_config("EndGuideMaxSize").data
 
     msgs: list = []
     for tab in tabs:
@@ -585,7 +640,9 @@ async def get_guide(
 
         # Rich path: substantial text → render text+images+tables as one image
         if text_chars >= RICH_RENDER_TEXT_THRESHOLD and blocks:
-            rendered = await _render_rich_tab(tab, char_name, wiki_url)
+            rendered = await _render_rich_tab(
+                tab, char_name, wiki_url, max_size_mb
+            )
             if rendered:
                 msgs.append(f"base64://{b64encode(rendered).decode()}")
                 continue
@@ -593,7 +650,7 @@ async def get_guide(
 
         # Legacy path: stitch images vertically
         if image_urls:
-            stitched = await _download_and_stitch(image_urls)
+            stitched = await _download_and_stitch(image_urls, max_size_mb)
             if stitched:
                 msgs.append(f"base64://{b64encode(stitched).decode()}")
             else:
