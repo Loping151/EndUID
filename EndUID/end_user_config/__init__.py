@@ -4,7 +4,7 @@ from gsuid_core.models import Event
 
 from ..utils.alias_map import get_alias_display_name, resolve_alias_entry
 from ..utils.database.models import EndBind, EndUser
-from ..utils.util import hide_uid as _mask_uid
+from ..utils.util import get_hide_uid_pref, hide_uid as _mask_uid
 
 
 GAME_TITLE = "「终末地」"
@@ -45,6 +45,10 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
         return f"{GAME_TITLE} {action}隐藏UID!\nUID[{_mask_uid(uid, user_pref=value)}]"
 
     if not value:
+        masked_uid = _mask_uid(
+            uid,
+            user_pref=await get_hide_uid_pref(uid, ev.user_id, ev.bot_id),
+        )
         await EndUser.update_data_by_data(
             select_data={
                 "user_id": ev.user_id,
@@ -53,7 +57,7 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
             },
             update_data={f"{field}_value": ""},
         )
-        return f"{GAME_TITLE} 已清除{func}\n特征码[{uid}]"
+        return f"{GAME_TITLE} 已清除{func}\n特征码[{masked_uid}]"
 
     resolved = resolve_alias_entry(value)
     if not resolved:
@@ -80,7 +84,11 @@ async def _set_end_user_value(ev: Event, func: str, uid: str, value: str) -> str
     )
 
     display = get_alias_display_name(store_value) or value
-    return f"{GAME_TITLE} 设置成功!\n特征码[{uid}]\n当前{func}:{display}"
+    masked_uid = _mask_uid(
+        uid,
+        user_pref=await get_hide_uid_pref(uid, ev.user_id, ev.bot_id),
+    )
+    return f"{GAME_TITLE} 设置成功!\n特征码[{masked_uid}]\n当前{func}:{display}"
 
 
 @end_user_config.on_prefix("设置", block=True)

@@ -9,6 +9,9 @@ end_explore_sv = SV("End探索")
 
 @end_explore_sv.on_fullmatch((
     "探索",
+    "探索度",
+    "ts",
+    "tsd",
     "区域探索",
     "地图探索",
 ))
