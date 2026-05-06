@@ -92,6 +92,11 @@ async def draw_end_daily_img(ev: Event, uid: str):
         return f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
 
     user_record = await EndUser.select_end_user(uid, target_user_id, ev.bot_id)
+    user_pref = (
+        user_record.hide_uid_self_value
+        if user_record and user_record.hide_uid_self_value
+        else ""
+    )
     server_id = user_record.server_id if user_record and user_record.server_id else "1"
     skland_user_id = user_record.skland_user_id if user_record and user_record.skland_user_id else None
     res = await end_api.get_card_detail(
@@ -193,8 +198,8 @@ async def draw_end_daily_img(ev: Event, uid: str):
         "bg_url": bg_url,
         "logo_url": logo_url,
         "avatar_url": avatar_url,
-        "user_name": base.name or hide_uid(uid),
-        "uid": hide_uid(base.roleId or uid),
+        "user_name": base.name or hide_uid(uid, user_pref=user_pref),
+        "uid": hide_uid(base.roleId or uid, user_pref=user_pref),
         "user_level": base.level or 0,
         "world_level": base.worldLevel or 0,
         "stamina_icon_url": _local_b64("理智.png"),

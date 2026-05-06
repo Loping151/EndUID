@@ -14,6 +14,7 @@ from ..utils.api.requests import end_api
 from ..utils.api.model import CardDetailResponse
 from ..utils.alias_map import update_alias_map_from_chars
 from ..utils.database.models import EndBind, EndUser
+from ..utils.util import get_hide_uid_pref, hide_uid
 from ..end_config import PREFIX
 from ..utils import CHAR_NAME_PATTERN
 from ..utils.path import PLAYER_PATH
@@ -122,7 +123,13 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
     except Exception as e:
         logger.debug(f"[EndUID] 读取角色名失败: {e}")
 
-    label = f"{role_name}({target_uid})" if role_name else str(target_uid)
+    hide_uid_pref = await get_hide_uid_pref(
+        target_uid,
+        target_user_id,
+        ev.bot_id,
+    )
+    display_uid = hide_uid(target_uid, user_pref=hide_uid_pref)
+    label = f"{role_name}({display_uid})" if role_name else str(display_uid)
     return await bot.send(f"✅ 刷新成功 {label}", at_sender=at_sender)
 
 

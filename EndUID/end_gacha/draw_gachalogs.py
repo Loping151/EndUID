@@ -14,7 +14,7 @@ from gsuid_core.logger import logger
 from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.database.models import EndBind
-from ..utils.util import hide_uid
+from ..utils.util import get_hide_uid_pref, hide_uid
 from ..utils.api.model import CardDetailResponse
 from ..utils.render_utils import (
     render_html,
@@ -337,7 +337,7 @@ def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
     }
 
 
-async def _load_card_maps(uid: str) -> tuple:
+async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
     """读取 card_detail.json 并构建头像映射
     返回 (name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok)
     """
@@ -361,7 +361,7 @@ async def _load_card_maps(uid: str) -> tuple:
             detail = CardDetailResponse.model_validate(card_res).data.detail
             base = detail.base
             if base:
-                name = base.name or hide_uid(uid)
+                name = base.name or hide_uid(uid, user_pref=user_pref)
                 level = base.level
                 if base.avatarUrl:
                     avatar_b64 = await get_image_b64_with_cache(
@@ -411,6 +411,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
         return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+    user_pref = await get_hide_uid_pref(uid, ev.user_id, ev.bot_id)
 
     gacha_data = await load_gachalogs(uid)
     if not gacha_data:
@@ -433,7 +434,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     (
         name, level, avatar_b64, illustration_b64,
         char_avatar_map, weapon_icon_map, _ok,
-    ) = await _load_card_maps(uid)
+    ) = await _load_card_maps(uid, user_pref)
 
     # 若抽卡记录中存在 card_detail 里没有的六星角色，触发一次刷新并重新加载
     gacha_char_names = _collect_gacha_char_names(pool_data)
@@ -449,7 +450,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
                 (
                     name, level, avatar_b64, illustration_b64,
                     char_avatar_map, weapon_icon_map, _ok,
-                ) = await _load_card_maps(uid)
+                ) = await _load_card_maps(uid, user_pref)
         except Exception as e:
             logger.debug(f"[EndUID][Gacha] 刷新头像失败: {e}")
 
@@ -517,7 +518,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
 
     context = {
         "name": name,
-        "uid": hide_uid(uid),
+        "uid": hide_uid(uid, user_pref=user_pref),
         "avatar": avatar_b64,
         "level": level,
         "pools": pools,

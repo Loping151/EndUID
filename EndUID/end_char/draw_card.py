@@ -13,7 +13,7 @@ from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.api.model import CardDetailResponse
 from ..utils.database.models import EndBind
-from ..utils.util import hide_uid
+from ..utils.util import get_hide_uid_pref, hide_uid
 from ..utils.render_utils import (
     render_html,
     image_to_base64,
@@ -63,6 +63,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
     uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
     if not uid:
         return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+    user_pref = await get_hide_uid_pref(uid, target_user_id, ev.bot_id)
 
     from . import refresh_card_data
     success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
@@ -144,8 +145,14 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         )
 
     context = {
-        "roleId": hide_uid(base.roleId if base else uid),
-        "name": base.name if base and base.name else hide_uid(uid),
+        "roleId": hide_uid(
+            base.roleId if base else uid,
+            user_pref=user_pref,
+        ),
+        "name": base.name if base and base.name else hide_uid(
+            uid,
+            user_pref=user_pref,
+        ),
         "createTime": _format_awaken_time(base.createTime) if base else "",
         "avatarUrl": base.avatarUrl if base else "",
         "avatar": base_avatar_b64,
