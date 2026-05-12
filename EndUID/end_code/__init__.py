@@ -17,7 +17,17 @@ invalid_code_list = ()
 url = "https://newsimg.5054399.com/comm/mlcxqcommon/static/wap/js/data_171.js?{}&callback=?&_={}"
 
 
-@sv_end_code.on_fullmatch(("code", "兑换码", "兌換碼"))
+@sv_end_code.on_fullmatch(
+    ("code", "兑换码", "兌換碼"),
+    to_ai="""查询终末地（明日方舟：终末地）当前有效兑换码列表。
+
+当用户问「终末地兑换码 / end 兑换码 / 终末地 前瞻兑换码 / 有没有兑换码」时调用。
+不需要绑定 UID，结果是公开的兑换码 + 奖励 + 有效期。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def get_code_func(bot: Bot, ev: Event):
     code_list = await get_code_list()
     if not code_list:

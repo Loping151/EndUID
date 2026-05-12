@@ -28,7 +28,17 @@ task_name_ann = "订阅终末地公告"
 ann_minute_check: int = EndConfig.get_config("AnnMinuteCheck").data
 
 
-@sv_ann.on_command("公告")
+@sv_ann.on_command(
+    "公告",
+    to_ai="""查询终末地（明日方舟：终末地）官方公告：列表或指定 ID 详情。
+
+当用户问「终末地公告 / 终末地公告列表 / 终末地公告 <编号> / end 看看公告」时调用。
+不需要绑定 UID。
+
+Args:
+    text: 留空或填 "列表" 返回公告列表；填数字（"#123" / "123"）返回该 ID 公告详情。
+""",
+)
 async def ann_(bot: Bot, ev: Event):
     ann_id = ev.text.strip()
 

@@ -68,13 +68,33 @@ def _parse_gacha_token(text: str) -> tuple[str, str, str]:
     return text, channel, sub_channel
 
 
-@sv_gacha_help.on_fullmatch(("抽卡帮助", "ckbz"), block=True)
+@sv_gacha_help.on_fullmatch(
+    ("抽卡帮助", "ckbz"),
+    block=True,
+    to_ai="""返回终末地抽卡功能（导入抽卡记录 / 抽卡链接获取方式）的使用说明图。
+
+当用户问「终末地抽卡帮助 / end 抽卡说明 / 抽卡链接怎么搞」时调用。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def send_gacha_help(bot: Bot, ev: Event):
     im = await draw_gacha_help()
     await bot.send(im)
 
 
-@sv_gacha_tool.on_fullmatch(("抽卡工具", "ckgj"), block=True)
+@sv_gacha_tool.on_fullmatch(
+    ("抽卡工具", "ckgj"),
+    block=True,
+    to_ai="""返回 Windows 端抽卡链接提取工具的下载地址。
+
+当用户问「终末地抽卡工具 / end 抽卡链接提取工具 / 抽卡工具下载」时调用。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def send_gacha_tool(bot: Bot, ev: Event):
     url = EndConfig.get_config("GachaToolUrl").data
     if not url:
@@ -154,13 +174,34 @@ async def import_gacha_record(bot: Bot, ev: Event):
     await bot.send(msg if success else f"导入失败: {msg}")
 
 
-@sv_gacha_record.on_fullmatch(("抽卡记录", "ckjl"), block=True)
+@sv_gacha_record.on_fullmatch(
+    ("抽卡记录", "ckjl"),
+    block=True,
+    to_ai="""查询自己终末地账号已导入的抽卡记录统计图（各池子出货情况、保底进度等）。
+
+当用户问「我的抽卡记录 / 终末地抽卡记录 / end 抽卡记录」时调用。
+需先导入过抽卡记录。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def send_gacha_record(bot: Bot, ev: Event):
     im = await draw_gacha_card(ev)
     await bot.send(im)
 
 
-@sv_gacha_export.on_fullmatch(("导出抽卡记录", "dcckjl"), block=True)
+@sv_gacha_export.on_fullmatch(
+    ("导出抽卡记录", "dcckjl"),
+    block=True,
+    to_ai="""导出自己终末地账号的抽卡记录（标准 JSON 格式文件）。
+
+当用户问「导出抽卡记录 / 备份抽卡 / end 抽卡导出」时调用。需先导入过记录。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def export_gacha_record(bot: Bot, ev: Event):
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:

@@ -27,7 +27,17 @@ end_sign_sub_sv = SV("End订阅签到结果", pm=0)
 end_del_invalid_sv = SV("End删除无效token", priority=1, pm=1)
 
 
-@end_sign_sv.on_fullmatch(("签到"))
+@end_sign_sv.on_fullmatch(
+    ("签到"),
+    to_ai="""用户主动执行终末地（明日方舟：终末地）每日签到。
+
+当用户问「签到 / 帮我签到 / end 签到 / 终末地签到」时调用。
+需绑定 cookie。用户主动授权 AI 代为执行，不算危险写操作。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def sign_in(bot: Bot, ev: Event):
     """签到命令"""
     msg = await end_sign_handler(bot, ev)
@@ -50,7 +60,16 @@ async def sign_all(bot: Bot, ev: Event):
         signing_state.clear_state()
 
 
-@end_sign_switch_sv.on_fullmatch(("开启自动签到", "自动签到"))
+@end_sign_switch_sv.on_fullmatch(
+    ("开启自动签到", "自动签到"),
+    to_ai="""开启自己终末地 / 明日方舟账号的每日自动签到任务。
+
+当用户问「开启自动签到 / 帮我开自动签到 / 终末地自动签到」时调用。需绑定 cookie。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def enable_auto_sign(bot: Bot, ev: Event):
     from ..utils.database.models import EndBind, EndUser
 
@@ -69,7 +88,16 @@ async def enable_auto_sign(bot: Bot, ev: Event):
     return await bot.send("✅ 已开启自动签到")
 
 
-@end_sign_switch_sv.on_fullmatch(("关闭自动签到", "停止自动签到"))
+@end_sign_switch_sv.on_fullmatch(
+    ("关闭自动签到", "停止自动签到"),
+    to_ai="""关闭自己终末地 / 明日方舟账号的每日自动签到任务。
+
+当用户问「关闭自动签到 / 停止自动签到 / 关掉自动签到」时调用。需已绑定。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def disable_auto_sign(bot: Bot, ev: Event):
     from ..utils.database.models import EndBind, EndUser
 

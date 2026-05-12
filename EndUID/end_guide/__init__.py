@@ -13,6 +13,13 @@ sv_guide = SV("End攻略")
 @sv_guide.on_regex(
     rf"^(?P<name>{CHAR_NAME_PATTERN})(?:攻略|gl)$",
     block=True,
+    to_ai="""查询终末地某角色的攻略 / 配队推荐图。
+
+当用户问「<角色>攻略 / <角色>gl / 终末地<角色>怎么练」时调用。
+
+Args:
+    raw_text: 形如 "<角色名>攻略" / "<角色名>gl"。
+""",
 )
 async def guide_handler(bot: Bot, ev: Event):
     name = (ev.regex_dict or {}).get("name", "").strip()

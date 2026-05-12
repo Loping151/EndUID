@@ -80,7 +80,17 @@ sv_char_query = SV("End角色查询")
 sv_refresh = SV("End数据刷新")
 sv_card = SV("End卡片")
 
-@sv_char_query.on_regex(f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$|^({CHAR_NAME_PATTERN})mb$")
+@sv_char_query.on_regex(
+    f"^查询\s*({CHAR_NAME_PATTERN})$|^({CHAR_NAME_PATTERN})面板$|^({CHAR_NAME_PATTERN})mb$",
+    to_ai="""查询自己终末地某个角色的面板（属性 / 模组 / 武器 / 等级等）。
+
+当用户问「<角色名>面板 / 查询<角色名> / <角色名>mb / 我的终末地某角色练度」时调用。
+需绑定终末地 UID。
+
+Args:
+    raw_text: 必须形如 "查询<角色名>" / "<角色名>面板" / "<角色名>mb"。
+""",
+)
 async def send_char_card_handler(bot: Bot, ev: Event):
     char_name = ""
     if getattr(ev, "regex_group", None):
@@ -102,7 +112,18 @@ async def send_char_card_handler(bot: Bot, ev: Event):
     await bot.send(im)
 
 
-@sv_refresh.on_command(("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"), block=True)
+@sv_refresh.on_command(
+    ("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"),
+    block=True,
+    to_ai="""刷新自己终末地全部角色面板的缓存数据（实时拉接口）。
+
+当用户问「终末地刷新 / end 更新数据 / 帮我刷新面板 / 更新一下终末地」时调用。
+需绑定终末地 UID 和有效 token。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def refresh_card_detail_handler(bot: Bot, ev: Event):
     from ..utils.at_help import ruser_id
     at_sender = True if ev.group_id else False
@@ -133,7 +154,18 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
     return await bot.send(f"✅ 刷新成功 {label}", at_sender=at_sender)
 
 
-@sv_card.on_command(("卡片", "kp", "card"), block=True)
+@sv_card.on_command(
+    ("卡片", "kp", "card"),
+    block=True,
+    to_ai="""查询自己终末地账号的综合信息卡片（管理员等级、好感度、资历等综合面板）。
+
+当用户问「终末地卡片 / end 卡片 / 我的终末地信息 / 我的终末地资料卡」时调用。
+需绑定终末地 UID。
+
+Args:
+    text: 无需参数。
+""",
+)
 async def send_card_handler(bot: Bot, ev: Event):
     im = await draw_card(ev)
     await bot.send(im)
