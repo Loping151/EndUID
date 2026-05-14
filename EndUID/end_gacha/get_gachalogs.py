@@ -34,6 +34,7 @@ CHAR_POOL_TYPE_MAP = {
     "E_CharacterGachaPoolType_Special": "特许寻访",
     "E_CharacterGachaPoolType_Standard": "基础寻访",
     "E_CharacterGachaPoolType_Beginner": "启程寻访",
+    "E_CharacterGachaPoolType_Joint": "辉光庆典",
 }
 
 
@@ -131,6 +132,7 @@ async def _get_new_gachalog(
         # 构建已有记录的 seqId 集合，用于快速查重
         old_list = old_pool_data.get(pool_name, [])
         existing_seq_ids = {r.get("seqId") for r in old_list if r.get("seqId")}
+        consecutive_duplicates = 0
 
         for page in range(100000):
             res = await end_api.get_gacha_char_record(
@@ -157,7 +159,6 @@ async def _get_new_gachalog(
                 break
 
             # 检查连续重合数量
-            consecutive_duplicates = 0
             should_stop = False
             for r in data_list:
                 if r.get("seqId") in existing_seq_ids:
@@ -229,6 +230,7 @@ async def _get_new_gachalog(
         # 构建已有记录的 seqId 集合
         old_list = old_pool_data.get(display_name, [])
         existing_seq_ids = {r.get("seqId") for r in old_list if r.get("seqId")}
+        consecutive_duplicates = 0
 
         for page in range(100000): # 能达到的话，您带我走吧
             res = await end_api.get_gacha_weapon_record(
@@ -250,7 +252,6 @@ async def _get_new_gachalog(
                 break
 
             # 检查连续重合数量
-            consecutive_duplicates = 0
             should_stop = False
             for r in data_list:
                 if r.get("seqId") in existing_seq_ids:

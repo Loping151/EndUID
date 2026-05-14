@@ -457,7 +457,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     # 武器池分组合并
     weapon_up_stats = []
     weapon_std_stats = []
-    handled_pool_names = {"特许寻访", "基础寻访", "启程寻访"}
+    handled_pool_names = {"特许寻访", "基础寻访", "启程寻访", "辉光庆典"}
     for pn in sorted(pool_data.keys()):
         if not pn.startswith("武器寻访"):
             continue
@@ -472,7 +472,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     weapon_up_merged = _merge_weapon_pools(weapon_up_stats, "武器寻访") if weapon_up_stats else None
     weapon_std_merged = _merge_weapon_pools(weapon_std_stats, "武器寻访-常驻") if weapon_std_stats else None
 
-    # 池显示顺序: 特许寻访 → 基础寻访 → 武器寻访 → 武器寻访-常驻 → 启程寻访
+    # 池显示顺序: 特许寻访 → 基础寻访 → 武器寻访 → 武器寻访-常驻 → 辉光庆典 → 启程寻访
     pools = []
     if "特许寻访" in pool_data:
         pools.append(_calc_pool_stats("特许寻访", pool_data["特许寻访"]))
@@ -482,6 +482,8 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
         pools.append(weapon_up_merged)
     if weapon_std_merged:
         pools.append(weapon_std_merged)
+    if "辉光庆典" in pool_data:
+        pools.append(_calc_pool_stats("辉光庆典", pool_data["辉光庆典"]))
     if "启程寻访" in pool_data:
         pools.append(_calc_pool_stats("启程寻访", pool_data["启程寻访"]))
 
