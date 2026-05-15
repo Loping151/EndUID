@@ -4,7 +4,11 @@ from gsuid_core.models import Event
 from gsuid_core.logger import logger
 
 from ..utils import CHAR_NAME_PATTERN
-from ..utils.alias_map import resolve_alias_entry, resolve_weapon_alias
+from ..utils.alias_map import (
+    resolve_admin_gender,
+    resolve_alias_entry,
+    resolve_weapon_alias,
+)
 from .fetch import ensure_list_data, get_char_wiki, get_weapon_wiki
 from .draw_wiki import (
     draw_char_wiki,
@@ -55,10 +59,15 @@ async def wiki_handler(bot: Bot, ev: Event):
 
     logger.info(f"[EndWiki] 查询: {name} {keyword}")
 
+    admin_gender = resolve_admin_gender(name)
+
     # Check for weapon alias pattern: "{角色名}专武"
     if keyword == "专武":
-        char_resolved = resolve_alias_entry(name)
-        char_real = char_resolved[0] if char_resolved else name
+        if admin_gender:
+            char_real = "管理员"
+        else:
+            char_resolved = resolve_alias_entry(name)
+            char_real = char_resolved[0] if char_resolved else name
         weapon_name = resolve_weapon_alias(f"{char_real}专武")
         if weapon_name:
             logger.info(
@@ -79,12 +88,16 @@ async def wiki_handler(bot: Bot, ev: Event):
         )
 
     # Alias resolution
-    resolved = resolve_alias_entry(name)
-    if resolved:
-        real_name = resolved[0]
-        logger.info(f"[EndWiki] 别名解析: {name} -> {real_name}")
+    if admin_gender:
+        real_name = admin_gender
+        logger.info(f"[EndWiki] 管理员性别别名: {name} -> {real_name}")
     else:
-        real_name = name
+        resolved = resolve_alias_entry(name)
+        if resolved:
+            real_name = resolved[0]
+            logger.info(f"[EndWiki] 别名解析: {name} -> {real_name}")
+        else:
+            real_name = name
 
     # Try character
     char_wiki = await get_char_wiki(real_name)
@@ -180,11 +193,12 @@ async def postcard_handler(bot: Bot, ev: Event):
     if not name:
         return
 
-    resolved = resolve_alias_entry(name)
-    if resolved:
-        real_name = resolved[0]
+    admin_gender = resolve_admin_gender(name)
+    if admin_gender:
+        real_name = admin_gender
     else:
-        real_name = name
+        resolved = resolve_alias_entry(name)
+        real_name = resolved[0] if resolved else name
 
     logger.info(f"[EndWiki] 查询明信片: {real_name}")
 

@@ -22,7 +22,11 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
-from ..utils.alias_map import get_alias_url, update_alias_map_from_chars
+from ..utils.alias_map import (
+    get_alias_display_name,
+    get_alias_url,
+    update_alias_map_from_chars,
+)
 from ..utils.util import hide_uid
 from ..end_config import PREFIX
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
@@ -150,7 +154,18 @@ async def draw_end_daily_img(ev: Event, uid: str):
     # 角色立绘
     pile_url = ""
     if user_record and user_record.stamina_bg_value:
-        alias_url = get_alias_url(user_record.stamina_bg_value)
+        alias_url = ""
+        if (
+            get_alias_display_name(user_record.stamina_bg_value) == "管理员"
+            and detail.chars
+        ):
+            for c in detail.chars:
+                cd = c.charData
+                if cd and cd.name == "管理员" and cd.avatarRtUrl:
+                    alias_url = cd.avatarRtUrl
+                    break
+        if not alias_url:
+            alias_url = get_alias_url(user_record.stamina_bg_value)
         if alias_url:
             try:
                 pile_url = await get_image_b64_with_cache(alias_url, PILE_CACHE_PATH)

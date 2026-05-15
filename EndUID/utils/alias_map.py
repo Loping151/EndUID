@@ -245,6 +245,23 @@ def resolve_alias_entry(value: str) -> Optional[Tuple[str, AliasEntry]]:
     return None
 
 
+ADMIN_GENDER_ALIASES: Dict[str, str] = {
+    "男管理员": "管理员 (男)",
+    "管理员男": "管理员 (男)",
+    "男管": "管理员 (男)",
+    "女管理员": "管理员 (女)",
+    "管理员女": "管理员 (女)",
+    "女管": "管理员 (女)",
+    "管理员": "管理员 (女)",
+}
+
+
+def resolve_admin_gender(name: str) -> Optional[str]:
+    if not name:
+        return None
+    return ADMIN_GENDER_ALIASES.get(name.strip())
+
+
 def get_alias_url(value: str) -> Optional[str]:
     resolved = resolve_alias_entry(value)
     if not resolved:
