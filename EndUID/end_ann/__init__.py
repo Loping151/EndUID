@@ -8,6 +8,7 @@ from gsuid_core.aps import scheduler
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
+from gsuid_core.server import on_core_start
 from gsuid_core.subscribe import gs_subscribe
 
 from .ann_card import ann_list_card, ann_detail_card
@@ -267,7 +268,7 @@ async def end_auto_clean_cache_daily():
     logger.info(f"[EndUID][缓存清理] {result}")
 
 
-@scheduler.scheduled_job("date")
+@on_core_start
 async def end_clean_cache_on_startup():
     """启动时清理一次终末地缓存"""
     await asyncio.sleep(10)
