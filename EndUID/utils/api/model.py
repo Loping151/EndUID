@@ -305,6 +305,117 @@ class QuickAccess(BaseModel):
     link: str = ""
 
 
+class IndieHardEnemy(BaseModel):
+    """影拓丰碑副本敌人"""
+    id: str = ""
+    name: str = ""
+    desc: str = ""
+    level: int = 0
+    imageUrl: str = ""
+    ability: str = ""
+
+
+class BestRecordChar(BaseModel):
+    """影拓丰碑最佳通关阵容角色"""
+    charId: str = ""
+    level: int = 0
+    potentialLevel: int = 0
+    avatarUrl: str = ""
+    evolvePhase: int = 0
+    property: KeyValuePair = Field(default_factory=KeyValuePair)
+    rarity: KeyValuePair = Field(default_factory=KeyValuePair)
+
+
+class DungeonBestRecord(BaseModel):
+    """副本最佳通关记录"""
+    chars: List[BestRecordChar] = Field(default_factory=list)
+    passTs: str = ""
+    ts: str = ""
+
+
+class IndieHardDungeon(BaseModel):
+    """影拓丰碑单个副本"""
+    id: str = ""
+    name: str = ""
+    isPass: bool = False
+    recommendLevel: int = 0
+    desc: str = ""
+    feature: str = ""
+    enemies: List[IndieHardEnemy] = Field(default_factory=list)
+    bestRecord: Optional[DungeonBestRecord] = None
+
+
+class IndieHardDungeonGroup(BaseModel):
+    """影拓丰碑副本组（普通/苦难成对）"""
+    normalDungeon: IndieHardDungeon = Field(default_factory=IndieHardDungeon)
+    hardDungeon: IndieHardDungeon = Field(default_factory=IndieHardDungeon)
+
+
+class IndieHardAchievementData(BaseModel):
+    """期次勋章数据"""
+    id: str = ""
+    name: str = ""
+    initIcon: str = ""
+    reforge2Icon: str = ""
+    reforge3Icon: str = ""
+    platedIcon: str = ""
+    cateName: str = ""
+    canCertify: bool = False
+    cate: str = ""
+    initLevel: int = 0
+
+
+class IndieHardAchieve(BaseModel):
+    """期次勋章获得状态"""
+    achievementData: IndieHardAchievementData = Field(default_factory=IndieHardAchievementData)
+    level: int = 0
+    isPlated: bool = False
+    obtainTs: str = "0"
+
+
+class IndieHardGroup(BaseModel):
+    """影拓丰碑一期活动"""
+    id: str = ""
+    name: str = ""
+    pic: str = ""
+    dungeonGroups: List[IndieHardDungeonGroup] = Field(default_factory=list)
+    activityStartTs: str = ""
+    activityEndTs: str = ""
+    activityName: str = ""
+    isInActivity: bool = False
+    achieve: Optional[IndieHardAchieve] = None
+
+
+class IndieHard(BaseModel):
+    """影拓丰碑（bossRush）"""
+    indieHardGroups: List[IndieHardGroup] = Field(default_factory=list)
+
+
+class IndieHardData(BaseModel):
+    """indie-hard 接口 data 容器"""
+    indieHard: IndieHard = Field(default_factory=IndieHard)
+
+
+class IndieHardResponse(BaseModel):
+    """indie-hard 接口响应"""
+    code: int = 0
+    message: str = ""
+    timestamp: str = ""
+    data: IndieHardData = Field(default_factory=IndieHardData)
+
+
+class WeeklyMission(BaseModel):
+    """周常任务"""
+    score: int = 0
+    total: int = 0
+
+
+class SeekSuspicion(BaseModel):
+    """悬念探寻进度"""
+    count: int = 0
+    total: int = 0
+
+
 class CardDetail(BaseModel):
     """卡片详情数据"""
     base: PlayerBase = Field(default_factory=PlayerBase)
@@ -315,6 +426,9 @@ class CardDetail(BaseModel):
     dungeon: Dungeon = Field(default_factory=Dungeon)
     bpSystem: BpSystem = Field(default_factory=BpSystem)
     dailyMission: DailyMission = Field(default_factory=DailyMission)
+    weeklyMission: Optional[WeeklyMission] = None
+    indieHard: Optional[IndieHard] = None
+    seekSuspicion: Optional[SeekSuspicion] = None
     config: Optional[UserConfig] = Field(default_factory=UserConfig)
     currentTs: str = ""
     quickaccess: Optional[List[QuickAccess]] = Field(default_factory=list)

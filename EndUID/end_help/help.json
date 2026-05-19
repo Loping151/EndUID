@@ -80,6 +80,14 @@
         "need_admin": false
       },
       {
+        "name": "丰碑",
+        "desc": "查看影拓丰碑通关进度",
+        "eg": "丰碑 苦难/普通",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
         "name": "日历",
         "desc": "查看活动日历与干员寻访",
         "eg": "日历",

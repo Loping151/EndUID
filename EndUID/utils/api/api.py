@@ -47,6 +47,9 @@ ENDFIELD_ENUMS_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/enums"
 # 卡片详情（角色、武器、基地等完整数据）
 CARD_DETAIL_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/detail"
 
+# 影拓丰碑（Shadowmark Monolith）详情
+INDIE_HARD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/indie-hard"
+
 
 # 公告相关
 SKLAND_ANN_LIST_URL = "https://zonai.skland.com/web/v1/home/index"
