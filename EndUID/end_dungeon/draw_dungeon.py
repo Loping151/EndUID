@@ -37,14 +37,6 @@ PROPERTY_ICON = {
     "char_property_natural":  "自然.png",
 }
 
-PROPERTY_BG_COLOR = {
-    "char_property_physical": "#a35545",
-    "char_property_fire":     "#d97645",
-    "char_property_pulse":    "#5b78d6",
-    "char_property_cryst":    "#4ab8c4",
-    "char_property_natural":  "#68b85b",
-}
-
 from ..utils.colors import RARITY_COLORS as _RARITY_COLORS
 
 RARITY_COLOR = {f"rarity_{k}": v for k, v in _RARITY_COLORS.items()}
@@ -115,7 +107,6 @@ async def _bake_chars(chars) -> List[dict]:
             "potentialIcon": potential_icon,
             "avatar_b64": avatar_b64,
             "property_icon_b64": _property_icon_b64(c.property.key if c.property else ""),
-            "property_color": PROPERTY_BG_COLOR.get(c.property.key, "#666") if c.property else "#666",
             "rarity_color": RARITY_COLOR.get(c.rarity.key, "#888") if c.rarity else "#888",
         })
     return out

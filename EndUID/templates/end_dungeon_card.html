@@ -406,14 +406,12 @@
     }
     .char-img { width: 100%; height: 100%; object-fit: cover; }
     .prop-corner {
-        position: absolute; left: 0; top: 0;
-        width: 32px; height: 32px;
+        position: absolute; left: 3px; top: 3px;
+        width: 28px; height: 28px;
         display: flex; align-items: center; justify-content: center;
-        background: var(--prop-bg, #555);
-        border-bottom-right-radius: 10px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.85));
     }
-    .prop-corner img { width: 22px; height: 22px; object-fit: contain; }
+    .prop-corner img { width: 100%; height: 100%; object-fit: contain; }
     .level-corner {
         position: absolute; left: 0; bottom: 0;
         padding: 3px 9px;
@@ -603,7 +601,7 @@
                                     <div class="char-img-wrap">
                                         {% if c.avatar_b64 %}<img class="char-img" src="{{ c.avatar_b64 }}">{% endif %}
                                         {% if c.property_icon_b64 %}
-                                        <div class="prop-corner" style="--prop-bg: {{ c.property_color }};">
+                                        <div class="prop-corner">
                                             <img src="{{ c.property_icon_b64 }}">
                                         </div>
                                         {% endif %}
