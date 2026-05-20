@@ -29,14 +29,14 @@
     .container { position: relative; width: 100%; padding-bottom: 44px; overflow: hidden; }
 
     .bg-stack { position: absolute; inset: 0; z-index: 0;
-        background: linear-gradient(180deg, #0c0e13 0%, #07080b 100%); }
-    .bg-stack .bgtop { position: absolute; top: 0; left: 0; right: 0; width: 100%; opacity: 0.7; }
-    .bg-stack .bgmid { position: absolute; top: 320px; left: 0; right: 0; width: 100%; opacity: 0.12; mix-blend-mode: screen; }
-    .bg-stack .bgbot { position: absolute; bottom: 0; left: 0; right: 0; width: 100%; opacity: 0.6; }
+        background:
+            radial-gradient(circle at 50% 0%, #20212a 0%, #121319 45%, #0a0b0f 100%); }
+    .grid-tile { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+        opacity: 0.05; mix-blend-mode: screen; }
     .grid-deco { position: absolute; inset: 0; z-index: 1; pointer-events: none;
         background-image:
-            linear-gradient(rgba(255,216,77,0.022) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,216,77,0.022) 1px, transparent 1px);
+            linear-gradient(rgba(255,216,77,0.020) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,216,77,0.020) 1px, transparent 1px);
         background-size: 64px 64px; }
 
     .ui-layer {
@@ -436,22 +436,15 @@
         background: var(--rarity-color, #888);
     }
 
-    .footer-note {
-        text-align: center;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 14px; color: #5a5e6a;
-        margin-top: 18px; letter-spacing: 0.06em;
-    }
 </style>
 </head>
 <body>
 <div class="container">
 
-    <div class="bg-stack">
-        {% if asset_bg_top %}<img class="bgtop" src="{{ asset_bg_top }}">{% endif %}
-        {% if asset_bg_middle %}<img class="bgmid" src="{{ asset_bg_middle }}">{% endif %}
-        {% if asset_bg_bottom %}<img class="bgbot" src="{{ asset_bg_bottom }}">{% endif %}
-    </div>
+    <div class="bg-stack"></div>
+    {% if asset_grid_tile %}
+    <div class="grid-tile" style="background-image: url('{{ asset_grid_tile }}'); background-repeat: repeat; background-size: 160px 160px;"></div>
+    {% endif %}
     <div class="grid-deco"></div>
 
     <div class="ui-layer">
@@ -626,7 +619,6 @@
             {% endfor %}
         </div>
 
-        <div class="footer-note">ENDFIELD · BOSSRUSH MONUMENT · {{ diff_label_en }} TRACK · DATA FROM SKLAND</div>
 
     </div>
 

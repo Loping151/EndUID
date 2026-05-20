@@ -294,9 +294,7 @@ async def draw_dungeon_img(
     medals_plated = sum(1 for g in groups_ctx if g["medal"].get("isPlated"))
 
     context = {
-        "asset_bg_top": _local_b64("image_bgtop.webp"),
-        "asset_bg_middle": _local_b64("image_bgmiddle.webp"),
-        "asset_bg_bottom": _local_b64("image_bgbottom.webp"),
+        "asset_grid_tile": _local_b64("grid_tile.png"),
 
         "diff": diff,
         "diff_label": "苦难" if diff == "hard" else "普通",
