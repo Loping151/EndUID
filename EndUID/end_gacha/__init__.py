@@ -121,7 +121,7 @@ async def import_gacha_by_file(bot: Bot, ev: Event):
         await bot.send(msg)
 
 
-@sv_gacha_import.on_command(("导入抽卡记录", "导入抽卡", "更新抽卡记录", "更新抽卡"), block=True)
+@sv_gacha_import.on_command(("导入抽卡记录", "导入抽卡", "更新抽卡记录", "更新抽卡", "刷新抽卡记录", "刷新抽卡"), block=True)
 async def import_gacha_record(bot: Bot, ev: Event):
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
