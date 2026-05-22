@@ -131,8 +131,6 @@ async def delete_all_invalid_cookie(bot: Bot, ev: Event):
 
 @end_sign_sub_sv.on_regex("^(订阅|取消订阅)签到结果$")
 async def end_sign_result_sub(bot: Bot, ev: Event):
-    if ev.bot_id != "onebot" and ev.bot_id != "feishu" and ev.bot_id != "lark" and ev.bot_id != "qqgroup":
-        return
 
     if "取消" in ev.raw_text:
         option = "关闭"
