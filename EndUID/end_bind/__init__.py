@@ -51,7 +51,7 @@ async def _send_text(bot: Bot, ev: Event, msg: str):
 async def send_end_bind_msg(bot: Bot, ev: Event):
     if ev.user_pm > 0:
         logger.warning(f"[ENDUID·绑定] 暂不支持绑定操作")
-        return "「终末地」 暂不支持绑定操作，请使用「{PREFIX}登录」进行绑定"
+        return f"「终末地」 暂不支持绑定操作，请使用「{PREFIX}登录」进行绑定"
     text = _normalize_text(ev.text)
     if not text:
         msg = (
@@ -370,7 +370,8 @@ async def check_token(bot: Bot, ev: Event, token: str):
 @EndBindUID.on_fullmatch(("我的cred", "查看cred", "获取cred"))
 async def my_cred(bot: Bot, ev: Event):
     if ev.user_pm > 0:
-        logger.warning(f"[ENDUID·绑定] 安全起见，禁止获取token")
+        logger.warning(f"[ENDUID·绑定] 安全起见，禁止获取cred")
+        return
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
         return await _send_text(bot, ev, f"{GAME_TITLE} 未绑定账号")
