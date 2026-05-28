@@ -139,7 +139,7 @@ async def end_sign_result_sub(bot: Bot, ev: Event):
 
     if ev.group_id and option == "开启":
         from ..utils.database.models import EndSubscribe
-        await EndSubscribe.check_and_update_bot(ev.group_id, ev.bot_self_id)
+        await EndSubscribe.check_and_update_bot(ev.group_id, ev.bot_id, ev.bot_self_id)
 
     if option == "关闭":
         await gs_subscribe.delete_subscribe("single", TASK_NAME_SIGN_RESULT, ev)
@@ -240,6 +240,7 @@ scheduler.add_job(
     "date",
     run_date=startup_time,
     id="end_resume_signing_on_startup",
+    replace_existing=True,
 )
 logger.info("[ENDUID·签到] 已注册启动恢复任务，将在启动后10秒检查未完成的签到")
 

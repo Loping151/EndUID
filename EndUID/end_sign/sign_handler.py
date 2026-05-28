@@ -30,13 +30,24 @@ async def end_sign_handler(bot: Bot, ev: Event) -> str:
         game_name = GAME_NAMES.get(user.game_id, "")
         nickname = user.nickname or user.uid
         display = f"{game_name} {nickname}" if game_name else nickname
-        result = await do_sign_in(user.uid, user.cookie, display, game_id=user.game_id)
+        result = await do_sign_in(
+            user.uid, user.cookie, display,
+            game_id=user.game_id,
+            user_id=user.user_id, bot_id=user.bot_id,
+        )
         results.append(result)
 
     return "\n".join(results)
 
 
-async def do_sign_in(uid: str, cred: str, nickname: str, game_id: int = ENDFIELD_GAME_ID) -> str:
+async def do_sign_in(
+    uid: str,
+    cred: str,
+    nickname: str,
+    game_id: int = ENDFIELD_GAME_ID,
+    user_id: str = "",
+    bot_id: str = "",
+) -> str:
     """执行签到操作
 
     Args:
@@ -44,6 +55,8 @@ async def do_sign_in(uid: str, cred: str, nickname: str, game_id: int = ENDFIELD
         cred: 森空岛 Cred
         nickname: 游戏昵称
         game_id: 游戏 ID
+        user_id: QQ 用户 ID（凭证失效时用于 mark_invalid，留空则跳过）
+        bot_id: bot 平台 ID（同上）
 
     Returns:
         签到结果消息
@@ -78,6 +91,14 @@ async def do_sign_in(uid: str, cred: str, nickname: str, game_id: int = ENDFIELD
     # 今日已签到
     elif code == 10001:
         return f"ℹ️ [{nickname}] 今天已经签到过了"
+
+    # 凭证失效
+    elif code in (RespCode.CRED_INVALID, RespCode.TOKEN_INVALID, RespCode.LOGIN_EXPIRED):
+        record_fail()
+        logger.warning(f"[ENDUID·签到] {nickname} 凭证失效（code={code}），标记为无效")
+        if user_id and bot_id:
+            await EndUser.mark_invalid(uid, user_id, bot_id, game_id)
+        return f"❌ [{nickname}] 签到失败（凭证失效，请重新登录）"
 
     # 其他错误
     else:
