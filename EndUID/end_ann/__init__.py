@@ -73,7 +73,7 @@ async def sub_ann_(bot: Bot, ev: Event):
     )
 
     if ev.group_id:
-        await EndSubscribe.check_and_update_bot(ev.group_id, ev.bot_self_id)
+        await EndSubscribe.check_and_update_bot(ev.group_id, ev.bot_id, ev.bot_self_id)
 
     data = await gs_subscribe.get_subscribe(task_name_ann)
     is_resubscribe = False
@@ -117,7 +117,12 @@ async def unsub_ann_(bot: Bot, ev: Event):
     return await bot.send("未曾订阅终末地公告！")
 
 
-@scheduler.scheduled_job("interval", minutes=ann_minute_check)
+@scheduler.scheduled_job(
+    "interval",
+    minutes=ann_minute_check,
+    id="end_ann_check",
+    replace_existing=True,
+)
 async def check_end_ann():
     if not EndConfig.get_config("AnnOpen").data:
         return
@@ -152,20 +157,29 @@ async def check_end_ann_state():
         return
 
     logger.info(f"「终末地公告」 更新公告id: {new_ann_need_send}")
-    save_ids = sorted(ids, reverse=True) + new_ann_ids
-    set_ann_new_ids(list(set(save_ids)))
 
+    # 推送成功（或被 is_check_time 跳过）才加入已处理集合，避免推送失败永久丢消息
+    processed_ids: list = list(ids)
     for ann_id in new_ann_need_send:
         try:
             img = await ann_detail_card(ann_id, is_check_time=True)
-            if isinstance(img, str):
-                continue
+        except Exception as e:
+            logger.exception(e)
+            continue
+
+        if isinstance(img, str):
+            processed_ids.append(ann_id)
+            continue
+
+        try:
             for subscribe in datas:
                 await subscribe.send(img)
                 await asyncio.sleep(random.uniform(1, 3))
+            processed_ids.append(ann_id)
         except Exception as e:
             logger.exception(e)
 
+    set_ann_new_ids(sorted(set(processed_ids), reverse=True))
     logger.info("「终末地公告」 推送完毕")
 
 
@@ -253,7 +267,13 @@ async def end_clean_cache_(bot: Bot, ev: Event):
     await bot.send(result)
 
 
-@scheduler.scheduled_job("cron", hour=3, minute=30)
+@scheduler.scheduled_job(
+    "cron",
+    hour=3,
+    minute=30,
+    id="end_ann_clean_cache_daily",
+    replace_existing=True,
+)
 async def end_auto_clean_cache_daily():
     """每天凌晨3:30自动清理终末地缓存"""
     logger.info(f"[ENDUID·缓存清理] 定时任务: 开始清理缓存，保留{CACHE_DAYS_TO_KEEP}天内的文件")

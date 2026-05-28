@@ -13,7 +13,6 @@ from gsuid_core.utils.image.convert import convert_img
 from ..utils.api.requests import end_api
 from ..utils.path import ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH
 from ..utils.render_utils import (
-    PLAYWRIGHT_AVAILABLE,
     render_html,
     get_image_b64_with_cache,
     image_to_base64,
