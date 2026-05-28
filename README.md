@@ -14,13 +14,19 @@
 
 **需要安装额外依赖 [Node.js](https://nodejs.org/)。**
 
-**建议安装 `playwright`，用于渲染公告、wiki图等功能：**
+**渲染方案二选一：**
+
+**方案 A：本地 `playwright`**（自带浏览器）
 ```bash
 # Linux/Mac
 source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium
 # Windows
 .venv\Scripts\activate; uv pip install playwright; uv run playwright install chromium
 ```
+
+**方案 B：外置渲染服务**（无需本地浏览器）
+自建外置渲染：[RemoteRender](https://github.com/Loping151/RemoteRender)。
+在配置中开启 `RemoteRenderEnable` 并填写 `RemoteRenderUrl`（默认 `http://127.0.0.1:3000/render`），所有 HTML→图渲染会走外置服务，本地无需安装 playwright/chromium。日历模块也已重写为纯 HTTP 直连，不再依赖浏览器；其他指令（公告/抽卡/wiki/基建/日常等）只要外置渲染服务可达即可。
 
 ```bash
 cd gsuid_core/gsuid_core/plugins
