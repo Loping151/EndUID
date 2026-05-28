@@ -20,9 +20,9 @@ from ..end_config import EndConfig, PREFIX
 async def end_sign_handler(bot: Bot, ev: Event) -> str:
     """用户签到处理（签到该用户绑定的所有游戏 UID）"""
     users = await EndUser.select_data_list(user_id=ev.user_id, bot_id=ev.bot_id)
-    users = [u for u in users if u.cookie]
+    users = [u for u in users if u.cookie and u.cookie_status != "无效"]
     if not users:
-        return f"未绑定账号，请先使用「{PREFIX}登录」"
+        return f"未绑定账号或凭证已失效，请使用「{PREFIX}登录」"
 
     GAME_NAMES = {ENDFIELD_GAME_ID: "终末地", ARKNIGHTS_GAME_ID: "明日方舟"}
     results = []
@@ -413,17 +413,17 @@ async def build_sign_report_msgs(
                 f"本群共签到成功 {group_success} 人\n"
             )
 
-            # 从群组绑定表获取 bot_self_id，如果没有则 fallback 到第一个 user 的 bot_id
-            bot_id = await EndSubscribe.get_group_bot(group_id)
-            if not bot_id:
+            # 从群组绑定表获取 (bot_id, bot_self_id)，没有则 fallback 到第一个 user 的 bot_id
+            record = await EndSubscribe.get_group_bot(group_id)
+            if record:
+                bot_id, bot_self_id = record
+            else:
                 bot_id = users[0].bot_id
+                bot_self_id = ""
                 logger.debug(f"[ENDUID·签到] 群 {group_id} 未在 EndSubscribe 中找到绑定，使用 fallback bot_id: {bot_id}")
 
             if group_id not in group_msgs:
-                group_msgs[group_id] = {}
-
-            if bot_id not in group_msgs[group_id]:
-                group_msgs[group_id][bot_id] = []
+                group_msgs[group_id] = []
 
             # 构建完整消息（标题 + at 失败成员）
             messages = [MessageSegment.text(title)]
@@ -434,7 +434,7 @@ async def build_sign_report_msgs(
                         MessageSegment.at(user.user_id),
                         MessageSegment.text(" 签到失败"),
                     ])
-            group_msgs[group_id][bot_id].append(messages)
+            group_msgs[group_id].append((bot_id, bot_self_id, messages))
 
     return private_msgs, group_msgs
 
@@ -444,7 +444,7 @@ async def send_sign_report(private_msgs: Dict, group_msgs: Dict) -> None:
 
     Args:
         private_msgs: 私聊消息字典 {user_id: {bot_id: [messages]}}
-        group_msgs: 群消息字典 {group_id: {bot_id: [messages]}}
+        group_msgs: 群消息字典 {group_id: [(bot_id, bot_self_id, messages), ...]}
     """
     from gsuid_core.gss import gss
 
@@ -460,13 +460,13 @@ async def send_sign_report(private_msgs: Dict, group_msgs: Dict) -> None:
                 except Exception as e:
                     logger.error(f"[ENDUID·签到] 私聊推送失败 ({user_id}): {e}")
 
-    for group_id, bot_data in group_msgs.items():
-        for bot_id, messages in bot_data.items():
+    for group_id, entries in group_msgs.items():
+        for bot_id, bot_self_id, messages in entries:
             for active_id in gss.active_bot:
                 try:
                     for msg in messages:
                         await gss.active_bot[active_id].target_send(
-                            msg, "group", group_id, bot_id, "", ""
+                            msg, "group", group_id, bot_id, bot_self_id, ""
                         )
                         await asyncio.sleep(0.5 + random.uniform(1, 3))
                 except Exception as e:

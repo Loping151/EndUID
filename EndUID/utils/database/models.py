@@ -563,12 +563,14 @@ class EndSubscribe(BaseModel, table=True):
         cls,
         session: AsyncSession,
         group_id: str,
-    ) -> Optional[str]:
-        """获取群组当前的bot_self_id"""
+    ) -> Optional[tuple[str, str]]:
+        """获取群组当前的 (bot_id, bot_self_id)"""
         sql = select(cls).where(cls.group_id == group_id)
         result = await session.execute(sql)
         record = result.scalars().first()
-        return record.bot_self_id if record else None
+        if not record:
+            return None
+        return record.bot_id, record.bot_self_id
 
 
 class EndUserActivity(BaseBotIDModel, table=True):
