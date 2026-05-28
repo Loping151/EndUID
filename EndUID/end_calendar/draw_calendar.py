@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import time
@@ -19,6 +20,7 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..utils.path import CACHE_BASE
+from .zonai_client import fetch_landing as _fetch_landing_http
 
 TEXTURE_PATH = Path(__file__).parent.parent / "end_char" / "texture2d"
 TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
@@ -32,10 +34,11 @@ calendar_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 CACHE_DURATION = 3600  # 1 hour
 _cache: Dict[str, dict] = {}
 _cache_time: float = 0
+_fetch_lock = asyncio.Lock()
 
 
 async def _fetch_wiki_data() -> Optional[Dict]:
-    """Use Playwright to intercept wiki API responses."""
+    """先走 HTTP 直连 zonai；拿不全才 fallback playwright 拦截。"""
     global _cache, _cache_time
 
     now = time.time()
@@ -43,6 +46,32 @@ async def _fetch_wiki_data() -> Optional[Dict]:
         logger.debug("[ENDUID·日历] 使用缓存数据")
         return _cache
 
+    async with _fetch_lock:
+        # 拿锁后 double-check：等待期间另一协程可能已刷新
+        now = time.time()
+        if _cache and (now - _cache_time) < CACHE_DURATION:
+            logger.debug("[ENDUID·日历] 使用缓存数据（等待后命中）")
+            return _cache
+
+        results = await _fetch_landing_http()
+        if results:
+            _cache = results
+            _cache_time = time.time()
+            logger.info(f"[ENDUID·日历] HTTP 获取数据: {list(results.keys())}")
+            return results
+
+        logger.warning("[ENDUID·日历] HTTP 拉取失败，fallback 到 playwright")
+        results = await _fetch_wiki_data_via_playwright()
+        if not results:
+            return None
+
+        _cache = results
+        _cache_time = time.time()
+        logger.info(f"[ENDUID·日历] playwright 获取数据: {list(results.keys())}")
+        return results
+
+
+async def _fetch_wiki_data_via_playwright() -> Optional[Dict]:
     try:
         from playwright.async_api import async_playwright
     except ImportError:
@@ -83,14 +112,7 @@ async def _fetch_wiki_data() -> Optional[Dict]:
         logger.error(f"[ENDUID·日历] Playwright 异常: {e}")
         return None
 
-    if not results:
-        logger.warning("[ENDUID·日历] 未获取到任何数据")
-        return None
-
-    _cache = results
-    _cache_time = time.time()
-    logger.info(f"[ENDUID·日历] 获取数据: {list(results.keys())}")
-    return results
+    return results if results else None
 
 
 def _ts_to_str(ts_str: str, fmt: str = "%m.%d %H:%M") -> str:
