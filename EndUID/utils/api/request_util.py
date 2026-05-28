@@ -128,24 +128,6 @@ def _get_device_id_from_smsdk(
     return device_id
 
 
-def check_node_version() -> Optional[str]:
-    try:
-        result = subprocess.run(
-            ["node", "-v"],
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError:
-        return None
-
-    if result.returncode != 0:
-        return None
-
-    version = (result.stdout or "").strip()
-    return version or None
-
-
-
 def get_base_header(
     cred: str,
     timestamp: str,

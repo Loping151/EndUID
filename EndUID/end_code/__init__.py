@@ -1,4 +1,3 @@
-import re
 import json
 import time
 from datetime import datetime
@@ -11,8 +10,6 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
 sv_end_code = SV("终末地兑换码")
-
-invalid_code_list = ()
 
 url = "https://newsimg.5054399.com/comm/mlcxqcommon/static/wap/js/data_171.js?{}&callback=?&_={}"
 
@@ -39,7 +36,7 @@ async def get_code_func(bot: Bot, ev: Event):
         if is_fail == "1":
             continue
         order = code.get("order", "")
-        if order in invalid_code_list or not order:
+        if not order:
             continue
         reward = code.get("reward", "")
         label = code.get("label", "")
@@ -64,43 +61,3 @@ async def get_code_list():
     except Exception as e:
         logger.exception("[ENDUID·获取兑换码失败] ", e)
         return
-
-
-def is_code_expired(label: str) -> bool:
-    if not label:
-        return False
-
-    # 使用正则提取月份和日期
-    pattern = r"(\d{1,2})月(\d{1,2})日(\d{1,2})点"
-    match = re.search(pattern, label)
-    if not match:
-        return False
-
-    expire_month = int(match.group(1))
-    expire_day = int(match.group(2))
-    expire_hour = int(match.group(2))
-
-    now = datetime.now()
-    current_month = now.month
-
-    expire_year = now.year
-    # 处理跨年的情况
-    if current_month < expire_month:
-        expire_year -= 1
-    elif current_month == expire_month:
-        if now.day > expire_day:
-            expire_year += 1
-    else:
-        pass
-
-    if expire_hour == 24:
-        expire_hour = 23
-        expire_min = 59
-        expire_sec = 59
-    else:
-        expire_min = 0
-        expire_sec = 0
-
-    expire_date = datetime(expire_year, expire_month, expire_day, expire_hour, expire_min, expire_sec)
-
-    return now > expire_date

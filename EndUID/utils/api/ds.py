@@ -82,34 +82,3 @@ def generate_sign(
 
 
 
-def sign_get_request(
-    token: str,
-    path: str,
-    params: dict = None,
-    platform: str = "3",
-    vname: str = "1.0.0",
-    did: str = "",
-) -> dict:
-    """为 GET 请求生成签名"""
-    query_string = ""
-    if params:
-        query_string = "&".join([f"{k}={v}" for k, v in sorted(params.items())])
-
-    return generate_sign(token, path, query_string, platform=platform, vname=vname, did=did)
-
-
-def sign_post_request(
-    token: str,
-    path: str,
-    body: dict = None,
-    platform: str = "3",
-    vname: str = "1.0.0",
-    did: str = "",
-) -> dict:
-    """为 POST 请求生成签名"""
-    body_string = ""
-    if body:
-        # 注意：JSON 序列化不能有空格
-        body_string = json.dumps(body, separators=(',', ':'))
-
-    return generate_sign(token, path, body_string, platform=platform, vname=vname, did=did)
