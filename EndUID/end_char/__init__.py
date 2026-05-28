@@ -64,7 +64,7 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
         async with aiofiles.open(save_path, "w", encoding="utf-8") as f:
             await f.write(json.dumps(res, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndUID] 卡片详情写入失败: {e}")
+        logger.warning(f"[ENDUID·角色] 卡片详情写入失败: {e}")
         return False, "❌ 刷新失败：保存卡片详情失败"
 
     try:
@@ -72,7 +72,7 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
         if detail.chars:
             update_alias_map_from_chars(detail.chars)
     except Exception as e:
-        logger.warning(f"[EndUID] 刷新后别名更新失败: {e}")
+        logger.warning(f"[ENDUID·角色] 刷新后别名更新失败: {e}")
 
     return True, ""
 
@@ -106,7 +106,7 @@ async def send_char_card_handler(bot: Bot, ev: Event):
         return
 
     char_name = char_name.strip()
-    logger.info(f"[EndUID] 收到角色查询请求: {char_name}")
+    logger.info(f"[ENDUID·角色] 收到角色查询请求: {char_name}")
 
     im = await draw_char_card(ev, char_name)
     await bot.send(im)
@@ -142,7 +142,7 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
         if detail.base and detail.base.name:
             role_name = detail.base.name
     except Exception as e:
-        logger.debug(f"[EndUID] 读取角色名失败: {e}")
+        logger.debug(f"[ENDUID·角色] 读取角色名失败: {e}")
 
     hide_uid_pref = await get_hide_uid_pref(
         target_uid,

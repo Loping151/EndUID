@@ -387,7 +387,7 @@ async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
                 )
             ok = True
     except Exception as e:
-        logger.warning(f"[EndUID][Gacha] 读取卡片详情失败: {e}")
+        logger.warning(f"[ENDUID·抽卡] 读取卡片详情失败: {e}")
 
     return name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok
 
@@ -429,7 +429,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
             from ..end_char import refresh_card_data
             await refresh_card_data(ev.user_id, ev.bot_id)
         except Exception as e:
-            logger.debug(f"[EndUID][Gacha] 自动刷新失败: {e}")
+            logger.debug(f"[ENDUID·抽卡] 自动刷新失败: {e}")
 
     (
         name, level, avatar_b64, illustration_b64,
@@ -441,7 +441,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
     missing_chars = gacha_char_names - set(char_avatar_map.keys())
     if missing_chars:
         logger.info(
-            f"[EndUID][Gacha] 六星角色头像缺失 {missing_chars}，触发刷新"
+            f"[ENDUID·抽卡] 六星角色头像缺失 {missing_chars}，触发刷新"
         )
         try:
             from ..end_char import refresh_card_data
@@ -452,7 +452,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
                     char_avatar_map, weapon_icon_map, _ok,
                 ) = await _load_card_maps(uid, user_pref)
         except Exception as e:
-            logger.debug(f"[EndUID][Gacha] 刷新头像失败: {e}")
+            logger.debug(f"[ENDUID·抽卡] 刷新头像失败: {e}")
 
     # 武器池分组合并
     weapon_up_stats = []

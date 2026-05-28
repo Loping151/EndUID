@@ -75,7 +75,7 @@ async def _composite_gem_icon(icon_url: str, rarity: int) -> str:
         data = buf.read()
         return f"data:image/png;base64,{base64.b64encode(data).decode('utf-8')}"
     except Exception as e:
-        logger.warning(f"[EndUID] Gem icon composite failed: {e}")
+        logger.warning(f"[ENDUID·角色面板] Gem icon composite failed: {e}")
         return ""
 
 
@@ -91,7 +91,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     char_id = entry.get("id")
     
     if not char_id:
-        logger.warning(f"[EndUID] 角色 {real_name} 的数据条目缺少 ID")
+        logger.warning(f"[ENDUID·角色面板] 角色 {real_name} 的数据条目缺少 ID")
         return
 
     # 2. 获取用户绑定信息
@@ -104,12 +104,12 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     user_pref = await get_hide_uid_pref(uid, target_user_id, ev.bot_id)
 
     # 3. 读取本地数据（由刷新指令写入）
-    logger.info(f"[EndUID] 正在查询角色: {real_name} (ID: {char_id})")
+    logger.info(f"[ENDUID·角色面板] 正在查询角色: {real_name} (ID: {char_id})")
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
     if not save_path.exists():
         # 自动刷新一次
-        logger.info(f"[EndUID] 未找到本地数据，自动刷新中...")
+        logger.info(f"[ENDUID·角色面板] 未找到本地数据，自动刷新中...")
         from . import refresh_card_data
         success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
         if not success:
@@ -120,7 +120,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
             raw = await f.read()
         data_res = json.loads(raw)
     except Exception as e:
-        logger.warning(f"[EndUID] 本地卡片数据读取失败: {e}")
+        logger.warning(f"[ENDUID·角色面板] 本地卡片数据读取失败: {e}")
         return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
          
     if data_res.get("code") != 0:
@@ -130,7 +130,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     try:
         detail = CardDetailResponse.model_validate(data_res).data.detail
     except Exception as e:
-        logger.error(f"[EndUID] 卡片详情解析失败: {e}")
+        logger.error(f"[ENDUID·角色面板] 卡片详情解析失败: {e}")
         return "❌ 角色数据解析失败"
 
     if detail.chars:

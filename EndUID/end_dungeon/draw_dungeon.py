@@ -95,7 +95,7 @@ async def _bake_chars(chars) -> List[dict]:
             try:
                 avatar_b64 = await get_image_b64_with_cache(c.avatarUrl, AVATAR_CACHE_PATH)
             except Exception as e:
-                logger.warning(f"[EndUID] 阵容头像下载失败 {c.charId}: {e}")
+                logger.warning(f"[ENDUID·关卡] 阵容头像下载失败 {c.charId}: {e}")
 
         # 潜能图标（webpack publicPath 中 potential_2~5.png 已下载；0-1 不显示）
         potential_icon = ""
@@ -152,7 +152,7 @@ async def _build_group_ctx(group: IndieHardGroup, diff: str) -> dict:
                     icon_url, PILE_CACHE_PATH, quality=85, cover_size=(180, 180),
                 )
             except Exception as e:
-                logger.warning(f"[EndUID] 勋章图标失败 {data.id}: {e}")
+                logger.warning(f"[ENDUID·关卡] 勋章图标失败 {data.id}: {e}")
         medal = {
             "name": (data.name or "").strip(' "“”\''),
             "obtained": achieve.level > 0,
@@ -214,12 +214,12 @@ async def draw_dungeon_img(
         async with aiofiles.open(player_dir / "indie_hard.json", "w", encoding="utf-8") as f:
             await f.write(json.dumps(res, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndUID] 丰碑详情写入失败: {e}")
+        logger.warning(f"[ENDUID·关卡] 丰碑详情写入失败: {e}")
 
     try:
         parsed = IndieHardResponse.model_validate(res).data.indieHard
     except Exception as e:
-        logger.error(f"[EndUID] 丰碑详情解析失败: {e}")
+        logger.error(f"[ENDUID·关卡] 丰碑详情解析失败: {e}")
         return "❌ 解析丰碑详情失败"
 
     groups = parsed.indieHardGroups
@@ -265,7 +265,7 @@ async def draw_dungeon_img(
                     base["avatarUrl"], AVATAR_CACHE_PATH,
                 )
     except Exception as e:
-        logger.warning(f"[EndUID] 基础信息读取失败: {e}")
+        logger.warning(f"[ENDUID·关卡] 基础信息读取失败: {e}")
 
     at_avatar = await get_at_avatar_b64(ev)
     if at_avatar:
@@ -280,7 +280,7 @@ async def draw_dungeon_img(
                     g.pic, PILE_CACHE_PATH, quality=85, cover_size=(560, 760),
                 )
             except Exception as e:
-                logger.warning(f"[EndUID] 丰碑封面下载失败 {g.id}: {e}")
+                logger.warning(f"[ENDUID·关卡] 丰碑封面下载失败 {g.id}: {e}")
                 gctx["pic_b64"] = ""
         else:
             gctx["pic_b64"] = ""

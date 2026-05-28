@@ -55,12 +55,12 @@ def generate_sign(
     # 3. 构造签名字符串
     sign_string = path + query_or_body + str(timestamp) + header_json
 
-    logger.debug(f"[签名调试] path={path}")
-    logger.debug(f"[签名调试] query_or_body={query_or_body}")
-    logger.debug(f"[签名调试] timestamp={timestamp}")
-    logger.debug(f"[签名调试] header_json={header_json}")
-    logger.debug(f"[签名调试] sign_string={sign_string}")
-    logger.debug(f"[签名调试] token={token[:20]}...")
+    logger.debug(f"[ENDUID·签名调试] path={path}")
+    logger.debug(f"[ENDUID·签名调试] query_or_body={query_or_body}")
+    logger.debug(f"[ENDUID·签名调试] timestamp={timestamp}")
+    logger.debug(f"[ENDUID·签名调试] header_json={header_json}")
+    logger.debug(f"[ENDUID·签名调试] sign_string={sign_string}")
+    logger.debug(f"[ENDUID·签名调试] token={token[:20]}...")
 
     # 4. HMAC-SHA256 加密
     hmac_hash = hmac.new(
@@ -72,8 +72,8 @@ def generate_sign(
     # 5. MD5 二次加密
     md5_hash = hashlib.md5(hmac_hash.encode('utf-8')).hexdigest()
 
-    logger.debug(f"[签名调试] hmac_hash={hmac_hash}")
-    logger.debug(f"[签名调试] md5_hash={md5_hash}")
+    logger.debug(f"[ENDUID·签名调试] hmac_hash={hmac_hash}")
+    logger.debug(f"[ENDUID·签名调试] md5_hash={md5_hash}")
 
     return {
         "sign": md5_hash,

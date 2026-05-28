@@ -247,7 +247,7 @@ async def clean_cache_directories(days: int) -> str:
 @sv_ann_clear_cache.on_fullmatch(("清理缓存", "删除缓存"), block=True)
 async def end_clean_cache_(bot: Bot, ev: Event):
     """手动清理缓存指令"""
-    logger.info(f"[EndUID][缓存清理] 手动触发清理，保留{CACHE_DAYS_TO_KEEP}天内的文件")
+    logger.info(f"[ENDUID·缓存清理] 手动触发清理，保留{CACHE_DAYS_TO_KEEP}天内的文件")
 
     result = await clean_cache_directories(CACHE_DAYS_TO_KEEP)
     await bot.send(result)
@@ -256,10 +256,10 @@ async def end_clean_cache_(bot: Bot, ev: Event):
 @scheduler.scheduled_job("cron", hour=3, minute=30)
 async def end_auto_clean_cache_daily():
     """每天凌晨3:30自动清理终末地缓存"""
-    logger.info(f"[EndUID][缓存清理] 定时任务: 开始清理缓存，保留{CACHE_DAYS_TO_KEEP}天内的文件")
+    logger.info(f"[ENDUID·缓存清理] 定时任务: 开始清理缓存，保留{CACHE_DAYS_TO_KEEP}天内的文件")
 
     result = await clean_cache_directories(CACHE_DAYS_TO_KEEP)
-    logger.info(f"[EndUID][缓存清理] {result}")
+    logger.info(f"[ENDUID·缓存清理] {result}")
 
 
 @on_core_start
@@ -267,7 +267,7 @@ async def end_clean_cache_on_startup():
     """启动时清理一次终末地缓存"""
     await asyncio.sleep(10)
 
-    logger.info(f"[EndUID][缓存清理] 启动时清理，保留{CACHE_DAYS_TO_KEEP}天内的文件")
+    logger.info(f"[ENDUID·缓存清理] 启动时清理，保留{CACHE_DAYS_TO_KEEP}天内的文件")
 
     result = await clean_cache_directories(CACHE_DAYS_TO_KEEP)
-    logger.info(f"[EndUID][缓存清理] {result}")
+    logger.info(f"[ENDUID·缓存清理] {result}")

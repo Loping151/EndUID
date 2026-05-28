@@ -40,13 +40,13 @@ async def _fetch_wiki_data() -> Optional[Dict]:
 
     now = time.time()
     if _cache and (now - _cache_time) < CACHE_DURATION:
-        logger.debug("[EndUID][Calendar] 使用缓存数据")
+        logger.debug("[ENDUID·日历] 使用缓存数据")
         return _cache
 
     try:
         from playwright.async_api import async_playwright
     except ImportError:
-        logger.error("[EndUID][Calendar] Playwright 未安装")
+        logger.error("[ENDUID·日历] Playwright 未安装")
         return None
 
     results: Dict[str, dict] = {}
@@ -76,20 +76,20 @@ async def _fetch_wiki_data() -> Optional[Dict]:
                 )
                 await page.wait_for_timeout(6000)
             except Exception as e:
-                logger.warning(f"[EndUID][Calendar] 页面加载异常: {e}")
+                logger.warning(f"[ENDUID·日历] 页面加载异常: {e}")
 
             await browser.close()
     except Exception as e:
-        logger.error(f"[EndUID][Calendar] Playwright 异常: {e}")
+        logger.error(f"[ENDUID·日历] Playwright 异常: {e}")
         return None
 
     if not results:
-        logger.warning("[EndUID][Calendar] 未获取到任何数据")
+        logger.warning("[ENDUID·日历] 未获取到任何数据")
         return None
 
     _cache = results
     _cache_time = time.time()
-    logger.info(f"[EndUID][Calendar] 获取数据: {list(results.keys())}")
+    logger.info(f"[ENDUID·日历] 获取数据: {list(results.keys())}")
     return results
 
 

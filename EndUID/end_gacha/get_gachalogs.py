@@ -48,7 +48,7 @@ async def load_gachalogs(uid: str) -> Optional[dict]:
             raw = await f.read()
         return json.loads(raw)
     except Exception as e:
-        logger.error(f"[EndUID][Gacha] 读取抽卡记录失败: {e}")
+        logger.error(f"[ENDUID·抽卡] 读取抽卡记录失败: {e}")
         return None
 
 
@@ -60,9 +60,9 @@ async def save_gachalogs(uid: str, gacha_data: dict):
     try:
         async with aiofiles.open(path, "w", encoding="utf-8") as f:
             await f.write(json.dumps(gacha_data, ensure_ascii=False, indent=2))
-        logger.info(f"[EndUID][Gacha] 保存抽卡记录成功: uid={uid}")
+        logger.info(f"[ENDUID·抽卡] 保存抽卡记录成功: uid={uid}")
     except Exception as e:
-        logger.error(f"[EndUID][Gacha] 保存抽卡记录失败: {e}")
+        logger.error(f"[ENDUID·抽卡] 保存抽卡记录失败: {e}")
 
 
 def _seq_id_sort_key(record: dict) -> tuple:
@@ -125,7 +125,7 @@ async def _get_new_gachalog(
     request_interval = _get_request_interval()
 
     for pool_type, pool_name in CHAR_POOL_TYPE_MAP.items():
-        logger.info(f"[EndUID][Gacha] 拉取 {pool_name} (pool_type={pool_type})")
+        logger.info(f"[ENDUID·抽卡] 拉取 {pool_name} (pool_type={pool_type})")
         records = []
         seq_id = None
 
@@ -142,7 +142,7 @@ async def _get_new_gachalog(
                 seq_id=seq_id,
             )
             if not res:
-                logger.warning(f"[EndUID][Gacha] {pool_name} 请求失败")
+                logger.warning(f"[ENDUID·抽卡] {pool_name} 请求失败")
                 break
 
             code = res.get("code")
@@ -150,7 +150,7 @@ async def _get_new_gachalog(
                 msg = res.get("msg") or res.get("message") or "未知错误"
                 if not first_error:
                     first_error = f"{pool_name}: {msg} (code={code})"
-                logger.warning(f"[EndUID][Gacha] {pool_name} 错误: {msg}")
+                logger.warning(f"[ENDUID·抽卡] {pool_name} 错误: {msg}")
                 break
 
             data = res.get("data", {})
@@ -173,12 +173,12 @@ async def _get_new_gachalog(
 
             if should_stop:
                 logger.info(
-                    f"[EndUID][Gacha] {pool_name} 第{page+1}页检测到"
+                    f"[ENDUID·抽卡] {pool_name} 第{page+1}页检测到"
                     f"连续{DUPLICATE_THRESHOLD}条记录已存在，停止拉取"
                 )
                 break
             logger.debug(
-                f"[EndUID][Gacha] {pool_name} 第{page+1}页: {len(data_list)}条"
+                f"[ENDUID·抽卡] {pool_name} 第{page+1}页: {len(data_list)}条"
             )
 
             if not data.get("hasMore", False):
@@ -199,7 +199,7 @@ async def _get_new_gachalog(
             total_new += max(0, new_count)
             new_pool_data[pool_name] = merged
             logger.info(
-                f"[EndUID][Gacha] {pool_name}: 新增{max(0, new_count)}条，"
+                f"[ENDUID·抽卡] {pool_name}: 新增{max(0, new_count)}条，"
                 f"合计{len(merged)}条"
             )
         elif pool_name in old_pool_data:
@@ -223,7 +223,7 @@ async def _get_new_gachalog(
         pool_name = pool_info.get("poolName", pool_id)
         display_name = f"武器寻访-{pool_name}"
 
-        logger.info(f"[EndUID][Gacha] 拉取 {display_name} (poolId={pool_id})")
+        logger.info(f"[ENDUID·抽卡] 拉取 {display_name} (poolId={pool_id})")
         records = []
         seq_id = None
 
@@ -266,7 +266,7 @@ async def _get_new_gachalog(
 
             if should_stop:
                 logger.info(
-                    f"[EndUID][Gacha] {display_name} 第{page+1}页检测到"
+                    f"[ENDUID·抽卡] {display_name} 第{page+1}页检测到"
                     f"连续{DUPLICATE_THRESHOLD}条记录已存在，停止拉取"
                 )
                 break
@@ -288,7 +288,7 @@ async def _get_new_gachalog(
             total_new += max(0, new_count)
             new_pool_data[display_name] = merged
             logger.info(
-                f"[EndUID][Gacha] {display_name}: 新增{max(0, new_count)}条，"
+                f"[ENDUID·抽卡] {display_name}: 新增{max(0, new_count)}条，"
                 f"合计{len(merged)}条"
             )
         elif display_name in old_pool_data:
@@ -395,8 +395,8 @@ async def delete_gachalogs(uid: str) -> bool:
         backup_path = path.with_suffix(".json.bak")
         shutil.copy2(str(path), str(backup_path))
         path.unlink()
-        logger.info(f"[EndUID][Gacha] 已删除抽卡记录: uid={uid}（已备份）")
+        logger.info(f"[ENDUID·抽卡] 已删除抽卡记录: uid={uid}（已备份）")
         return True
     except Exception as e:
-        logger.error(f"[EndUID][Gacha] 删除抽卡记录失败: {e}")
+        logger.error(f"[ENDUID·抽卡] 删除抽卡记录失败: {e}")
         return False

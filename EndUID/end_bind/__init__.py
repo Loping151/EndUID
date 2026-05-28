@@ -50,7 +50,7 @@ async def _send_text(bot: Bot, ev: Event, msg: str):
 @EndBindUID.on_command(("绑定", "bind"), block=True)
 async def send_end_bind_msg(bot: Bot, ev: Event):
     if ev.user_pm > 0:
-        logger.warning(f"[EndUID] 暂不支持绑定操作")
+        logger.warning(f"[ENDUID·绑定] 暂不支持绑定操作")
         return "「终末地」 暂不支持绑定操作，请使用「{PREFIX}登录」进行绑定"
     text = _normalize_text(ev.text)
     if not text:
@@ -90,7 +90,7 @@ async def send_end_login_msg(bot: Bot, ev: Event):
         return await _send_text(bot, ev, f"{GAME_TITLE} 获取二维码失败，请稍后重试")
 
     scan_url = f"hypergryph://scan_login?scanId={scan_id}"
-    logger.info(f"[EndUID] 扫码URL: {scan_url}")
+    logger.info(f"[ENDUID·绑定] 扫码URL: {scan_url}")
 
     qr_path = Path(__file__).parent / f"{ev.user_id}.gif"
     try:
@@ -101,7 +101,7 @@ async def send_end_login_msg(bot: Bot, ev: Event):
         ]
         await bot.send(msg, at_sender=at_sender)
     except Exception as e:
-        logger.error(f"[EndUID] 生成二维码失败: {e}")
+        logger.error(f"[ENDUID·绑定] 生成二维码失败: {e}")
         return await _send_text(bot, ev, f"{GAME_TITLE} 生成二维码失败")
     finally:
         if qr_path.exists():
@@ -113,7 +113,7 @@ async def send_end_login_msg(bot: Bot, ev: Event):
         await asyncio.sleep(2)
         scan_code = await end_api.get_scan_status(scan_id)
         if scan_code:
-            logger.info(f"[EndUID] 用户已扫码，scanCode: {scan_code}")
+            logger.info(f"[ENDUID·绑定] 用户已扫码，scanCode: {scan_code}")
             break
 
     if not scan_code:
@@ -161,17 +161,17 @@ async def check_cred(
                 if skland_user_id:
                     skland_user_id = str(skland_user_id)
             else:
-                logger.warning("[EndUID] 获取 森空岛 用户信息失败，已跳过写入用户ID")
+                logger.warning("[ENDUID·绑定] 获取 森空岛 用户信息失败，已跳过写入用户ID")
         except Exception as e:
-            logger.warning(f"[EndUID] 获取 森空岛 用户信息异常: {e}")
+            logger.warning(f"[ENDUID·绑定] 获取 森空岛 用户信息异常: {e}")
 
     res = await end_api.get_binding(cred)
     if not res or res.get("code") != 0 or res.get("message") != "OK":
-        logger.warning(f"[EndUID] 首次请求绑定信息失败，响应: {res}，尝试重试一次")
+        logger.warning(f"[ENDUID·绑定] 首次请求绑定信息失败，响应: {res}，尝试重试一次")
         await asyncio.sleep(2)
         res = await end_api.get_binding(cred) # 再来一次
         if not res or res.get("code") != 0 or res.get("message") != "OK":
-            logger.error(f"[EndUID] 绑定失败，响应: {res}")
+            logger.error(f"[ENDUID·绑定] 绑定失败，响应: {res}")
             return await _send_text(bot, ev, f"{GAME_TITLE} 绑定失败，请检查 cred 是否正确")
 
     binding_list = res.get("data", {}).get("list", [])
@@ -231,7 +231,7 @@ async def check_cred(
             })
 
     if not roles:
-        logger.warning(f"[EndUID] 请求返回：{binding_list}，请汇报此结果")
+        logger.warning(f"[ENDUID·绑定] 请求返回：{binding_list}，请汇报此结果")
         return await _send_text(bot, ev, f"{GAME_TITLE} 未找到账号绑定信息")
 
     # 绑定 UID 到 EndBind
@@ -332,11 +332,11 @@ async def check_cred(
                     if success and gacha_msg:
                         await _send_text(bot, ev, f"已同步抽卡记录: {gacha_msg}")
                     elif gacha_msg:
-                        logger.warning(f"[EndUID] 自动同步抽卡记录失败: {gacha_msg}")
+                        logger.warning(f"[ENDUID·绑定] 自动同步抽卡记录失败: {gacha_msg}")
                 else:
-                    logger.warning("[EndUID] 登录时获取 u8_token 失败，跳过抽卡同步")
+                    logger.warning("[ENDUID·绑定] 登录时获取 u8_token 失败，跳过抽卡同步")
             except Exception as e:
-                logger.warning(f"[EndUID] 登录时自动同步抽卡记录异常: {e}")
+                logger.warning(f"[ENDUID·绑定] 登录时自动同步抽卡记录异常: {e}")
 
         asyncio.create_task(_sync_gacha())
 
@@ -345,9 +345,9 @@ async def check_cred(
 
         card_ok, card_err = await refresh_card_data(ev.user_id, ev.bot_id)
         if not card_ok and card_err:
-            logger.warning(f"[EndUID] 登录时自动刷新面板失败: {card_err}")
+            logger.warning(f"[ENDUID·绑定] 登录时自动刷新面板失败: {card_err}")
     except Exception as e:
-        logger.warning(f"[EndUID] 登录时自动刷新面板异常: {e}")
+        logger.warning(f"[ENDUID·绑定] 登录时自动刷新面板异常: {e}")
 
 
 async def check_token(bot: Bot, ev: Event, token: str):
@@ -370,7 +370,7 @@ async def check_token(bot: Bot, ev: Event, token: str):
 @EndBindUID.on_fullmatch(("我的cred", "查看cred", "获取cred"))
 async def my_cred(bot: Bot, ev: Event):
     if ev.user_pm > 0:
-        logger.warning(f"[EndUID] 安全起见，禁止获取token")
+        logger.warning(f"[ENDUID·绑定] 安全起见，禁止获取token")
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
         return await _send_text(bot, ev, f"{GAME_TITLE} 未绑定账号")
@@ -385,7 +385,7 @@ async def my_cred(bot: Bot, ev: Event):
 @EndBindUID.on_fullmatch(("我的token", "查看token", "获取token", "获取tk"))
 async def my_token(bot: Bot, ev: Event):
     if ev.user_pm > 0:
-        logger.warning(f"[EndUID] 安全起见，禁止获取token")
+        logger.warning(f"[ENDUID·绑定] 安全起见，禁止获取token")
         return
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:

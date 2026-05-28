@@ -58,11 +58,11 @@ async def get_code_list():
         async with httpx.AsyncClient(timeout=None) as client:
             res = await client.get(new_url, timeout=10)
             json_data = res.text.split("=", 1)[1].strip().rstrip(";")
-            logger.debug(f"[获取兑换码] url:{new_url}, codeList:{json_data}")
+            logger.debug(f"[ENDUID·获取兑换码] url:{new_url}, codeList:{json_data}")
             return json.loads(json_data)
 
     except Exception as e:
-        logger.exception("[获取兑换码失败] ", e)
+        logger.exception("[ENDUID·获取兑换码失败] ", e)
         return
 
 

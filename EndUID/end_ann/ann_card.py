@@ -79,10 +79,10 @@ async def ann_list_card() -> Union[bytes, str]:
         if cache_file.exists():
             file_age = time.time() - cache_file.stat().st_mtime
             if file_age < end_api.ANN_LIST_CACHE_DURATION:
-                logger.debug("[End] 命中公告列表渲染缓存")
+                logger.debug("[ENDUID·公告] 命中公告列表渲染缓存")
                 return cache_file.read_bytes()
 
-        logger.debug("[End] 正在获取公告列表...")
+        logger.debug("[ENDUID·公告] 正在获取公告列表...")
 
         ann_list = await end_api.get_ann_list()
         if not ann_list:
@@ -96,7 +96,7 @@ async def ann_list_card() -> Union[bytes, str]:
         for i, ann in enumerate(ann_list):
             if i == 0:
                 logger.debug(
-                    f"[End] 首条公告原始数据 keys: {list(ann.keys())}, "
+                    f"[ENDUID·公告] 首条公告原始数据 keys: {list(ann.keys())}, "
                     f"createdAtTs={ann.get('createdAtTs')}"
                 )
 
@@ -137,19 +137,19 @@ async def ann_list_card() -> Union[bytes, str]:
             "show_footer": False,
         }
 
-        logger.debug(f"[End] 准备渲染公告列表, items: {len(items)}")
+        logger.debug(f"[ENDUID·公告] 准备渲染公告列表, items: {len(items)}")
         img_bytes = await render_html(end_templates, "ann_card.html", context)
 
         if img_bytes:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_bytes(img_bytes)
-            logger.debug("[End] 公告列表渲染缓存已保存")
+            logger.debug("[ENDUID·公告] 公告列表渲染缓存已保存")
             return img_bytes
         else:
             return "公告列表渲染失败"
 
     except Exception as e:
-        logger.exception(f"[End] 公告列表生成失败: {e}")
+        logger.exception(f"[ENDUID·公告] 公告列表生成失败: {e}")
         return f"公告列表生成失败: {e}"
 
 
@@ -167,7 +167,7 @@ async def ann_detail_card(
         图片字节或错误消息
     """
     try:
-        logger.debug(f"[End] 正在获取公告详情: {ann_id}")
+        logger.debug(f"[ENDUID·公告] 正在获取公告详情: {ann_id}")
 
         # 如果是序号，转换为实际 ID
         actual_id = str(ann_id)
@@ -180,11 +180,11 @@ async def ann_detail_card(
                 if ann_list and idx <= len(ann_list):
                     actual_id = ann_list[idx - 1].get("id", str(ann_id))
                     is_real_id = True
-                    logger.debug(f"[End] 序号 {idx} 对应公告 ID: {actual_id}")
+                    logger.debug(f"[ENDUID·公告] 序号 {idx} 对应公告 ID: {actual_id}")
 
         cache_file = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}.jpg"
         if is_real_id and not is_check_time and cache_file.exists():
-            logger.debug(f"[End] 命中公告详情渲染缓存: {actual_id}")
+            logger.debug(f"[ENDUID·公告] 命中公告详情渲染缓存: {actual_id}")
             cached_bytes = cache_file.read_bytes()
             # 检查是否有长图缓存
             long_cache = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}_long.json"
@@ -271,7 +271,7 @@ async def ann_detail_card(
             "show_footer": False,
         }
 
-        logger.debug(f"[End] 准备渲染公告详情, images: {len(normal_images)}")
+        logger.debug(f"[ENDUID·公告] 准备渲染公告详情, images: {len(normal_images)}")
         img_bytes = await render_html(end_templates, "ann_card.html", context)
 
         result_images = []
@@ -281,7 +281,7 @@ async def ann_detail_card(
         if long_images:
             from ..utils.image import pic_download_from_url
 
-            logger.info(f"[End] 检测到 {len(long_images)} 张超长图片，将单独发送")
+            logger.info(f"[ENDUID·公告] 检测到 {len(long_images)} 张超长图片，将单独发送")
             for img_url in long_images:
                 try:
                     img = await pic_download_from_url(ANN_CACHE_PATH, img_url)
@@ -291,7 +291,7 @@ async def ann_detail_card(
                     img_bytes_long = await convert_img(img)
                     result_images.append(img_bytes_long)
                 except Exception as e:
-                    logger.warning(f"[End] 下载超长图片失败: {img_url}, {e}")
+                    logger.warning(f"[ENDUID·公告] 下载超长图片失败: {img_url}, {e}")
 
         if img_bytes:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -299,7 +299,7 @@ async def ann_detail_card(
             if long_local_paths:
                 long_cache = ANN_RENDER_CACHE_PATH / f"detail_{actual_id}_long.json"
                 long_cache.write_text(json.dumps(long_local_paths))
-            logger.debug(f"[End] 公告详情渲染缓存已保存: {actual_id}")
+            logger.debug(f"[ENDUID·公告] 公告详情渲染缓存已保存: {actual_id}")
 
             if result_images:
                 result_images = [img_bytes] + result_images
@@ -309,5 +309,5 @@ async def ann_detail_card(
             return "公告详情渲染失败"
 
     except Exception as e:
-        logger.exception(f"[End] 公告详情生成失败: {e}")
+        logger.exception(f"[ENDUID·公告] 公告详情生成失败: {e}")
         return f"公告详情生成失败: {e}"

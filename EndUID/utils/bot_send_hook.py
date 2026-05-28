@@ -25,11 +25,11 @@ class PluginHookManager:
                 h for h in self.target_send_hooks if h.__name__ != func.__name__
             ]
             logger.debug(
-                f"[{self.plugin_name} BotHook] 更新 target_send hook: {func.__name__}"
+                f"[ENDUID·BotHook] 更新 target_send hook: {func.__name__}"
             )
         else:
             logger.debug(
-                f"[{self.plugin_name} BotHook] 注册 target_send hook: {func.__name__}"
+                f"[ENDUID·BotHook] 注册 target_send hook: {func.__name__}"
             )
         self.target_send_hooks.append(func)
 
@@ -41,11 +41,11 @@ class PluginHookManager:
                 h for h in self.user_activity_hooks if h.__name__ != func.__name__
             ]
             logger.debug(
-                f"[{self.plugin_name} BotHook] 更新 user_activity hook: {func.__name__}"
+                f"[ENDUID·BotHook] 更新 user_activity hook: {func.__name__}"
             )
         else:
             logger.debug(
-                f"[{self.plugin_name} BotHook] 注册 user_activity hook: {func.__name__}"
+                f"[ENDUID·BotHook] 注册 user_activity hook: {func.__name__}"
             )
         self.user_activity_hooks.append(func)
 
@@ -55,10 +55,10 @@ def get_or_create_hook_manager(plugin_name: str) -> PluginHookManager:
     if plugin_name not in _plugin_hook_managers:
         _plugin_hook_managers[plugin_name] = PluginHookManager(plugin_name)
         logger.debug(
-            f"[BotHook] 创建新的插件管理器: {plugin_name}, 当前管理器列表: {list(_plugin_hook_managers.keys())}"
+            f"[ENDUID·BotHook] 创建新的插件管理器: {plugin_name}, 当前管理器列表: {list(_plugin_hook_managers.keys())}"
         )
     else:
-        logger.debug(f"[BotHook] 复用已存在的插件管理器: {plugin_name}")
+        logger.debug(f"[ENDUID·BotHook] 复用已存在的插件管理器: {plugin_name}")
     return _plugin_hook_managers[plugin_name]
 
 
@@ -91,18 +91,18 @@ async def _call_all_target_send_hooks(
             continue
 
         logger.debug(
-            f"[{plugin_name} BotHook] 调用 {len(manager.target_send_hooks)} 个 target_send hooks, group_id={group_id}"
+            f"[ENDUID·BotHook] 调用 {len(manager.target_send_hooks)} 个 target_send hooks, group_id={group_id}"
         )
 
         for hook in manager.target_send_hooks:
             try:
                 logger.debug(
-                    f"[{plugin_name} BotHook] 执行 hook: {hook.__name__}, group_id={group_id}"
+                    f"[ENDUID·BotHook] 执行 hook: {hook.__name__}, group_id={group_id}"
                 )
                 await hook(group_id, bot_self_id)
             except Exception as e:
                 logger.warning(
-                    f"[{plugin_name} BotHook] target_send hook {hook.__name__} 执行失败: {e}"
+                    f"[ENDUID·BotHook] target_send hook {hook.__name__} 执行失败: {e}"
                 )
 
 
@@ -113,24 +113,24 @@ async def _call_all_user_activity_hooks(
     if not user_id:
         return
 
-    logger.debug(f"[BotHook] 当前已注册的插件管理器: {list(_plugin_hook_managers.keys())}")
+    logger.debug(f"[ENDUID·BotHook] 当前已注册的插件管理器: {list(_plugin_hook_managers.keys())}")
 
     for plugin_name, manager in _plugin_hook_managers.items():
         logger.debug(
-            f"[BotHook] 插件 {plugin_name} 有 {len(manager.user_activity_hooks)} 个 user_activity_hooks"
+            f"[ENDUID·BotHook] 插件 {plugin_name} 有 {len(manager.user_activity_hooks)} 个 user_activity_hooks"
         )
 
         if not manager.user_activity_hooks:
             continue
 
         logger.debug(
-            f"[{plugin_name} BotHook] 调用 {len(manager.user_activity_hooks)} 个 user_activity hooks, user_id={user_id}"
+            f"[ENDUID·BotHook] 调用 {len(manager.user_activity_hooks)} 个 user_activity hooks, user_id={user_id}"
         )
 
         for hook in manager.user_activity_hooks:
             try:
                 logger.debug(
-                    f"[{plugin_name} BotHook] 执行 hook: {hook.__name__}, user_id={user_id}"
+                    f"[ENDUID·BotHook] 执行 hook: {hook.__name__}, user_id={user_id}"
                 )
                 try:
                     await hook(user_id, bot_id, bot_self_id)
@@ -138,7 +138,7 @@ async def _call_all_user_activity_hooks(
                     await hook(user_id, bot_id)
             except Exception as e:
                 logger.warning(
-                    f"[{plugin_name} BotHook] user_activity hook {hook.__name__} 执行失败: {e}"
+                    f"[ENDUID·BotHook] user_activity hook {hook.__name__} 执行失败: {e}"
                 )
 
 
@@ -148,7 +148,7 @@ def install_bot_hooks():
     只会安装一次，所有插件的 hooks 都会被调用
     """
     if hasattr(Bot, "_bot_hooks_installed"):
-        logger.debug("[BotHook] Bot hooks 已经安装，跳过")
+        logger.debug("[ENDUID·BotHook] Bot hooks 已经安装，跳过")
         return
 
     original_send = Bot.send
@@ -196,4 +196,4 @@ def install_bot_hooks():
     Bot.target_send = hooked_target_send
     Bot._bot_hooks_installed = True
 
-    logger.debug("[BotHook] Bot hooks 已安装")
+    logger.debug("[ENDUID·BotHook] Bot hooks 已安装")

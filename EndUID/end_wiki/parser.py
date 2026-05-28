@@ -460,7 +460,7 @@ def parse_skland_char_wiki(
         )
     except Exception as e:
         logger.error(
-            f"[EndWiki] Failed to parse Skland wiki item: {e}"
+            f"[ENDUID·百科] Failed to parse Skland wiki item: {e}"
         )
         return None
 
@@ -795,6 +795,6 @@ def parse_skland_weapon_wiki(
         )
     except Exception as e:
         logger.error(
-            f"[EndWiki] Failed to parse Skland weapon wiki: {e}"
+            f"[ENDUID·百科] Failed to parse Skland weapon wiki: {e}"
         )
         return None

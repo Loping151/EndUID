@@ -26,13 +26,13 @@ async def guide_handler(bot: Bot, ev: Event):
     if not name:
         return
 
-    logger.info(f"[EndGuide] 查询攻略: {name}")
+    logger.info(f"[ENDUID·攻略] 查询攻略: {name}")
 
     # Resolve alias
     resolved = resolve_alias_entry(name)
     if resolved:
         real_name = resolved[0]
-        logger.info(f"[EndGuide] 别名解析: {name} -> {real_name}")
+        logger.info(f"[ENDUID·攻略] 别名解析: {name} -> {real_name}")
     else:
         real_name = name
 

@@ -57,7 +57,7 @@ async def wiki_handler(bot: Bot, ev: Event):
     if not name:
         return
 
-    logger.info(f"[EndWiki] 查询: {name} {keyword}")
+    logger.info(f"[ENDUID·百科] 查询: {name} {keyword}")
 
     admin_gender = resolve_admin_gender(name)
 
@@ -71,7 +71,7 @@ async def wiki_handler(bot: Bot, ev: Event):
         weapon_name = resolve_weapon_alias(f"{char_real}专武")
         if weapon_name:
             logger.info(
-                f"[EndWiki] 武器别名: {name} -> {char_real}专武"
+                f"[ENDUID·百科] 武器别名: {name} -> {char_real}专武"
                 f" -> {weapon_name}"
             )
             weapon_wiki = await get_weapon_wiki(weapon_name)
@@ -90,12 +90,12 @@ async def wiki_handler(bot: Bot, ev: Event):
     # Alias resolution
     if admin_gender:
         real_name = admin_gender
-        logger.info(f"[EndWiki] 管理员性别别名: {name} -> {real_name}")
+        logger.info(f"[ENDUID·百科] 管理员性别别名: {name} -> {real_name}")
     else:
         resolved = resolve_alias_entry(name)
         if resolved:
             real_name = resolved[0]
-            logger.info(f"[EndWiki] 别名解析: {name} -> {real_name}")
+            logger.info(f"[ENDUID·百科] 别名解析: {name} -> {real_name}")
         else:
             real_name = name
 
@@ -144,7 +144,7 @@ Args:
 """,
 )
 async def char_list_handler(bot: Bot, ev: Event):
-    logger.info("[EndWiki] 查询角色列表")
+    logger.info("[ENDUID·百科] 查询角色列表")
     data = await ensure_list_data()
     if not data or not data.characters:
         return await bot.send("暂无角色列表数据")
@@ -165,7 +165,7 @@ Args:
 """,
 )
 async def weapon_list_handler(bot: Bot, ev: Event):
-    logger.info("[EndWiki] 查询武器列表")
+    logger.info("[ENDUID·百科] 查询武器列表")
     data = await ensure_list_data()
     if not data or not data.weapons:
         return await bot.send("暂无武器列表数据")
@@ -200,7 +200,7 @@ async def postcard_handler(bot: Bot, ev: Event):
         resolved = resolve_alias_entry(name)
         real_name = resolved[0] if resolved else name
 
-    logger.info(f"[EndWiki] 查询明信片: {real_name}")
+    logger.info(f"[ENDUID·百科] 查询明信片: {real_name}")
 
     char_wiki = await get_char_wiki(real_name)
     if not char_wiki and real_name != name:
@@ -244,11 +244,11 @@ async def blueprint_handler(bot: Bot, ev: Event):
     resolved = resolve_alias_entry(query)
     if resolved:
         real_query = resolved[0]
-        logger.info(f"[EndWiki] 蓝图别名解析: {query} -> {real_query}")
+        logger.info(f"[ENDUID·百科] 蓝图别名解析: {query} -> {real_query}")
     else:
         real_query = query
 
-    logger.info(f"[EndWiki] 搜索蓝图: {real_query}")
+    logger.info(f"[ENDUID·百科] 搜索蓝图: {real_query}")
 
     from .blueprint import handle_blueprint_search
 

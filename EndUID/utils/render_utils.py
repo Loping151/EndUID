@@ -35,10 +35,10 @@ def _import_playwright():
         return async_playwright
     except ImportError:
         if not EndConfig.get_config("RemoteRenderEnable").data:
-            logger.warning("[End] 未安装 playwright，无法使用渲染公告、wiki图等功能。")
-            logger.warning("[End] 可选择配置外置渲染方法！")
-            logger.info("[End] 安装方法 Linux/Mac: 在当前目录下执行 source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium")
-            logger.info("[End] 安装方法 Windows: 在当前目录下执行 .venv\\Scripts\\activate; uv pip install playwright; uv run playwright install chromium")
+            logger.warning("[ENDUID·渲染工具] 未安装 playwright，无法使用渲染公告、wiki图等功能。")
+            logger.warning("[ENDUID·渲染工具] 可选择配置外置渲染方法！")
+            logger.info("[ENDUID·渲染工具] 安装方法 Linux/Mac: 在当前目录下执行 source .venv/bin/activate && uv pip install playwright && uv run playwright install chromium")
+            logger.info("[ENDUID·渲染工具] 安装方法 Windows: 在当前目录下执行 .venv\\Scripts\\activate; uv pip install playwright; uv run playwright install chromium")
         return None
 
 
@@ -82,9 +82,9 @@ def _mount_fonts() -> None:
                 CORSStaticFiles(directory=_FONTS_DIR),
                 name="wwuid_fonts",
             )
-        logger.debug("[End] 已挂载字体静态路由 (CORS Enabled)")
+        logger.debug("[ENDUID·渲染工具] 已挂载字体静态路由 (CORS Enabled)")
     except Exception as e:
-        logger.warning(f"[End] 挂载字体静态路由失败: {e}")
+        logger.warning(f"[ENDUID·渲染工具] 挂载字体静态路由失败: {e}")
 
 
 def _get_local_base_url() -> str:
@@ -216,7 +216,7 @@ async def _render_via_remote(html_content: str, remote_url: str) -> Optional[byt
     """使用外置渲染服务渲染 HTML"""
     start_time = time.time()
     try:
-        logger.debug(f"[End] 尝试使用外置渲染服务: {remote_url}")
+        logger.debug(f"[ENDUID·渲染工具] 尝试使用外置渲染服务: {remote_url}")
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -229,25 +229,25 @@ async def _render_via_remote(html_content: str, remote_url: str) -> Optional[byt
                 image_data = response.content
                 elapsed_time = time.time() - start_time
                 html_kb = len(html_content) / 1024
-                logger.info(f"[End] 外置渲染成功，耗时: {elapsed_time:.2f}s，HTML大小: {html_kb:.1f}KB，图片大小: {len(image_data)} bytes")
+                logger.info(f"[ENDUID·渲染工具] 外置渲染成功，耗时: {elapsed_time:.2f}s，HTML大小: {html_kb:.1f}KB，图片大小: {len(image_data)} bytes")
                 return image_data
             else:
-                logger.warning(f"[End] 外置渲染失败，状态码: {response.status_code}, 错误: {response.text}")
+                logger.warning(f"[ENDUID·渲染工具] 外置渲染失败，状态码: {response.status_code}, 错误: {response.text}")
                 return None
     except httpx.TimeoutException:
         elapsed_time = time.time() - start_time
-        logger.warning(f"[End] 外置渲染超时 ({elapsed_time:.2f}s)，将回退到本地渲染")
+        logger.warning(f"[ENDUID·渲染工具] 外置渲染超时 ({elapsed_time:.2f}s)，将回退到本地渲染")
         return None
     except Exception as e:
         elapsed_time = time.time() - start_time
-        logger.warning(f"[End] 外置渲染异常 ({elapsed_time:.2f}s): {e}，将回退到本地渲染")
+        logger.warning(f"[ENDUID·渲染工具] 外置渲染异常 ({elapsed_time:.2f}s): {e}，将回退到本地渲染")
         return None
 
 
 async def render_html(end_templates, template_name: str, context: dict) -> Optional[bytes]:
 
     try:
-        logger.debug(f"[End] HTML渲染开始: {template_name}")
+        logger.debug(f"[ENDUID·渲染工具] HTML渲染开始: {template_name}")
 
         template = end_templates.get_template(template_name)
 
@@ -259,15 +259,15 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
                 font_css_url = _get_font_css_url()
                 context["font_css_url"] = font_css_url
                 html_content = template.render(**context)
-                logger.debug(f"[End] 使用在线字体渲染 HTML: {template_name}")
-                logger.debug(f"[End] 外置渲染已启用，尝试使用: {remote_url}")
+                logger.debug(f"[ENDUID·渲染工具] 使用在线字体渲染 HTML: {template_name}")
+                logger.debug(f"[ENDUID·渲染工具] 外置渲染已启用，尝试使用: {remote_url}")
                 remote_result = await _render_via_remote(html_content, remote_url)
                 if remote_result is not None:
                     return remote_result
 
-                logger.info("[End] 外置渲染失败，回退到本地渲染")
+                logger.info("[ENDUID·渲染工具] 外置渲染失败，回退到本地渲染")
             except Exception as e:
-                logger.warning(f"[End] 外置渲染异常: {e}，回退到本地渲染")
+                logger.warning(f"[ENDUID·渲染工具] 外置渲染异常: {e}，回退到本地渲染")
 
         try:
             font_css_path = _FONTS_DIR / _FONT_CSS_NAME
@@ -279,17 +279,17 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
                 context["font_css_url"] = _get_font_css_url()
 
             html_content = template.render(**context)
-            logger.debug(f"[End] 使用本地字体渲染 HTML: {template_name}")
+            logger.debug(f"[ENDUID·渲染工具] 使用本地字体渲染 HTML: {template_name}")
         except Exception as e:
-            logger.error(f"[End] Template render failed: {e}")
+            logger.error(f"[ENDUID·渲染工具] Template render failed: {e}")
             raise e
 
         # 本地渲染
         if not PLAYWRIGHT_AVAILABLE or async_playwright is None:
-            logger.warning("[End] Playwright 未安装，无法渲染，将回退到 PIL 渲染（如有）")
+            logger.warning("[ENDUID·渲染工具] Playwright 未安装，无法渲染，将回退到 PIL 渲染（如有）")
             return None
 
-        logger.debug(f"[End] 使用本地 Playwright 渲染")
+        logger.debug(f"[ENDUID·渲染工具] 使用本地 Playwright 渲染")
 
         local_start_time = time.time()
         page, gen = None, -1
@@ -322,10 +322,10 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
             screenshot = await container.screenshot(type='jpeg', quality=90)
             render_time = time.time() - local_start_time
             html_kb = len(html_content) / 1024
-            logger.info(f"[End] 本地渲染成功，耗时: {render_time:.2f}s，HTML: {html_kb:.0f}KB，图片: {len(screenshot)} bytes")
+            logger.info(f"[ENDUID·渲染工具] 本地渲染成功，耗时: {render_time:.2f}s，HTML: {html_kb:.0f}KB，图片: {len(screenshot)} bytes")
             return screenshot
         except Exception as e:
-            logger.error(f"[End] Playwright execution failed: {e}")
+            logger.error(f"[ENDUID·渲染工具] Playwright execution failed: {e}")
             if page is not None:
                 try:
                     await page.close()
@@ -338,7 +338,7 @@ async def render_html(end_templates, template_name: str, context: dict) -> Optio
                 await _release_page(page, gen)
 
     except Exception as e:
-        logger.error(f"[End] HTML渲染失败: {e}")
+        logger.error(f"[ENDUID·渲染工具] HTML渲染失败: {e}")
         return None
 
 
@@ -367,7 +367,7 @@ def image_to_base64(image_path: Union[str, Path], quality: int = 0) -> str:
             ext = "jpeg"
         return f"data:image/{ext};base64,{base64.b64encode(data).decode('utf-8')}"
     except Exception as e:
-        logger.warning(f"[渲染工具] 图片转 base64 失败: {image_path}, {e}")
+        logger.warning(f"[ENDUID·渲染工具] 图片转 base64 失败: {image_path}, {e}")
         return ""
 
 
@@ -382,7 +382,7 @@ def get_logo_b64() -> Optional[str]:
             data = f.read()
             return f"data:image/png;base64,{base64.b64encode(data).decode('utf-8')}"
     except Exception as e:
-        logger.warning(f"[渲染工具] Logo loading failed: {e}")
+        logger.warning(f"[ENDUID·渲染工具] Logo loading failed: {e}")
         return None
 
 
@@ -406,7 +406,7 @@ def get_footer_b64(footer_type: str = "black") -> Optional[str]:
             data = f.read()
             return f"data:image/png;base64,{base64.b64encode(data).decode('utf-8')}"
     except Exception as e:
-        logger.warning(f"[渲染工具] Footer loading failed: {e}")
+        logger.warning(f"[ENDUID·渲染工具] Footer loading failed: {e}")
         return None
 
 
@@ -472,12 +472,12 @@ async def get_image_b64_with_cache(
 
         orig_size = local_path.stat().st_size
         logger.debug(
-            f"[渲染工具] 烘焙: {filename} → {bake_name}, "
+            f"[ENDUID·渲染工具] 烘焙: {filename} → {bake_name}, "
             f"原始: {orig_size} bytes, 烘焙后: {len(data)} bytes"
         )
 
         return f"data:image/webp;base64,{base64.b64encode(data).decode('utf-8')}"
 
     except Exception as e:
-        logger.warning(f"[渲染工具] 获取图片 base64 失败: {url}, {e}")
+        logger.warning(f"[ENDUID·渲染工具] 获取图片 base64 失败: {url}, {e}")
         return ""

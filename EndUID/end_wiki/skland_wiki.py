@@ -57,7 +57,7 @@ class SklandWikiClient:
                     referer=WIKI_REFERER,
                 )
             except Exception as e:
-                logger.warning(f"[SklandWiki] dId generation failed: {e}")
+                logger.warning(f"[ENDUID·森空岛百科] dId generation failed: {e}")
                 self._did = ""
         return self._did
 
@@ -107,13 +107,13 @@ class SklandWikiClient:
                 if data.get("code") == 0:
                     self._token = data["data"]["token"]
                     self._token_time = time.time()
-                    logger.info("[SklandWiki] Token refreshed")
+                    logger.info("[ENDUID·森空岛百科] Token refreshed")
                     return self._token
                 logger.warning(
-                    f"[SklandWiki] Token refresh failed: {data}"
+                    f"[ENDUID·森空岛百科] Token refresh failed: {data}"
                 )
         except Exception as e:
-            logger.error(f"[SklandWiki] Token refresh error: {e}")
+            logger.error(f"[ENDUID·森空岛百科] Token refresh error: {e}")
         return ""
 
     async def _ensure_token(self) -> str:
@@ -151,10 +151,10 @@ class SklandWikiClient:
                         if data2.get("code") == 0:
                             return data2.get("data")
                 logger.warning(
-                    f"[SklandWiki] API error: {path} {data.get('code')}"
+                    f"[ENDUID·森空岛百科] API error: {path} {data.get('code')}"
                 )
         except Exception as e:
-            logger.error(f"[SklandWiki] Request error: {path} {e}")
+            logger.error(f"[ENDUID·森空岛百科] Request error: {path} {e}")
         return None
 
     # ---- public methods ----

@@ -55,7 +55,7 @@ async def _render_alias_card(key: str, entry: dict, alias_list: list[str]) -> Op
         if avatar_url_raw:
             avatar_url = await get_image_b64_with_cache(avatar_url_raw, AVATAR_CACHE_PATH)
     except Exception as e:
-        logger.warning(f"[EndUID] 别名卡片图片获取失败: {e}")
+        logger.warning(f"[ENDUID·别名] 别名卡片图片获取失败: {e}")
 
     context = {
         "char_name": key,

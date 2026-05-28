@@ -18,7 +18,7 @@ def _load_config() -> dict:
         with open(ANN_CONFIG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        logger.warning(f"[EndUID] 加载公告配置失败: {e}")
+        logger.warning(f"[ENDUID·公告] 加载公告配置失败: {e}")
         return {}
 
 
@@ -29,7 +29,7 @@ def _save_config(config: dict) -> None:
         with open(ANN_CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        logger.error(f"[EndUID] 保存公告配置失败: {e}")
+        logger.error(f"[ENDUID·公告] 保存公告配置失败: {e}")
 
 
 def get_ann_new_ids() -> List[str]:

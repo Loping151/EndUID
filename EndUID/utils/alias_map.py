@@ -70,7 +70,7 @@ def _ensure_map_file():
                 if not isinstance(template_data, dict):
                     template_data = {}
             except Exception as e:
-                logger.warning(f"[EndUID] 读取模板 map.json 失败: {e}")
+                logger.warning(f"[ENDUID·别名映射] 读取模板 map.json 失败: {e}")
                 template_data = {}
 
         # 读取现有的数据文件
@@ -82,7 +82,7 @@ def _ensure_map_file():
                 if not isinstance(data_map, dict):
                     data_map = {}
             except Exception as e:
-                logger.warning(f"[EndUID] 读取 map.json 失败: {e}")
+                logger.warning(f"[ENDUID·别名映射] 读取 map.json 失败: {e}")
                 data_map = {}
 
         # 合并模板和数据
@@ -93,9 +93,9 @@ def _ensure_map_file():
             json.dumps(merged_data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        logger.info(f"[EndUID] map.json 已合并更新")
+        logger.info(f"[ENDUID·别名映射] map.json 已合并更新")
     except Exception as e:
-        logger.warning(f"[EndUID] 初始化 map.json 失败: {e}")
+        logger.warning(f"[ENDUID·别名映射] 初始化 map.json 失败: {e}")
 
 
 def _load_alias_map() -> AliasMap:
@@ -107,7 +107,7 @@ def _load_alias_map() -> AliasMap:
         data = json.loads(raw or "{}")
         return data if isinstance(data, dict) else {}
     except Exception as e:
-        logger.warning(f"[EndUID] 读取 map.json 失败: {e}")
+        logger.warning(f"[ENDUID·别名映射] 读取 map.json 失败: {e}")
         return {}
 
 
@@ -119,7 +119,7 @@ def _save_alias_map(data: AliasMap) -> None:
             encoding="utf-8",
         )
     except Exception as e:
-        logger.warning(f"[EndUID] 写入 map.json 失败: {e}")
+        logger.warning(f"[ENDUID·别名映射] 写入 map.json 失败: {e}")
 
 
 def _get_alias_list(entry: AliasEntry) -> list[str]:

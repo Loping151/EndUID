@@ -31,7 +31,7 @@ class SigningState:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"[EndUID][SignState] 读取状态文件失败: {e}")
+            logger.error(f"[ENDUID·签到状态] 读取状态文件失败: {e}")
             return None
 
     @staticmethod
@@ -43,18 +43,18 @@ class SigningState:
         try:
             with open(STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(state, f, ensure_ascii=False, indent=2)
-            logger.info(f"[EndUID][SignState] 创建状态文件: type={sign_type}")
+            logger.info(f"[ENDUID·签到状态] 创建状态文件: type={sign_type}")
         except Exception as e:
-            logger.error(f"[EndUID][SignState] 创建状态文件失败: {e}")
+            logger.error(f"[ENDUID·签到状态] 创建状态文件失败: {e}")
 
     @staticmethod
     def clear_state():
         if STATE_FILE.exists():
             try:
                 STATE_FILE.unlink()
-                logger.info("[EndUID][SignState] 删除状态文件（签到已完成）")
+                logger.info("[ENDUID·签到状态] 删除状态文件（签到已完成）")
             except Exception as e:
-                logger.error(f"[EndUID][SignState] 删除状态文件失败: {e}")
+                logger.error(f"[ENDUID·签到状态] 删除状态文件失败: {e}")
 
     @staticmethod
     def should_resume() -> bool:
@@ -73,18 +73,18 @@ class SigningState:
 
             if elapsed > 86400:
                 logger.warning(
-                    f"[EndUID][SignState] 状态文件已过期（{elapsed / 3600:.1f}小时），清除"
+                    f"[ENDUID·签到状态] 状态文件已过期（{elapsed / 3600:.1f}小时），清除"
                 )
                 SigningState.clear_state()
                 return False
 
             logger.info(
-                f"[EndUID][SignState] 发现未完成的签到任务: "
+                f"[ENDUID·签到状态] 发现未完成的签到任务: "
                 f"type={state['type']}, elapsed={elapsed / 60:.1f}分钟"
             )
             return True
         except Exception as e:
-            logger.error(f"[EndUID][SignState] 检查状态文件时出错: {e}")
+            logger.error(f"[ENDUID·签到状态] 检查状态文件时出错: {e}")
             return False
 
 

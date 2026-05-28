@@ -20,7 +20,7 @@ Plugins(
     allow_empty_prefix=False
 )
 
-logger.info("[EndUID] 插件加载中...")
+logger.info("[ENDUID·插件] 插件加载中...")
 
 # ===== 活跃度批量写入缓冲 =====
 _activity_buffer: dict[str, tuple[str, str, str]] = {}
@@ -36,7 +36,7 @@ async def _flush_activity_buffer():
         try:
             await EndUserActivity.update_user_activity(user_id, bot_id, bot_self_id)
         except Exception as e:
-            logger.warning(f"[EndUID] 批量活跃度写入失败: {e}")
+            logger.warning(f"[ENDUID·插件] 批量活跃度写入失败: {e}")
 
 
 _shutdown_event = asyncio.Event()
@@ -52,22 +52,22 @@ async def _activity_flush_loop():
         try:
             await _flush_activity_buffer()
         except Exception as e:
-            logger.warning(f"[EndUID] 活跃度刷写循环异常: {e}")
+            logger.warning(f"[ENDUID·插件] 活跃度刷写循环异常: {e}")
 
 _flush_task = asyncio.get_event_loop().create_task(_activity_flush_loop())
 
 
 @on_core_shutdown
 async def _flush_on_shutdown():
-    logger.info("[EndUID] 退出前停止活跃度刷写循环...")
+    logger.info("[ENDUID·插件] 退出前停止活跃度刷写循环...")
     _shutdown_event.set()
     try:
         await asyncio.wait_for(_flush_task, timeout=5)
     except asyncio.TimeoutError:
         _flush_task.cancel()
-    logger.info("[EndUID] 刷写活跃度缓冲区...")
+    logger.info("[ENDUID·插件] 刷写活跃度缓冲区...")
     await _flush_activity_buffer()
-    logger.info("[EndUID] 活跃度缓冲区刷写完成")
+    logger.info("[ENDUID·插件] 活跃度缓冲区刷写完成")
 
 
 # 1. 安装 Bot Hook（Monkey Patch）
@@ -78,14 +78,14 @@ install_bot_hooks()
 async def end_bot_check_hook(group_id: str, bot_self_id: str):
     """Bot-群组绑定 Hook"""
     logger.debug(
-        f"[EndUID Hook] bot_check_hook 被调用: group_id={group_id}, bot_self_id={bot_self_id}"
+        f"[ENDUID·Hook] bot_check_hook 被调用: group_id={group_id}, bot_self_id={bot_self_id}"
     )
 
     if group_id:
         try:
             await EndSubscribe.check_and_update_bot(group_id, bot_self_id)
         except Exception as e:
-            logger.warning(f"[EndUID] Bot检测失败: {e}")
+            logger.warning(f"[ENDUID·插件] Bot检测失败: {e}")
 
 
 async def end_user_activity_hook(user_id: str, bot_id: str, bot_self_id: str):
@@ -101,4 +101,4 @@ async def end_user_activity_hook(user_id: str, bot_id: str, bot_self_id: str):
 register_target_send_hook(end_bot_check_hook)
 register_user_activity_hook(end_user_activity_hook)
 
-logger.success("[EndUID] Hook 已注册")
+logger.success("[ENDUID·插件] Hook 已注册")

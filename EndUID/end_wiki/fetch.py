@@ -35,7 +35,7 @@ def _load_id_map() -> dict | None:
         raw = ID_MAP_PATH.read_text(encoding="utf-8")
         return json.loads(raw)
     except Exception as e:
-        logger.warning(f"[EndWiki] Failed to load id_map: {e}")
+        logger.warning(f"[ENDUID·百科] Failed to load id_map: {e}")
         return None
 
 
@@ -45,12 +45,12 @@ async def _save_id_map(data: dict) -> None:
         async with aiofiles.open(ID_MAP_PATH, "w", encoding="utf-8") as f:
             await f.write(json.dumps(data, indent=2, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndWiki] Failed to save id_map: {e}")
+        logger.warning(f"[ENDUID·百科] Failed to save id_map: {e}")
 
 
 async def _refresh_id_map() -> dict:
     """Rebuild id_map from catalog API (1 request, all items)."""
-    logger.info("[EndWiki] Refreshing ID map from catalog...")
+    logger.info("[ENDUID·百科] Refreshing ID map from catalog...")
     catalog_items = await wiki_client.get_catalog_items(
         sub_type_names={"干员", "武器"}
     )
@@ -83,7 +83,7 @@ async def _refresh_id_map() -> dict:
 
     data = {"items": items, "fetch_time": time.time()}
     await _save_id_map(data)
-    logger.info(f"[EndWiki] ID map refreshed: {len(items)} items")
+    logger.info(f"[ENDUID·百科] ID map refreshed: {len(items)} items")
     return data
 
 
@@ -101,7 +101,7 @@ async def _try_refresh_id_map() -> bool:
         _id_map = await _refresh_id_map()
         return True
     except Exception as e:
-        logger.error(f"[EndWiki] Failed to refresh ID map: {e}")
+        logger.error(f"[ENDUID·百科] Failed to refresh ID map: {e}")
         return False
 
 
@@ -222,7 +222,7 @@ async def get_char_wiki(
                 data = json.loads(await f.read())
             return CharWiki.model_validate(data)
         except Exception as e:
-            logger.warning(f"[EndWiki] Cache load failed {char_name}: {e}")
+            logger.warning(f"[ENDUID·百科] Cache load failed {char_name}: {e}")
 
     item = await wiki_client.get_item_info(item_id)
     if not item:
@@ -241,7 +241,7 @@ async def get_char_wiki(
         ) as f:
             await f.write(wiki.model_dump_json(indent=2))
     except Exception as e:
-        logger.warning(f"[EndWiki] Cache save failed {char_name}: {e}")
+        logger.warning(f"[ENDUID·百科] Cache save failed {char_name}: {e}")
 
     return wiki
 
@@ -268,7 +268,7 @@ async def get_weapon_wiki(
                 data = json.loads(await f.read())
             return WeaponWiki.model_validate(data)
         except Exception as e:
-            logger.warning(f"[EndWiki] Cache load failed {weapon_name}: {e}")
+            logger.warning(f"[ENDUID·百科] Cache load failed {weapon_name}: {e}")
 
     item = await wiki_client.get_item_info(item_id)
     if not item:
@@ -287,6 +287,6 @@ async def get_weapon_wiki(
         ) as f:
             await f.write(wiki.model_dump_json(indent=2))
     except Exception as e:
-        logger.warning(f"[EndWiki] Cache save failed {weapon_name}: {e}")
+        logger.warning(f"[ENDUID·百科] Cache save failed {weapon_name}: {e}")
 
     return wiki

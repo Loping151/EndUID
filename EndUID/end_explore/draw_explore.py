@@ -49,7 +49,7 @@ async def draw_explore(ev: Event) -> Union[bytes, str]:
             raw = await f.read()
         data_res = json.loads(raw)
     except Exception as e:
-        logger.warning(f"[EndUID] 本地卡片数据读取失败: {e}")
+        logger.warning(f"[ENDUID·探索] 本地卡片数据读取失败: {e}")
         return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
 
     if data_res.get("code") != 0:
@@ -59,7 +59,7 @@ async def draw_explore(ev: Event) -> Union[bytes, str]:
     try:
         detail = CardDetailResponse.model_validate(data_res).data.detail
     except Exception as e:
-        logger.error(f"[EndUID] 卡片详情解析失败: {e}")
+        logger.error(f"[ENDUID·探索] 卡片详情解析失败: {e}")
         return "❌ 角色数据解析失败"
 
     base = detail.base

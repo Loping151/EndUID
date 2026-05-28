@@ -83,13 +83,13 @@ async def do_sign_in(uid: str, cred: str, nickname: str, game_id: int = ENDFIELD
     else:
         record_fail()
         message = res.get("message", "未知错误")
-        logger.warning(f"[EndUID] 签到失败: {res}")
+        logger.warning(f"[ENDUID·签到] 签到失败: {res}")
         return f"❌ [{nickname}] 签到失败: {message}"
 
 
 async def end_auto_sign() -> str:
     """自动签到任务"""
-    logger.info("[EndUID] 自动签到任务开始")
+    logger.info("[ENDUID·签到] 自动签到任务开始")
 
     # 获取所有用户
     all_users = await EndUser.get_all_data()
@@ -101,7 +101,7 @@ async def end_auto_sign() -> str:
     ]
 
     if not candidate_users:
-        logger.info("[EndUID] 没有需要签到的用户")
+        logger.info("[ENDUID·签到] 没有需要签到的用户")
         return "[EndUID] 没有需要签到的用户"
 
     # 跳过今日已签到的用户
@@ -115,13 +115,13 @@ async def end_auto_sign() -> str:
         sign_users.append(user)
 
     if skipped_count > 0:
-        logger.info(f"[EndUID] 跳过 {skipped_count} 个今日已签到的用户")
+        logger.info(f"[ENDUID·签到] 跳过 {skipped_count} 个今日已签到的用户")
 
     if not sign_users:
-        logger.info("[EndUID] 所有用户今日已签到，无需执行")
+        logger.info("[ENDUID·签到] 所有用户今日已签到，无需执行")
         return f"[EndUID] 所有 {len(candidate_users)} 个用户今日已签到"
 
-    logger.info(f"[EndUID] 开始为 {len(sign_users)} 个用户签到")
+    logger.info(f"[ENDUID·签到] 开始为 {len(sign_users)} 个用户签到")
 
     # 签到结果统计
     success_count = 0
@@ -152,7 +152,7 @@ async def end_auto_sign() -> str:
             if isinstance(result, Exception):
                 fail_count += 1
                 failed_users.append(user)
-                logger.error(f"[EndUID] 签到异常: {result}")
+                logger.error(f"[ENDUID·签到] 签到异常: {result}")
             elif isinstance(result, dict):
                 if result["status"] == "success":
                     success_count += 1
@@ -219,7 +219,7 @@ async def do_sign_in_with_result(
             if res is None:
                 if attempt < max_retries:
                     logger.warning(
-                        f"[EndUID] {display_uid} 签到请求失败，第 {attempt}/{max_retries} 次重试"
+                        f"[ENDUID·签到] {display_uid} 签到请求失败，第 {attempt}/{max_retries} 次重试"
                     )
                     await asyncio.sleep(retry_delay)
                     continue
@@ -228,35 +228,35 @@ async def do_sign_in_with_result(
             code = res.get("code")
 
             if code == 0:
-                logger.info(f"[EndUID] {display_uid} 签到成功")
+                logger.info(f"[ENDUID·签到] {display_uid} 签到成功")
                 await EndSignRecord.mark_signed(user.uid)
                 return {"status": "success", "message": f"[{display_uid}] 签到成功"}
             elif code == 10001:
-                logger.info(f"[EndUID] {display_uid} 今日已签到")
+                logger.info(f"[ENDUID·签到] {display_uid} 今日已签到")
                 await EndSignRecord.mark_signed(user.uid)
                 return {"status": "signed", "message": f"[{display_uid}] 今日已签到"}
             elif code in (RespCode.CRED_INVALID, RespCode.TOKEN_INVALID, RespCode.LOGIN_EXPIRED):
-                logger.warning(f"[EndUID] {display_uid} 凭证失效（code={code}），标记为无效")
+                logger.warning(f"[ENDUID·签到] {display_uid} 凭证失效（code={code}），标记为无效")
                 await EndUser.mark_invalid(user.uid, user.user_id, user.bot_id, user.game_id)
                 return {"status": "fail", "message": f"[{display_uid}] 签到失败（凭证失效）"}
             else:
                 if attempt < max_retries:
                     logger.warning(
-                        f"[EndUID] {display_uid} 签到失败（code={code}），第 {attempt}/{max_retries} 次重试"
+                        f"[ENDUID·签到] {display_uid} 签到失败（code={code}），第 {attempt}/{max_retries} 次重试"
                     )
                     await asyncio.sleep(retry_delay)
                     continue
-                logger.warning(f"[EndUID] {display_uid} 签到失败（已重试{max_retries}次）: {res}")
+                logger.warning(f"[ENDUID·签到] {display_uid} 签到失败（已重试{max_retries}次）: {res}")
                 return {"status": "fail", "message": f"[{display_uid}] 签到失败"}
 
         except Exception as e:
             if attempt < max_retries:
                 logger.warning(
-                    f"[EndUID] {display_uid} 签到异常（第 {attempt}/{max_retries} 次重试）: {e}"
+                    f"[ENDUID·签到] {display_uid} 签到异常（第 {attempt}/{max_retries} 次重试）: {e}"
                 )
                 await asyncio.sleep(retry_delay)
                 continue
-            logger.error(f"[EndUID] {display_uid} 签到异常（已重试{max_retries}次）: {e}")
+            logger.error(f"[ENDUID·签到] {display_uid} 签到异常（已重试{max_retries}次）: {e}")
             return {"status": "fail", "message": f"[{display_uid}] 签到异常"}
 
     return {"status": "fail", "message": f"[{display_uid}] 签到失败"}
@@ -396,7 +396,7 @@ async def build_sign_report_msgs(
             bot_id = await EndSubscribe.get_group_bot(group_id)
             if not bot_id:
                 bot_id = users[0].bot_id
-                logger.debug(f"[EndUID] 群 {group_id} 未在 EndSubscribe 中找到绑定，使用 fallback bot_id: {bot_id}")
+                logger.debug(f"[ENDUID·签到] 群 {group_id} 未在 EndSubscribe 中找到绑定，使用 fallback bot_id: {bot_id}")
 
             if group_id not in group_msgs:
                 group_msgs[group_id] = {}
@@ -437,7 +437,7 @@ async def send_sign_report(private_msgs: Dict, group_msgs: Dict) -> None:
                         )
                         await asyncio.sleep(0.5 + random.uniform(1, 3))
                 except Exception as e:
-                    logger.error(f"[EndUID] 私聊推送失败 ({user_id}): {e}")
+                    logger.error(f"[ENDUID·签到] 私聊推送失败 ({user_id}): {e}")
 
     for group_id, bot_data in group_msgs.items():
         for bot_id, messages in bot_data.items():
@@ -449,4 +449,4 @@ async def send_sign_report(private_msgs: Dict, group_msgs: Dict) -> None:
                         )
                         await asyncio.sleep(0.5 + random.uniform(1, 3))
                 except Exception as e:
-                    logger.error(f"[EndUID] 群推送失败 ({group_id}): {e}")
+                    logger.error(f"[ENDUID·签到] 群推送失败 ({group_id}): {e}")

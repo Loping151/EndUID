@@ -125,12 +125,12 @@ async def draw_end_daily_img(ev: Event, uid: str):
         async with aiofiles.open(save_path, "w", encoding="utf-8") as f:
             await f.write(json.dumps(res, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndUID] 卡片详情写入失败: {e}")
+        logger.warning(f"[ENDUID·每日] 卡片详情写入失败: {e}")
 
     try:
         detail = CardDetailResponse.model_validate(res).data.detail
     except Exception as e:
-        logger.error(f"[EndUID] 卡片详情解析失败: {e}")
+        logger.error(f"[ENDUID·每日] 卡片详情解析失败: {e}")
         return "❌ 解析卡片详情失败"
 
     if detail.chars:
@@ -170,7 +170,7 @@ async def draw_end_daily_img(ev: Event, uid: str):
             try:
                 pile_url = await get_image_b64_with_cache(alias_url, PILE_CACHE_PATH)
             except Exception as e:
-                logger.warning(f"[EndUID] 体力背景读取失败: {e}")
+                logger.warning(f"[ENDUID·每日] 体力背景读取失败: {e}")
                 pile_url = ""
 
     if not pile_url and detail.chars:

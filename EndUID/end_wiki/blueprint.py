@@ -44,7 +44,7 @@ def _load_bp_map() -> dict | None:
         raw = BP_MAP_PATH.read_text(encoding="utf-8")
         return json.loads(raw)
     except Exception as e:
-        logger.warning(f"[EndBP] Failed to load blueprint map: {e}")
+        logger.warning(f"[ENDUID·蓝图] Failed to load blueprint map: {e}")
         return None
 
 
@@ -56,7 +56,7 @@ async def _save_bp_map(data: dict) -> None:
         ) as f:
             await f.write(json.dumps(data, indent=2, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndBP] Failed to save blueprint map: {e}")
+        logger.warning(f"[ENDUID·蓝图] Failed to save blueprint map: {e}")
 
 
 def _extract_bp_info(item: dict) -> dict:
@@ -117,7 +117,7 @@ async def _fetch_blueprints() -> dict[str, dict]:
     if not bp_entries:
         return {}
 
-    logger.info(f"[EndBP] Catalog returned {len(bp_entries)} blueprints")
+    logger.info(f"[ENDUID·蓝图] Catalog returned {len(bp_entries)} blueprints")
 
     # Step 2: Fetch detail for each to get materials/products
     items: dict[str, dict] = {}
@@ -132,7 +132,7 @@ async def _fetch_blueprints() -> dict[str, dict]:
 
         bp_info = _extract_bp_info(item)
         items[item_id] = bp_info
-        logger.debug(f"[EndBP] Loaded blueprint {item_id}: {bp_info['name']}")
+        logger.debug(f"[ENDUID·蓝图] Loaded blueprint {item_id}: {bp_info['name']}")
 
     return items
 
@@ -147,7 +147,7 @@ async def _try_refresh_bp_map() -> bool:
     if (now - _bp_map_last_attempt) < BP_MAP_RETRY_BACKOFF:
         return False
     _bp_map_last_attempt = now
-    logger.info("[EndBP] Refreshing blueprint map...")
+    logger.info("[ENDUID·蓝图] Refreshing blueprint map...")
     try:
         items = await _fetch_blueprints()
         if not items:
@@ -155,10 +155,10 @@ async def _try_refresh_bp_map() -> bool:
         data = {"items": items, "fetch_time": time.time()}
         await _save_bp_map(data)
         _bp_map = data
-        logger.info(f"[EndBP] Blueprint map refreshed: {len(items)}")
+        logger.info(f"[ENDUID·蓝图] Blueprint map refreshed: {len(items)}")
         return True
     except Exception as e:
-        logger.error(f"[EndBP] Failed to refresh blueprint map: {e}")
+        logger.error(f"[ENDUID·蓝图] Failed to refresh blueprint map: {e}")
         return False
 
 
@@ -295,7 +295,7 @@ async def _render_blueprint_card(
         try:
             cache_file.write_bytes(result)
         except Exception as e:
-            logger.warning(f"[EndBP] Failed to cache render: {e}")
+            logger.warning(f"[ENDUID·蓝图] Failed to cache render: {e}")
 
     return result
 

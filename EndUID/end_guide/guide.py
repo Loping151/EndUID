@@ -60,7 +60,7 @@ def _load_guide_map() -> dict | None:
         raw = GUIDE_MAP_PATH.read_text(encoding="utf-8")
         return json.loads(raw)
     except Exception as e:
-        logger.warning(f"[EndGuide] Failed to load guide map: {e}")
+        logger.warning(f"[ENDUID·攻略] Failed to load guide map: {e}")
         return None
 
 
@@ -72,7 +72,7 @@ async def _save_guide_map(data: dict) -> None:
         ) as f:
             await f.write(json.dumps(data, indent=2, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndGuide] Failed to save guide map: {e}")
+        logger.warning(f"[ENDUID·攻略] Failed to save guide map: {e}")
 
 
 def _extract_char_name(guide_name: str) -> str:
@@ -90,7 +90,7 @@ async def _try_refresh_guide_map() -> bool:
     if (now - _guide_map_last_attempt) < GUIDE_MAP_RETRY_BACKOFF:
         return False
     _guide_map_last_attempt = now
-    logger.info("[EndGuide] Refreshing guide ID map...")
+    logger.info("[ENDUID·攻略] Refreshing guide ID map...")
     try:
         items = await _fetch_guide_items()
         if not items:
@@ -98,10 +98,10 @@ async def _try_refresh_guide_map() -> bool:
         data = {"items": items, "fetch_time": time.time()}
         await _save_guide_map(data)
         _guide_map = data
-        logger.info(f"[EndGuide] Guide map refreshed: {len(items)} guides")
+        logger.info(f"[ENDUID·攻略] Guide map refreshed: {len(items)} guides")
         return True
     except Exception as e:
-        logger.error(f"[EndGuide] Failed to refresh guide map: {e}")
+        logger.error(f"[ENDUID·攻略] Failed to refresh guide map: {e}")
         return False
 
 
@@ -129,7 +129,7 @@ def resize_for_jpg(img: Image.Image) -> Image.Image:
     new_width = int(width * scale)
     new_height = int(height * scale)
     logger.info(
-        f"[EndGuide] 攻略图尺寸{width}x{height}超过JPG限制，"
+        f"[ENDUID·攻略] 攻略图尺寸{width}x{height}超过JPG限制，"
         f"缩放至{new_width}x{new_height}"
     )
     return img.resize((new_width, new_height), Image.LANCZOS)
@@ -154,13 +154,13 @@ def compress_image_to_jpg(img: Image.Image, max_size_mb: int) -> bytes:
         result = buffer.getvalue()
         if len(result) <= max_size_bytes:
             logger.info(
-                f"[EndGuide] 攻略图压缩至quality={quality}, "
+                f"[ENDUID·攻略] 攻略图压缩至quality={quality}, "
                 f"大小={len(result) / 1024 / 1024:.2f}MB"
             )
             return result
 
     logger.warning(
-        f"[EndGuide] 攻略图压缩至最低质量仍超过{max_size_mb}MB, "
+        f"[ENDUID·攻略] 攻略图压缩至最低质量仍超过{max_size_mb}MB, "
         f"当前大小={len(result) / 1024 / 1024:.2f}MB"
     )
     return result
@@ -197,7 +197,7 @@ async def _fetch_guide_items() -> dict[str, dict]:
             "name": name,
             "char_name": char_name,
         }
-        logger.debug(f"[EndGuide] Catalog guide {item_id}: {char_name}")
+        logger.debug(f"[ENDUID·攻略] Catalog guide {item_id}: {char_name}")
 
     return items
 
@@ -455,7 +455,7 @@ async def _get_guide_data(item_id: int) -> Optional[list[dict]]:
             return data.get("tabs", [])
         except Exception as e:
             logger.warning(
-                f"[EndGuide] Failed to load cache {item_id}: {e}"
+                f"[ENDUID·攻略] Failed to load cache {item_id}: {e}"
             )
 
     item = await wiki_client.get_item_info(item_id)
@@ -478,7 +478,7 @@ async def _get_guide_data(item_id: int) -> Optional[list[dict]]:
         ) as f:
             await f.write(json.dumps(cache_data, ensure_ascii=False))
     except Exception as e:
-        logger.warning(f"[EndGuide] Failed to save cache {item_id}: {e}")
+        logger.warning(f"[ENDUID·攻略] Failed to save cache {item_id}: {e}")
 
     return tabs
 
@@ -501,7 +501,7 @@ async def _download_and_stitch(
             img = await pic_download_from_url(GUIDE_IMG_CACHE, url)
             images.append(img.convert("RGB"))
         except Exception as e:
-            logger.warning(f"[EndGuide] Image download failed: {e}")
+            logger.warning(f"[ENDUID·攻略] Image download failed: {e}")
 
     if not images:
         return None
@@ -593,7 +593,7 @@ async def _render_rich_tab(
         )
         return compress_image_bytes_to_jpg(rendered, max_size_mb)
     except Exception as e:
-        logger.warning(f"[EndGuide] Rich render failed: {e}")
+        logger.warning(f"[ENDUID·攻略] Rich render failed: {e}")
         return None
 
 

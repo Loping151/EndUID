@@ -108,9 +108,9 @@ class EndApi:
                 # 距离上次请求超过 3 分钟（180 秒）
                 if current_time - user.last_cred_request_time > 180:
                     need_refresh = True
-                    logger.info(f"[EndUID] Token 超过 3 分钟，需要刷新")
+                    logger.info(f"[ENDUID·API] Token 超过 3 分钟，需要刷新")
                 else:
-                    logger.info(f"[EndUID] 使用缓存的 token（距上次请求 {current_time - user.last_cred_request_time} 秒）")
+                    logger.info(f"[ENDUID·API] 使用缓存的 token（距上次请求 {current_time - user.last_cred_request_time} 秒）")
             else:
                 # 没有记录时间，需要刷新
                 need_refresh = True
@@ -132,7 +132,7 @@ class EndApi:
 
         for attempt in range(1, max_retries + 1):
             try:
-                logger.debug(f"[EndUID][RefreshToken] GET {REFRESH_TOKEN_URL} cred_len={len(cred)}")
+                logger.debug(f"[ENDUID·刷新Token] GET {REFRESH_TOKEN_URL} cred_len={len(cred)}")
                 proxy = self._get_proxy()
                 async with session.get(
                     REFRESH_TOKEN_URL,
@@ -141,14 +141,14 @@ class EndApi:
                 ) as resp:
                     if resp.content_type and "json" in resp.content_type:
                         res = await resp.json()
-                        logger.debug(f"[EndUID][RefreshToken] response: {res}")
+                        logger.debug(f"[ENDUID·刷新Token] response: {res}")
                     else:
                         text = await resp.text()
                         logger.error(
-                            f"[EndUID] Token 刷新失败: HTTP {resp.status}, body={text[:200]}"
+                            f"[ENDUID·API] Token 刷新失败: HTTP {resp.status}, body={text[:200]}"
                         )
                         if attempt < max_retries:
-                            logger.warning(f"[EndUID] Token 刷新非JSON响应，第 {attempt}/{max_retries} 次重试")
+                            logger.warning(f"[ENDUID·API] Token 刷新非JSON响应，第 {attempt}/{max_retries} 次重试")
                             await asyncio.sleep(retry_delay)
                             continue
                         return None
@@ -166,16 +166,16 @@ class EndApi:
                             last_cred_request_time=current_time
                         )
 
-                        logger.info(f"[EndUID] Token 刷新成功 (timestamp={timestamp})")
+                        logger.info(f"[ENDUID·API] Token 刷新成功 (timestamp={timestamp})")
                         return token
                     elif code in (RespCode.CRED_INVALID, RespCode.TOKEN_INVALID, RespCode.LOGIN_EXPIRED):
                         # 凭证失效，不重试，直接抛出
-                        logger.warning(f"[EndUID] Token 刷新失败（凭证失效 code={code}）")
+                        logger.warning(f"[ENDUID·API] Token 刷新失败（凭证失效 code={code}）")
                         raise CredentialInvalidError(f"凭证失效 code={code}")
                     else:
-                        logger.error(f"[EndUID] Token 刷新失败: {res}")
+                        logger.error(f"[ENDUID·API] Token 刷新失败: {res}")
                         if attempt < max_retries:
-                            logger.warning(f"[EndUID] Token 刷新未知错误，第 {attempt}/{max_retries} 次重试")
+                            logger.warning(f"[ENDUID·API] Token 刷新未知错误，第 {attempt}/{max_retries} 次重试")
                             await asyncio.sleep(retry_delay)
                             continue
                         return None
@@ -183,10 +183,10 @@ class EndApi:
                 raise
             except Exception as e:
                 if attempt < max_retries:
-                    logger.warning(f"[EndUID] Token 刷新异常（第 {attempt}/{max_retries} 次重试）: {e}")
+                    logger.warning(f"[ENDUID·API] Token 刷新异常（第 {attempt}/{max_retries} 次重试）: {e}")
                     await asyncio.sleep(retry_delay)
                     continue
-                logger.error(f"[EndUID] Token 刷新异常（已重试{max_retries}次）: {e}")
+                logger.error(f"[ENDUID·API] Token 刷新异常（已重试{max_retries}次）: {e}")
                 return None
 
         return None
@@ -229,7 +229,7 @@ class EndApi:
         try:
             token = await self.refresh_token(cred)
         except CredentialInvalidError:
-            logger.warning(f"[EndUID] 凭证失效，请求中止")
+            logger.warning(f"[ENDUID·API] 凭证失效，请求中止")
             return None
         if not token:
             return None
@@ -309,12 +309,12 @@ class EndApi:
             if extra_headers:
                 headers.update(extra_headers)
 
-            logger.debug(f"[EndUID][请求头] {json.dumps(headers, indent=2, ensure_ascii=False)}")
+            logger.debug(f"[ENDUID·请求头] {json.dumps(headers, indent=2, ensure_ascii=False)}")
 
             session = await self.get_session()
             try:
                 logger.debug(
-                    f"[EndUID][Request] {method} {url} uid={uid} game_id={game_id} "
+                    f"[ENDUID·请求] {method} {url} uid={uid} game_id={game_id} "
                     f"params={params if method == 'GET' else None} body={body if method != 'GET' else None}"
                 )
                 async def read_response(resp: aiohttp.ClientResponse) -> dict:
@@ -333,25 +333,25 @@ class EndApi:
                     # 不使用 params 参数，因为我们已经在 URL 中拼接了查询参数
                     async with session.get(url, headers=headers, proxy=proxy) as resp:
                         res = await read_response(resp)
-                        logger.debug(f"[EndUID][Request] response: {res}")
+                        logger.debug(f"[ENDUID·请求] response: {res}")
 
                         if resp.status in [400, 403]:
                             if res.get("code") == RespCode.CRED_INVALID:
                                 message = res.get("message", "")
                                 if "签到" in message:
-                                    logger.info(f"[EndUID] 已签到: {message}")
+                                    logger.info(f"[ENDUID·API] 已签到: {message}")
                                 else:
-                                    logger.info(f"[EndUID] Cred 失效: {message}")
+                                    logger.info(f"[ENDUID·API] Cred 失效: {message}")
                             elif res.get("code") == RespCode.TOKEN_INVALID:
-                                logger.info(f"[EndUID] Token 失效，准备刷新")
+                                logger.info(f"[ENDUID·API] Token 失效，准备刷新")
                             return res
 
                         if resp.status == 401:
-                            logger.warning(f"[EndUID] 请求返回 401，凭证失效")
+                            logger.warning(f"[ENDUID·API] 请求返回 401，凭证失效")
                             return {"code": RespCode.CRED_INVALID, "message": "HTTP 401 Unauthorized"}
 
                         if resp.status != 200:
-                            logger.error(f"[EndUID] 请求失败: {resp.status}")
+                            logger.error(f"[ENDUID·API] 请求失败: {resp.status}")
                             return None
 
                         return res
@@ -365,30 +365,30 @@ class EndApi:
                         **request_kwargs
                     ) as resp:
                         res = await read_response(resp)
-                        logger.debug(f"[EndUID][Request] response: {res}")
+                        logger.debug(f"[ENDUID·请求] response: {res}")
 
                         if resp.status in [400, 403]:
                             if res.get("code") == RespCode.CRED_INVALID:
                                 message = res.get("message", "")
                                 if "签到" in message:
-                                    logger.info(f"[EndUID] 已签到: {message}")
+                                    logger.info(f"[ENDUID·API] 已签到: {message}")
                                 else:
-                                    logger.info(f"[EndUID] Cred 失效: {message}")
+                                    logger.info(f"[ENDUID·API] Cred 失效: {message}")
                             elif res.get("code") == RespCode.TOKEN_INVALID:
-                                logger.info(f"[EndUID] Token 失效，准备刷新")
+                                logger.info(f"[ENDUID·API] Token 失效，准备刷新")
                             return res
 
                         if resp.status == 401:
-                            logger.warning(f"[EndUID] 请求返回 401，凭证失效")
+                            logger.warning(f"[ENDUID·API] 请求返回 401，凭证失效")
                             return {"code": RespCode.CRED_INVALID, "message": "HTTP 401 Unauthorized"}
 
                         if resp.status != 200:
-                            logger.error(f"[EndUID] 请求失败: {resp.status}")
+                            logger.error(f"[ENDUID·API] 请求失败: {resp.status}")
                             return None
 
                         return res
             except Exception as e:
-                logger.error(f"[EndUID] 请求异常: {e}")
+                logger.error(f"[ENDUID·API] 请求异常: {e}")
                 return None
 
         res = await do_request(token)
@@ -543,7 +543,7 @@ class EndApi:
                         )
 
         if not resolved_user_id:
-            logger.error("[EndUID] 获取 Skland 用户ID失败，无法请求卡片详情")
+            logger.error("[ENDUID·API] 获取 Skland 用户ID失败，无法请求卡片详情")
             return None
 
         params = {
@@ -607,7 +607,7 @@ class EndApi:
                         )
 
         if not resolved_user_id:
-            logger.error("[EndUID] 获取 Skland 用户 ID 失败，无法请求 indie-hard")
+            logger.error("[ENDUID·API] 获取 Skland 用户 ID 失败，无法请求 indie-hard")
             return None
 
         params = {
@@ -639,7 +639,7 @@ class EndApi:
         proxy = self._get_proxy()
 
         try:
-            logger.debug(f"[EndUID][OAuth] POST {SCAN_LOGIN_API}")
+            logger.debug(f"[ENDUID·OAuth] POST {SCAN_LOGIN_API}")
             async with session.post(
                 SCAN_LOGIN_API,
                 headers=headers,
@@ -648,20 +648,20 @@ class EndApi:
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
-                    logger.error(f"[EndUID][获取扫码ID] {resp.status} {resp.reason}")
+                    logger.error(f"[ENDUID·获取扫码ID] {resp.status} {resp.reason}")
                     return None
 
                 res = await resp.json()
-                logger.debug(f"[EndUID][OAuth][scan_login] response: {res}")
+                logger.debug(f"[ENDUID·OAuth] [scan_login] response: {res}")
                 if res.get("status") != 0 or res.get("msg") != "OK":
-                    logger.error(f"[EndUID][获取扫码ID] {res}")
+                    logger.error(f"[ENDUID·获取扫码ID] {res}")
                     return None
 
                 scan_id = res["data"]["scanId"]
-                logger.info(f"[EndUID] 获取到扫码ID: {scan_id}")
+                logger.info(f"[ENDUID·API] 获取到扫码ID: {scan_id}")
                 return scan_id
         except Exception as e:
-            logger.error(f"[EndUID][获取扫码ID] {e}")
+            logger.error(f"[ENDUID·获取扫码ID] {e}")
             return None
 
     async def get_scan_status(self, scan_id: str) -> Optional[str]:
@@ -675,27 +675,27 @@ class EndApi:
         proxy = self._get_proxy()
 
         try:
-            logger.debug(f"[EndUID][OAuth] GET {url}")
+            logger.debug(f"[ENDUID·OAuth] GET {url}")
             async with session.get(
                 url,
                 proxy=proxy,
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
-                    logger.debug(f"[EndUID][检查扫码状态] {resp.status}")
+                    logger.debug(f"[ENDUID·检查扫码状态] {resp.status}")
                     return None
 
                 res = await resp.json()
-                logger.debug(f"[EndUID][OAuth][scan_status] response: {res}")
+                logger.debug(f"[ENDUID·OAuth] [scan_status] response: {res}")
                 if res.get("status") != 0:
                     # 未扫码时会返回非0状态，这是正常的
                     return None
 
                 scan_code = res["data"]["scanCode"]
-                logger.info(f"[EndUID] 获取到扫码Code: {scan_code}")
+                logger.info(f"[ENDUID·API] 获取到扫码Code: {scan_code}")
                 return scan_code
         except Exception as e:
-            logger.debug(f"[EndUID][检查扫码状态] {e}")
+            logger.debug(f"[ENDUID·检查扫码状态] {e}")
             return None
 
     async def get_token_by_scan_code(
@@ -713,7 +713,7 @@ class EndApi:
         proxy = self._get_proxy()
 
         try:
-            logger.debug(f"[EndUID][OAuth] POST {TOKEN_BY_SCAN_CODE_API}")
+            logger.debug(f"[ENDUID·OAuth] POST {TOKEN_BY_SCAN_CODE_API}")
             async with session.post(
                 TOKEN_BY_SCAN_CODE_API,
                 headers=headers,
@@ -722,25 +722,25 @@ class EndApi:
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
-                    logger.error(f"[EndUID][获取Token] {resp.status}")
+                    logger.error(f"[ENDUID·获取Token] {resp.status}")
                     return None
 
                 res = await resp.json()
-                logger.debug(f"[EndUID][OAuth][token_by_scan] response: {res}")
+                logger.debug(f"[ENDUID·OAuth] [token_by_scan] response: {res}")
                 if res.get("status") != 0:
-                    logger.error(f"[EndUID][获取Token] {res}")
+                    logger.error(f"[ENDUID·获取Token] {res}")
                     return None
 
                 data = res.get("data", {})
                 token = data.get("token", "")
                 device_token = data.get("deviceToken", "")
                 logger.info(
-                    f"[EndUID] 获取到Token（长度: {len(token)}）"
+                    f"[ENDUID·API] 获取到Token（长度: {len(token)}）"
                     f", deviceToken={'有' if device_token else '无'}"
                 )
                 return {"token": token, "device_token": device_token}
         except Exception as e:
-            logger.error(f"[EndUID][获取Token] {e}")
+            logger.error(f"[ENDUID·获取Token] {e}")
             return None
 
     async def get_cred_info_by_token(self, token: str) -> Optional[dict]:
@@ -754,7 +754,7 @@ class EndApi:
         proxy = self._get_proxy()
 
         try:
-            logger.debug(f"[EndUID][OAuth] POST {OAUTH_API}")
+            logger.debug(f"[ENDUID·OAuth] POST {OAUTH_API}")
             async with session.post(
                 OAUTH_API,
                 headers=headers,
@@ -763,24 +763,24 @@ class EndApi:
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if resp.status == 405:
-                    logger.error(f"[EndUID][OAUTH API] 405 当前服务暂时无法使用token")
+                    logger.error(f"[ENDUID·OAuth API] 405 当前服务暂时无法使用token")
                     return "405"
 
                 if not resp.ok:
-                    logger.error(f"[EndUID][OAUTH API] {resp.status}")
+                    logger.error(f"[ENDUID·OAuth API] {resp.status}")
                     return None
 
                 res = await resp.json()
-                logger.debug(f"[EndUID][OAuth][oauth_code] response: {res}")
+                logger.debug(f"[ENDUID·OAuth] [oauth_code] response: {res}")
                 if res.get("status") != 0:
-                    logger.error(f"[EndUID][OAUTH API] {res}")
+                    logger.error(f"[ENDUID·OAuth API] {res}")
                     return None
 
                 code = res["data"]["code"]
-                logger.debug(f"[EndUID] 获取到OAUTH CODE: {code}")
+                logger.debug(f"[ENDUID·API] 获取到OAUTH CODE: {code}")
 
         except Exception as e:
-            logger.error(f"[EndUID][OAUTH API] {e}")
+            logger.error(f"[ENDUID·OAuth API] {e}")
             return None
 
         # 2. 用 code 换取 cred，并从该接口返回中读取 skland_user_id
@@ -788,7 +788,7 @@ class EndApi:
         headers = get_cred_header()
 
         try:
-            logger.debug(f"[EndUID][OAuth] POST {CRED_API}")
+            logger.debug(f"[ENDUID·OAuth] POST {CRED_API}")
             async with session.post(
                 CRED_API,
                 headers=headers,
@@ -796,19 +796,19 @@ class EndApi:
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:
-                    logger.error(f"[EndUID][CRED API] {resp.status}")
+                    logger.error(f"[ENDUID·凭据API] {resp.status}")
                     return None
 
                 res = await resp.json()
-                logger.debug(f"[EndUID][OAuth][generate_cred] response: {res}")
+                logger.debug(f"[ENDUID·OAuth] [generate_cred] response: {res}")
                 if res.get("code") != 0:
-                    logger.error(f"[EndUID][CRED API] {res}")
+                    logger.error(f"[ENDUID·凭据API] {res}")
                     return None
 
                 data = res.get("data", {}) or {}
                 cred = data.get("cred")
                 if not cred:
-                    logger.error(f"[EndUID][CRED API] missing cred: {res}")
+                    logger.error(f"[ENDUID·凭据API] missing cred: {res}")
                     return None
 
                 skland_user_id = (
@@ -821,13 +821,13 @@ class EndApi:
                 if skland_user_id is not None:
                     skland_user_id = str(skland_user_id)
 
-                logger.info(f"[EndUID] 获取到Cred（长度: {len(cred)}）")
+                logger.info(f"[ENDUID·API] 获取到Cred（长度: {len(cred)}）")
                 return {
                     "cred": cred,
                     "skland_user_id": skland_user_id,
                 }
         except Exception as e:
-            logger.error(f"[EndUID][CRED API] {e}")
+            logger.error(f"[ENDUID·凭据API] {e}")
             return None
 
     async def get_cred_by_token(self, token: str) -> Optional[str]:
@@ -888,12 +888,12 @@ class EndApi:
             token = await self.refresh_token(user.cookie)
         except CredentialInvalidError:
             # 凭证确认失效，标记为无效
-            logger.warning(f"[EndUID] {uid} 凭证失效，标记为无效")
+            logger.warning(f"[ENDUID·API] {uid} 凭证失效，标记为无效")
             await EndUser.mark_invalid(uid, user_id, bot_id)
             return None
         if not token:
             # 网络错误，不标记无效
-            logger.warning(f"[EndUID] {uid} Token 刷新失败（网络错误），跳过")
+            logger.warning(f"[ENDUID·API] {uid} Token 刷新失败（网络错误），跳过")
             return None
 
         # 更新最后使用时间
@@ -942,13 +942,13 @@ class EndApi:
             ) as resp:
                 grant_res = await resp.json()
 
-            logger.debug(f"[EndUID][Gacha] grant response: {grant_res}")
+            logger.debug(f"[ENDUID·抽卡] grant response: {grant_res}")
 
             grant_status = grant_res.get("status")
             if grant_status != 0:
                 msg = grant_res.get("msg", "未知错误")
                 logger.warning(
-                    f"[EndUID][Gacha] OAuth grant 失败: "
+                    f"[ENDUID·抽卡] OAuth grant 失败: "
                     f"status={grant_status}, msg={msg}"
                 )
                 return None
@@ -957,18 +957,18 @@ class EndApi:
             grant_token = grant_data.get("token")
             if not grant_token:
                 logger.error(
-                    f"[EndUID][Gacha] grant 响应缺少 token: {grant_res}"
+                    f"[ENDUID·抽卡] grant 响应缺少 token: {grant_res}"
                 )
                 return None
 
             logger.debug(
-                f"[EndUID][Gacha] grant_token={grant_token[:8]}..."
+                f"[ENDUID·抽卡] grant_token={grant_token[:8]}..."
             )
             return grant_token
 
         except Exception as e:
             logger.warning(
-                f"[EndUID][Gacha] 获取 gacha grant token 异常: {e}"
+                f"[ENDUID·抽卡] 获取 gacha grant token 异常: {e}"
             )
             return None
 
@@ -988,23 +988,23 @@ class EndApi:
                 u8_res = await resp.json()
 
             logger.debug(
-                f"[EndUID][Gacha] u8_token_by_uid response: {u8_res}"
+                f"[ENDUID·抽卡] u8_token_by_uid response: {u8_res}"
             )
 
             u8_data = u8_res.get("data") or {}
             u8_token = u8_data.get("token")
             if not u8_token:
                 msg = u8_res.get("msg", "未知错误")
-                logger.error(f"[EndUID][Gacha] 获取 u8_token 失败: {msg}")
+                logger.error(f"[ENDUID·抽卡] 获取 u8_token 失败: {msg}")
                 return None
 
             logger.info(
-                f"[EndUID][Gacha] 获取 u8_token 成功: {u8_token[:8]}..."
+                f"[ENDUID·抽卡] 获取 u8_token 成功: {u8_token[:8]}..."
             )
             return u8_token
 
         except Exception as e:
-            logger.error(f"[EndUID][Gacha] 获取 u8_token 异常: {e}")
+            logger.error(f"[ENDUID·抽卡] 获取 u8_token 异常: {e}")
             return None
 
     async def get_u8_token(
@@ -1035,7 +1035,7 @@ class EndApi:
 
         try:
             logger.debug(
-                f"[EndUID][Gacha] GET {url} params={list(params.keys())}"
+                f"[ENDUID·抽卡] GET {url} params={list(params.keys())}"
             )
             async with session.get(url, params=params, proxy=proxy) as resp:
                 if resp.content_type and "json" in resp.content_type:
@@ -1043,19 +1043,19 @@ class EndApi:
                 else:
                     text = await resp.text()
                     logger.error(
-                        f"[EndUID][Gacha] 非 JSON 响应: HTTP {resp.status}, body={text[:200]}"
+                        f"[ENDUID·抽卡] 非 JSON 响应: HTTP {resp.status}, body={text[:200]}"
                     )
                     return None
 
-                logger.debug(f"[EndUID][Gacha] response: {res}")
+                logger.debug(f"[ENDUID·抽卡] response: {res}")
 
                 if resp.status != 200:
-                    logger.error(f"[EndUID][Gacha] 请求失败: HTTP {resp.status}")
+                    logger.error(f"[ENDUID·抽卡] 请求失败: HTTP {resp.status}")
                     return None
 
                 return res
         except Exception as e:
-            logger.error(f"[EndUID][Gacha] 请求异常: {e}")
+            logger.error(f"[ENDUID·抽卡] 请求异常: {e}")
             return None
 
     async def get_gacha_char_record(
@@ -1210,21 +1210,21 @@ class EndApi:
             ) as resp:
                 res = await resp.json()
         except Exception as e:
-            logger.error(f"[EndUID][Ann] 获取 web token 异常: {e}")
+            logger.error(f"[ENDUID·公告] 获取 web token 异常: {e}")
             return None
 
         if res.get("code") != 0:
-            logger.error(f"[EndUID][Ann] 获取 web token 失败: {res}")
+            logger.error(f"[ENDUID·公告] 获取 web token 失败: {res}")
             return None
 
         token = res.get("data", {}).get("token")
         if not token:
-            logger.error(f"[EndUID][Ann] 获取 web token 响应缺少 token 字段: {res}")
+            logger.error(f"[ENDUID·公告] 获取 web token 响应缺少 token 字段: {res}")
             return None
 
         EndApi._web_public_token = token
         EndApi._web_public_token_time = current_time
-        logger.info("[EndUID][Ann] 刷新 web token 成功")
+        logger.info("[ENDUID·公告] 刷新 web token 成功")
         return token
 
     async def _web_public_get(
@@ -1266,7 +1266,7 @@ class EndApi:
                 ) as resp:
                     return await resp.json()
             except Exception as e:
-                logger.error(f"[EndUID][Ann] 请求 {path} 异常: {e}")
+                logger.error(f"[ENDUID·公告] 请求 {path} 异常: {e}")
                 return None
 
         token = await self._web_public_refresh_token()
@@ -1279,7 +1279,7 @@ class EndApi:
 
         # token 失效时服务端返回 code=10000 "请求异常"，刷新 token 后再试一次
         if res.get("code") == RespCode.REQUEST_ERROR:
-            logger.info(f"[EndUID][Ann] token 可能已失效，强制刷新后重试: {path}")
+            logger.info(f"[ENDUID·公告] token 可能已失效，强制刷新后重试: {path}")
             token = await self._web_public_refresh_token(force=True)
             if not token:
                 return None
@@ -1304,7 +1304,7 @@ class EndApi:
         )
         if is_cache and cache_valid:
             logger.debug(
-                f"[EndUID][Ann] 使用缓存的公告列表（距上次请求 "
+                f"[ENDUID·公告] 使用缓存的公告列表（距上次请求 "
                 f"{int(current_time - self.ann_list_cache_time)} 秒）"
             )
             return self.ann_list_data
@@ -1324,7 +1324,7 @@ class EndApi:
 
             res = await self._web_public_get("/web/v1/home/index", params)
             if not res or res.get("code") != 0:
-                logger.error(f"[EndUID][Ann] 获取公告列表失败: {res}")
+                logger.error(f"[ENDUID·公告] 获取公告列表失败: {res}")
                 break
 
             data = res.get("data", {}) or {}
@@ -1383,7 +1383,7 @@ class EndApi:
 
         self.ann_list_data = unique_list[:page_size]
         self.ann_list_cache_time = time.time()
-        logger.info(f"[EndUID][Ann] 获取到 {len(self.ann_list_data)} 条公告")
+        logger.info(f"[ENDUID·公告] 获取到 {len(self.ann_list_data)} 条公告")
         return self.ann_list_data
 
     async def get_ann_detail(self, post_id) -> Optional[dict]:
@@ -1401,7 +1401,7 @@ class EndApi:
 
         res = await self._web_public_get("/web/v1/item", {"id": post_id_str})
         if not res or res.get("code") != 0:
-            logger.error(f"[EndUID][Ann] 获取公告详情失败 id={post_id}: {res}")
+            logger.error(f"[ENDUID·公告] 获取公告详情失败 id={post_id}: {res}")
             return None
 
         data = res.get("data", {}) or {}
@@ -1447,7 +1447,7 @@ class EndApi:
                                 parts.append(text_lookup.get(str(cid), ""))
                     ordered_text.append("".join(parts))
             except Exception as e:
-                logger.warning(f"[EndUID][Ann] format 解析失败 id={post_id}: {e}")
+                logger.warning(f"[ENDUID·公告] format 解析失败 id={post_id}: {e}")
                 ordered_text = []
         if not ordered_text:
             # 兜底：format 缺失或解析失败时退回原始存储顺序

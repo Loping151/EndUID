@@ -533,7 +533,7 @@ class EndSubscribe(BaseModel, table=True):
 
         if changed:
             logger.info(
-                f"[EndUID订阅] 群 {group_id} 更新 {update_result.rowcount} 条订阅的bot_self_id -> {bot_self_id}"
+                f"[ENDUID·订阅] 群 {group_id} 更新 {update_result.rowcount} 条订阅的bot_self_id -> {bot_self_id}"
             )
 
         # 使用 INSERT ... ON CONFLICT DO UPDATE 原子操作，避免并发 INSERT 竞态导致索引损坏

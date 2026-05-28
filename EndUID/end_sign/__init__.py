@@ -158,7 +158,7 @@ async def end_scheduled_sign():
         msg = await end_auto_sign()
         subscribes = await gs_subscribe.get_subscribe(TASK_NAME_SIGN_RESULT)
         if subscribes and msg:
-            logger.info(f"[EndUID] 推送签到结果: {msg}")
+            logger.info(f"[ENDUID·签到] 推送签到结果: {msg}")
             for sub in subscribes:
                 await sub.send(msg)
     finally:
@@ -168,14 +168,14 @@ async def end_scheduled_sign():
 def setup_scheduler():
     """设置定时任务"""
     if not EndConfig.get_config("SchedSignin").data:
-        logger.info("[EndUID] 定时签到未启用")
+        logger.info("[ENDUID·签到] 定时签到未启用")
         return
 
     sign_time_config = EndConfig.get_config("SignTime").data
     sign_hour = int(sign_time_config[0])
     sign_minute = int(sign_time_config[1])
 
-    logger.info(f"[EndUID] 设置定时签到: 每天 {sign_hour:02d}:{sign_minute:02d}")
+    logger.info(f"[ENDUID·签到] 设置定时签到: 每天 {sign_hour:02d}:{sign_minute:02d}")
 
     try:
         scheduler.add_job(
@@ -186,9 +186,9 @@ def setup_scheduler():
             minute=sign_minute,
             replace_existing=True,
         )
-        logger.success("[EndUID] 定时签到任务已注册")
+        logger.success("[ENDUID·签到] 定时签到任务已注册")
     except Exception as e:
-        logger.error(f"[EndUID] 定时签到任务注册失败: {e}")
+        logger.error(f"[ENDUID·签到] 定时签到任务注册失败: {e}")
 
 
 setup_scheduler()
@@ -203,7 +203,7 @@ async def clear_end_sign_record():
 
     two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
     await EndSignRecord.clear_sign_records(two_days_ago)
-    logger.info("[EndUID] 已清除2天前的签到记录")
+    logger.info("[ENDUID·签到] 已清除2天前的签到记录")
 
 
 # ===================== 重启续签 =====================
@@ -218,7 +218,7 @@ async def check_and_resume_end_signing():
         return
 
     sign_type = state.get("type", "auto")
-    logger.warning(f"[EndUID] 检测到未完成的签到任务，正在恢复: type={sign_type}")
+    logger.warning(f"[ENDUID·签到] 检测到未完成的签到任务，正在恢复: type={sign_type}")
 
     await asyncio.sleep(5)
 
@@ -230,7 +230,7 @@ async def check_and_resume_end_signing():
             await end_auto_sign()
             signing_state.clear_state()
     except Exception as e:
-        logger.error(f"[EndUID] 恢复签到任务时出错: {e}")
+        logger.error(f"[ENDUID·签到] 恢复签到任务时出错: {e}")
         signing_state.clear_state()
 
 
@@ -241,6 +241,6 @@ scheduler.add_job(
     run_date=startup_time,
     id="end_resume_signing_on_startup",
 )
-logger.info("[EndUID] 已注册启动恢复任务，将在启动后10秒检查未完成的签到")
+logger.info("[ENDUID·签到] 已注册启动恢复任务，将在启动后10秒检查未完成的签到")
 
-logger.success("[EndUID] 签到模块加载完成")
+logger.success("[ENDUID·签到] 签到模块加载完成")
