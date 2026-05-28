@@ -75,15 +75,15 @@ install_bot_hooks()
 
 # 2. 注册自定义 Hook
 
-async def end_bot_check_hook(group_id: str, bot_self_id: str):
+async def end_bot_check_hook(group_id: str, bot_id: str, bot_self_id: str):
     """Bot-群组绑定 Hook"""
     logger.debug(
-        f"[ENDUID·Hook] bot_check_hook 被调用: group_id={group_id}, bot_self_id={bot_self_id}"
+        f"[ENDUID·Hook] bot_check_hook 被调用: group_id={group_id}, bot_id={bot_id}, bot_self_id={bot_self_id}"
     )
 
     if group_id:
         try:
-            await EndSubscribe.check_and_update_bot(group_id, bot_self_id)
+            await EndSubscribe.check_and_update_bot(group_id, bot_id, bot_self_id)
         except Exception as e:
             logger.warning(f"[ENDUID·插件] Bot检测失败: {e}")
 

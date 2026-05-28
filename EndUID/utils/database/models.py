@@ -507,6 +507,7 @@ class EndSubscribe(BaseModel, table=True):
         cls,
         session: AsyncSession,
         group_id: str,
+        bot_id: str,
         bot_self_id: str,
     ) -> bool:
         """检查并更新群组的 bot_self_id
@@ -538,7 +539,7 @@ class EndSubscribe(BaseModel, table=True):
 
         # 使用 INSERT ... ON CONFLICT DO UPDATE 原子操作，避免并发 INSERT 竞态导致索引损坏
         stmt = sqlite_insert(cls).values(
-            bot_id="onebot",
+            bot_id=bot_id,
             user_id="",
             group_id=group_id,
             bot_self_id=bot_self_id,
@@ -547,6 +548,7 @@ class EndSubscribe(BaseModel, table=True):
         stmt = stmt.on_conflict_do_update(
             index_elements=["group_id"],
             set_={
+                "bot_id": stmt.excluded.bot_id,
                 "bot_self_id": stmt.excluded.bot_self_id,
                 "updated_at": stmt.excluded.updated_at,
             },

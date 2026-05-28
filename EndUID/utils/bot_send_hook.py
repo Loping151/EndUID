@@ -1,7 +1,9 @@
+import inspect
+import sys
 from typing import Callable, Optional
+
 from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
-import sys
 
 
 if not hasattr(sys, "_gs_bot_hook_managers"):
@@ -65,6 +67,13 @@ def get_or_create_hook_manager(plugin_name: str) -> PluginHookManager:
 _end_manager = get_or_create_hook_manager("End")
 
 
+def _hook_arity(hook: Callable) -> int:
+    try:
+        return len(inspect.signature(hook).parameters)
+    except (TypeError, ValueError):
+        return 3
+
+
 def register_target_send_hook(func: Callable):
     """注册 target_send 方法 hook"""
     _end_manager.register_target_send_hook(func)
@@ -99,7 +108,10 @@ async def _call_all_target_send_hooks(
                 logger.debug(
                     f"[ENDUID·BotHook] 执行 hook: {hook.__name__}, group_id={group_id}"
                 )
-                await hook(group_id, bot_self_id)
+                if _hook_arity(hook) >= 3:
+                    await hook(group_id, bot_id, bot_self_id)
+                else:
+                    await hook(group_id, bot_self_id)
             except Exception as e:
                 logger.warning(
                     f"[ENDUID·BotHook] target_send hook {hook.__name__} 执行失败: {e}"
