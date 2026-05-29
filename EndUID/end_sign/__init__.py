@@ -201,7 +201,6 @@ setup_scheduler()
     hour=0,
     minute=5,
     id="end_sign_clear_record",
-    replace_existing=True,
 )
 async def clear_end_sign_record():
     """每天 00:05 清除 2 天前的签到记录"""

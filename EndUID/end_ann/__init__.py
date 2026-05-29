@@ -121,7 +121,6 @@ async def unsub_ann_(bot: Bot, ev: Event):
     "interval",
     minutes=ann_minute_check,
     id="end_ann_check",
-    replace_existing=True,
 )
 async def check_end_ann():
     if not EndConfig.get_config("AnnOpen").data:
@@ -272,7 +271,6 @@ async def end_clean_cache_(bot: Bot, ev: Event):
     hour=3,
     minute=30,
     id="end_ann_clean_cache_daily",
-    replace_existing=True,
 )
 async def end_auto_clean_cache_daily():
     """每天凌晨3:30自动清理终末地缓存"""
