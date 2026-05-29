@@ -15,6 +15,7 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "本地代理地址",
         "本地代理地址",
         "",
+        secret=True,
     ),
     "AtCheck": GsBoolConfig(
         "允许@查询他人",
@@ -138,11 +139,13 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "外置渲染地址",
         "外置渲染服务的API地址，例如：http://127.0.0.1:3000/render",
         "http://127.0.0.1:3000/render",
+        secret=True,
     ),
     "FontCssUrl": GsStrConfig(
         "外置渲染字体CSS地址",
         "用于HTML渲染的字体CSS URL，外置渲染时传递，一般保留默认即可，如果在本地，可以填http://127.0.0.1:8765/end/fonts/fonts.css，如果有自己的登录域名：可以使用 你的登录域名根/end/fonts/fonts.css",
         "https://fonts.loli.net/css2?family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Color+Emoji&display=swap",
+        secret=True,
     ),
 }
 
