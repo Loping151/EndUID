@@ -7,179 +7,277 @@
     @import url('{{ font_css_url }}');
 
     :root {
-        --c-bg: #0f1014;
-        --c-accent: #ffe600;
-        --c-text: #ffffff;
-        --c-subtext: #8b8b8b;
-        --c-card-bg: rgba(20, 21, 24, 0.9);
-        --c-rarity: {{ rarity_color }};
+        --bg: #0a0b0f;
+        --panel: rgba(255, 255, 255, 0.022);
+        --panel-line: rgba(255, 255, 255, 0.07);
+        --accent: #ffe600;
+        --rarity: {{ rarity_color }};
+        --text: #f2f3f5;
+        --sub: #6b6e78;
+        --dim: #9a9da6;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-        width: 800px;
-        background-color: var(--c-bg);
+        width: 820px;
+        background-color: var(--bg);
         font-family: 'Source Han Sans CN', sans-serif;
-        color: var(--c-text);
+        color: var(--text);
         position: relative;
-    }
-
-    .container {
-        position: relative;
-        z-index: 10;
-        padding: 40px;
-        padding-bottom: 80px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
     }
 
     .bg-layer {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 0;
-        background: linear-gradient(180deg, #0f1014 0%, #0f1014 85%, {{ rarity_color }}18 100%);
+        position: absolute; inset: 0; z-index: 0;
+        background:
+            radial-gradient(120% 80% at 80% -10%, {{ rarity_color }}1f 0%, transparent 45%),
+            radial-gradient(100% 60% at 0% 0%, rgba(255,255,255,0.03) 0%, transparent 40%),
+            linear-gradient(180deg, #0c0d12 0%, #0a0b0f 70%, {{ rarity_color }}0d 100%);
+    }
+    .bg-grid {
+        position: absolute; inset: 0; z-index: 1;
+        background-image:
+            linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+        background-size: 46px 46px;
+        mask-image: linear-gradient(to bottom, black 0%, transparent 55%);
+        -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 55%);
     }
 
-    /* Header */
-    .header {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+    .container {
+        position: relative; z-index: 10;
+        padding: 34px 36px 90px;
+        display: flex; flex-direction: column; gap: 22px;
     }
 
-    .weapon-icon-wrap {
-        width: 110px;
-        height: 110px;
-        border-radius: 12px;
-        border: 2px solid {{ rarity_color }}66;
-        background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, {{ rarity_color }}15 100%);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-shrink: 0;
-        position: relative;
-        overflow: hidden;
+    /* ---- top system bar ---- */
+    .sysbar {
+        display: flex; align-items: center; gap: 10px;
+        font-family: 'JetBrains Mono', monospace; font-size: 11px;
+        letter-spacing: 2px; color: var(--sub); text-transform: uppercase;
     }
-    .weapon-icon-wrap img { max-width: 90%; max-height: 90%; object-fit: contain; }
-    .weapon-icon-bar {
-        position: absolute; bottom: 0; left: 0; width: 100%; height: 3px;
-        background: var(--c-rarity);
+    .sysbar .dot { width: 7px; height: 7px; background: var(--rarity); transform: rotate(45deg); }
+    .sysbar .line { flex: 1; height: 1px; background: var(--panel-line); }
+    .sysbar .code { color: var(--rarity); }
+
+    /* ---- header ---- */
+    .header { display: flex; align-items: flex-end; gap: 22px; padding: 4px 0 18px; }
+    .icon-frame {
+        width: 224px; height: 224px; flex-shrink: 0; position: relative;
+        background: linear-gradient(160deg, {{ rarity_color }}22, rgba(0,0,0,0.35));
+        border: 1px solid {{ rarity_color }}55;
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 28px), calc(100% - 28px) 100%, 0 100%);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .icon-frame img { max-width: 88%; max-height: 88%; object-fit: contain; }
+    .icon-frame::before {
+        content: ""; position: absolute; top: 10px; left: 10px;
+        width: 24px; height: 24px;
+        border-top: 2px solid var(--rarity); border-left: 2px solid var(--rarity);
+    }
+    .icon-tag {
+        position: absolute; bottom: 0; left: 0;
+        font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 700;
+        letter-spacing: 1px; color: var(--bg); background: var(--rarity);
+        padding: 3px 10px;
     }
 
-    .header-info { flex: 1; }
-    .rarity-row { display: flex; gap: 2px; margin-bottom: 4px; }
-    .rarity-star { width: 22px; height: 22px; }
-    .weapon-name { font-size: 42px; font-weight: 900; line-height: 1.1; }
+    .h-info { flex: 1; min-width: 0; }
+    .rarity-row { display: flex; gap: 1px; margin-bottom: 6px; }
+    .rarity-star { width: 20px; height: 20px; }
+    .weapon-name { font-size: 46px; font-weight: 900; line-height: 1.0; letter-spacing: -1px; }
+    .h-meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
     .type-badge {
-        display: inline-block; margin-top: 6px; padding: 3px 12px;
-        background: {{ rarity_color }}15; border-left: 3px solid var(--c-rarity);
-        color: var(--c-rarity); font-family: 'JetBrains Mono'; font-weight: 700; font-size: 13px;
+        font-family: 'Oswald'; font-weight: 700; font-size: 13px; letter-spacing: 1px;
+        color: var(--rarity); padding: 4px 14px;
+        border: 1px solid {{ rarity_color }}55; background: {{ rarity_color }}12;
+    }
+    .rarity-badge {
+        font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700;
+        color: var(--sub); letter-spacing: 1px;
     }
 
-    /* Section */
-    .section { background: var(--c-card-bg); border: 1px solid rgba(255,255,255,0.06); padding: 18px 22px; }
-    .section-title {
-        font-size: 18px; font-weight: 800; color: var(--c-accent);
-        border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; margin-bottom: 14px;
-        display: flex; align-items: baseline; gap: 8px;
+    /* ---- section frame ---- */
+    .sec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .sec-idx {
+        font-family: 'Oswald'; font-size: 13px; font-weight: 700; line-height: 1;
+        color: var(--rarity); border: 1px solid {{ rarity_color }}66;
+        padding: 4px 6px 3px; letter-spacing: 1px;
     }
-    .section-title span { font-family: 'JetBrains Mono'; font-size: 12px; color: var(--c-subtext); font-weight: 400; }
+    .sec-zh { font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+    .sec-en {
+        font-family: 'Oswald'; font-size: 12px; font-weight: 500;
+        letter-spacing: 3px; text-transform: uppercase; color: var(--sub);
+    }
+    .sec-rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--panel-line), transparent); }
 
-    /* Stats compare */
-    .stats-compare {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
+    .panel {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-top: 1px solid rgba(255,255,255,0.11);
+        padding: 20px 22px;
     }
+
+    /* ---- base stats ---- */
+    .stats-compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .stat-box {
-        background: rgba(0,0,0,0.3); padding: 12px 14px;
-        border-left: 2px solid rgba(255,255,255,0.06);
+        position: relative; background: rgba(0,0,0,0.28);
+        padding: 13px 16px; border-left: 2px solid {{ rarity_color }}66;
     }
-    .stat-label { font-size: 12px; color: var(--c-subtext); margin-bottom: 4px; }
-    .stat-vals { display: flex; align-items: baseline; gap: 12px; }
-    .stat-init { font-family: 'Oswald'; font-size: 24px; font-weight: 700; color: white; }
-    .stat-arrow { color: #555; font-size: 14px; }
-    .stat-max { font-family: 'Oswald'; font-size: 24px; font-weight: 700; color: var(--c-rarity); }
+    .stat-label {
+        font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing: 0.5px;
+        color: var(--sub); margin-bottom: 7px; text-transform: uppercase;
+    }
+    .stat-vals { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+    .stat-init { font-family: 'Oswald'; font-size: 26px; font-weight: 700; color: var(--dim); }
+    .stat-arrow { color: #4a4d57; font-size: 13px; font-family: 'JetBrains Mono'; }
+    .stat-max { font-family: 'Oswald'; font-size: 26px; font-weight: 700; color: var(--rarity); }
+    .stat-box.small .stat-init, .stat-box.small .stat-max { font-size: 20px; }
 
-    /* Passive */
-    .passive-block {
-        padding: 14px 16px; margin-bottom: 10px;
-        border-left: 3px solid var(--c-rarity);
-        background: {{ rarity_color }}08;
+    /* ---- passive (hero) ---- */
+    .passive {
+        position: relative; padding: 22px 24px 22px 26px;
+        background: linear-gradient(100deg, {{ rarity_color }}14 0%, {{ rarity_color }}05 40%, transparent 100%);
+        border: 1px solid {{ rarity_color }}33; border-left: 4px solid var(--rarity);
     }
-    .passive-block.max { border-left-color: #ff9800; background: rgba(255,152,0,0.04); }
-    .passive-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .passive-name { font-size: 17px; font-weight: 800; }
+    .passive::after {
+        content: ""; position: absolute; top: 0; right: 0;
+        border-width: 0 16px 16px 0; border-style: solid;
+        border-color: transparent {{ rarity_color }}55 transparent transparent;
+    }
+    .passive-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .passive-name { font-size: 22px; font-weight: 800; }
     .passive-tag {
-        font-family: 'JetBrains Mono'; font-size: 10px; padding: 2px 7px;
-        border-radius: 2px; font-weight: 700;
+        font-family: 'JetBrains Mono'; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+        color: var(--bg); background: var(--rarity); padding: 3px 8px;
     }
-    .passive-tag.init { background: {{ rarity_color }}20; color: var(--c-rarity); }
-    .passive-tag.max { background: rgba(255,152,0,0.15); color: #ff9800; }
-    .passive-desc { font-size: 13px; line-height: 1.7; color: #bbb; white-space: pre-wrap; }
+    .passive-desc { font-size: 14px; line-height: 1.85; color: var(--dim); white-space: pre-wrap; }
+    .hl-num { color: var(--rarity); font-weight: 700; font-family: 'JetBrains Mono'; }
 
-    /* Skill rank table */
-    .rank-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-    .rank-table th {
-        background: rgba(255,230,0,0.06); color: var(--c-accent); font-weight: 700;
-        padding: 5px 3px; text-align: center; font-size: 11px;
-        border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap;
+    /* ---- gems ---- */
+    .gem-list { display: flex; gap: 14px; flex-wrap: wrap; }
+    .gem {
+        display: flex; align-items: center; gap: 16px;
+        background: rgba(0,0,0,0.28); padding: 14px 24px 14px 16px;
+        border-left: 3px solid var(--rarity);
     }
-    .rank-table th:first-child { text-align: left; padding-left: 10px; min-width: 100px; }
-    .rank-table td {
-        padding: 6px 3px; text-align: center; color: #bbb;
-        border-bottom: 1px solid rgba(255,255,255,0.03);
-        font-family: 'JetBrains Mono'; font-size: 11px;
-    }
-    .hl-num { color: var(--c-accent); font-weight: 700; }
-    .rank-table td:first-child {
-        text-align: left; padding-left: 10px;
-        font-family: 'Source Han Sans CN'; color: #999; font-size: 12px;
-    }
+    .gem img { width: 72px; height: 72px; object-fit: contain; background: rgba(255,255,255,0.03); }
+    .gem-name { font-size: 20px; font-weight: 700; color: #e6e7ea; }
 
-    /* Footer */
+    /* ---- skill scaling ---- */
+    .skill-block { margin-top: 6px; }
+    .skill-block + .skill-block { margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .skill-row-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .skill-name { font-size: 16px; font-weight: 700; color: #e6e7ea; }
+    .skill-kind { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--sub); letter-spacing: 1px; }
+
+    /* compact: RANK 3-9 ladder (value only) */
+    .ladder { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+    .ladder .cell {
+        text-align: center; padding: 12px 4px 13px;
+        background: rgba(0,0,0,0.25); border-bottom: 2px solid rgba(255,255,255,0.05);
+    }
+    .ladder .cell.peak { border-bottom-color: var(--rarity); background: {{ rarity_color }}10; }
+    .ladder .rk {
+        font-family: 'Oswald'; font-size: 13px; font-weight: 700; color: var(--sub);
+        letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .ladder .cell.peak .rk { color: var(--rarity); }
+    .ladder .vv { font-family: 'JetBrains Mono'; font-size: 16px; font-weight: 700; color: #d8dade; }
+    .ladder .cell.peak .vv { color: var(--rarity); }
+
+    /* verbose: min -> max stacked */
+    .verbose { display: flex; flex-direction: column; gap: 10px; }
+    .vstep {
+        display: flex; gap: 14px; padding: 13px 16px; background: rgba(0,0,0,0.26);
+        border-left: 2px solid rgba(255,255,255,0.08);
+    }
+    .vstep.peak { border-left-color: var(--rarity); background: {{ rarity_color }}0c; }
+    .vstep .vrk {
+        font-family: 'Oswald'; font-size: 14px; font-weight: 700; color: var(--sub);
+        flex-shrink: 0; width: 54px; letter-spacing: 0.5px;
+    }
+    .vstep.peak .vrk { color: var(--rarity); }
+    .vstep .vtxt { font-size: 13px; line-height: 1.7; color: var(--dim); }
+
+    /* ---- breakthrough ---- */
+    .bt-level { margin-bottom: 16px; }
+    .bt-level:last-child { margin-bottom: 0; }
+    .bt-name {
+        font-family: 'Oswald'; font-size: 14px; font-weight: 700; letter-spacing: 1px;
+        color: var(--dim); margin-bottom: 9px; display: flex; align-items: center; gap: 8px;
+    }
+    .bt-name::before { content: ""; width: 3px; height: 13px; background: var(--rarity); }
+    .mat-list { display: flex; gap: 10px; flex-wrap: wrap; }
+    .mat {
+        display: flex; align-items: center; gap: 9px;
+        background: rgba(0,0,0,0.28); padding: 8px 14px 8px 9px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .mat img { width: 36px; height: 36px; object-fit: contain; }
+    .mat-info .mn { font-size: 13px; font-weight: 700; color: #ddd; }
+    .mat-info .mc { font-family: 'JetBrains Mono'; font-size: 12px; font-weight: 700; color: var(--rarity); }
+
+    /* ---- footer ---- */
     .footer {
-        position: absolute; bottom: 0; left: 0; width: 100%; height: 60px;
-        background: rgba(10,10,12,0.98);
-        border-top: 2px solid {{ rarity_color }}40;
-        display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 50;
+        position: absolute; bottom: 0; left: 0; width: 100%; height: 64px;
+        background: rgba(8,9,12,0.96); border-top: 1px solid {{ rarity_color }}3a;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 36px; z-index: 50;
     }
-    .footer-logo { height: 24px; opacity: 0.7; }
-    .footer-text { font-family: 'Oswald'; font-size: 14px; color: var(--c-subtext); }
+    .footer-logo { height: 22px; opacity: 0.6; }
+    .footer-text {
+        font-family: 'JetBrains Mono'; font-size: 12px; letter-spacing: 1px; color: var(--sub);
+    }
+    .footer-text b { color: var(--rarity); }
 </style>
 </head>
 <body>
     <div class="bg-layer"></div>
+    <div class="bg-grid"></div>
 
     <div class="container">
 
-        <!-- Header -->
+        <!-- system bar -->
+        <div class="sysbar">
+            <div class="dot"></div>
+            <span>Weapon Archive</span>
+            <span class="code">/ {{ wiki.weapon_type }}</span>
+            <div class="line"></div>
+            <span>★{{ wiki.rarity }}</span>
+        </div>
+
+        <!-- header -->
         <div class="header">
-            <div class="weapon-icon-wrap">
+            <div class="icon-frame">
                 {% if weapon_img %}<img src="{{ weapon_img }}">{% endif %}
-                <div class="weapon-icon-bar"></div>
+                <div class="icon-tag">WPN</div>
             </div>
-            <div class="header-info">
+            <div class="h-info">
                 <div class="rarity-row">
                     {% for _ in range(wiki.rarity) %}
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
                     {% endfor %}
                 </div>
                 <div class="weapon-name">{{ wiki.name }}</div>
-                <div class="type-badge">{{ wiki.weapon_type }}</div>
+                <div class="h-meta">
+                    <div class="type-badge">{{ wiki.weapon_type }}</div>
+                </div>
             </div>
         </div>
 
-        <!-- Base Stats Compare -->
-        <div class="section">
-            <div class="section-title">基础属性 <span>ATTRIBUTES</span></div>
+        <!-- 01 base stats -->
+        <div class="panel">
+            <div class="sec-head" style="margin-bottom:14px;">
+                <div class="sec-idx">01</div>
+                <div class="sec-zh">基础属性</div>
+                <div class="sec-en">Attributes</div>
+                <div class="sec-rule"></div>
+            </div>
             <div class="stats-compare">
                 <div class="stat-box">
-                    <div class="stat-label">基础攻击力</div>
+                    <div class="stat-label">基础攻击力 / ATK</div>
                     <div class="stat-vals">
                         <div class="stat-init">{{ wiki.base_attack }}</div>
                         {% if wiki.base_attack_max %}
@@ -189,13 +287,13 @@
                     </div>
                 </div>
                 {% for bonus in wiki.stat_bonuses %}
-                <div class="stat-box">
+                <div class="stat-box small">
                     <div class="stat-label">{{ bonus.name }}</div>
                     <div class="stat-vals">
-                        <div class="stat-init" style="font-size:20px;">{{ bonus.value }}</div>
+                        <div class="stat-init">{{ bonus.value }}</div>
                         {% if wiki.stat_bonuses_max and loop.index0 < wiki.stat_bonuses_max|length %}
                         <div class="stat-arrow">&rarr;</div>
-                        <div class="stat-max" style="font-size:20px;">{{ wiki.stat_bonuses_max[loop.index0].value }}</div>
+                        <div class="stat-max">{{ wiki.stat_bonuses_max[loop.index0].value }}</div>
                         {% endif %}
                     </div>
                 </div>
@@ -203,77 +301,111 @@
             </div>
         </div>
 
-        <!-- Passive Skill -->
+        <!-- 02 passive -->
         {% if wiki.passive_max or wiki.passive %}
         {% set pas = wiki.passive_max or wiki.passive %}
-        <div class="section">
-            <div class="section-title">附术效果 <span>PASSIVE (MAX)</span></div>
-            <div class="passive-block">
-                <div class="passive-header">
+        <div>
+            <div class="sec-head">
+                <div class="sec-idx">02</div>
+                <div class="sec-zh">附术效果</div>
+                <div class="sec-en">Passive · Max</div>
+                <div class="sec-rule"></div>
+            </div>
+            <div class="passive">
+                <div class="passive-head">
                     <div class="passive-name">{{ pas.name }}</div>
+                    <div class="passive-tag">PASSIVE</div>
                 </div>
-                <div class="passive-desc">{{ pas.description }}</div>
+                <div class="passive-desc">{{ pas.description | hl_num }}</div>
             </div>
         </div>
         {% endif %}
 
-        <!-- Recommended Gems -->
+        <!-- 03 gems -->
         {% if gems %}
-        <div class="section">
-            <div class="section-title">基质推荐 <span>RECOMMENDED GEM</span></div>
-            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div>
+            <div class="sec-head">
+                <div class="sec-idx">03</div>
+                <div class="sec-zh">基质推荐</div>
+                <div class="sec-en">Recommended Gem</div>
+                <div class="sec-rule"></div>
+            </div>
+            <div class="gem-list">
                 {% for gem in gems %}
-                <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.25); padding:10px 16px; border-left:2px solid var(--c-rarity);">
-                    {% if gem.cover %}
-                    <img src="{{ gem.cover }}" style="width:48px; height:48px; border-radius:8px; object-fit:contain; background:rgba(255,255,255,0.03);">
-                    {% endif %}
-                    <div style="font-size:16px; font-weight:700; color:#ddd;">{{ gem.name }}</div>
+                <div class="gem">
+                    {% if gem.cover %}<img src="{{ gem.cover }}">{% endif %}
+                    <div class="gem-name">{{ gem.name }}</div>
                 </div>
                 {% endfor %}
             </div>
         </div>
         {% endif %}
 
-        <!-- Skill Rank Tables (RANK 5-9 only) -->
+        <!-- 04 skill scaling -->
         {% if wiki.skill_ranks %}
-        <div class="section">
-            <div class="section-title">技能数值 <span>SKILL DATA</span></div>
+        <div class="panel">
+            <div class="sec-head">
+                <div class="sec-idx">04</div>
+                <div class="sec-zh">技能数值</div>
+                <div class="sec-en">Skill Scaling · R3-R9</div>
+                <div class="sec-rule"></div>
+            </div>
             {% for skill in wiki.skill_ranks %}
-            <div style="margin-bottom:16px;">
-                <div style="font-size:15px; font-weight:700; color:#ddd; margin-bottom:6px; padding-left:2px;">{{ skill.name }}</div>
-                <table class="rank-table" style="direction:rtl;">
-                    <tr>
-                        {% for h in skill.header[4:] %}
-                        <th style="direction:ltr;">{{ h }}</th>
-                        {% endfor %}
-                    </tr>
-                    <tr>
-                        {% for v in skill.values[4:] %}
-                        <td style="direction:ltr;">{{ v[:50] | hl_num }}</td>
-                        {% endfor %}
-                    </tr>
-                </table>
+            {% set vals = skill.values[2:] if skill.values|length > 4 else skill.values %}
+            {% set rk0 = skill.values|length - vals|length %}
+            {% set vmax = (vals | map('length') | list | max) if vals else 0 %}
+            <div class="skill-block">
+                <div class="skill-row-head">
+                    <div class="skill-name">{{ skill.name }}</div>
+                    <div class="skill-kind">RANK {{ rk0 + 1 }} → {{ skill.values|length }}</div>
+                </div>
+                {% if vmax <= 16 and vals|length >= 2 %}
+                <div class="ladder">
+                    {% for v in vals %}
+                    <div class="cell {% if loop.last %}peak{% endif %}">
+                        <div class="rk">R{{ rk0 + loop.index }}</div>
+                        <div class="vv">{{ v | stat_num }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="verbose">
+                    <div class="vstep">
+                        <div class="vrk">R{{ rk0 + 1 }}</div>
+                        <div class="vtxt">{{ vals[0] | hl_num }}</div>
+                    </div>
+                    {% if vals|length > 1 %}
+                    <div class="vstep peak">
+                        <div class="vrk">R{{ skill.values|length }}</div>
+                        <div class="vtxt">{{ vals[-1] | hl_num }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
-        <!-- Breakthrough Materials -->
+        <!-- 05 breakthrough -->
         {% if wiki.breakthroughs %}
-        <div class="section">
-            <div class="section-title">突破材料 <span>BREAKTHROUGH</span></div>
+        <div class="panel">
+            <div class="sec-head">
+                <div class="sec-idx">05</div>
+                <div class="sec-zh">突破材料</div>
+                <div class="sec-en">Breakthrough</div>
+                <div class="sec-rule"></div>
+            </div>
             {% for bt in wiki.breakthroughs %}
-            <div style="margin-bottom:14px;">
-                <div style="font-size:14px; font-weight:700; color:#aaa; margin-bottom:8px;">{{ bt.level }}</div>
-                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <div class="bt-level">
+                <div class="bt-name">{{ bt.level }}</div>
+                <div class="mat-list">
                     {% for mat in bt.materials %}
-                    <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:4px;">
-                        {% if mat.cover_url %}
-                        <img src="{{ mat.cover_url }}" style="width:36px; height:36px; border-radius:4px; object-fit:contain;">
-                        {% endif %}
-                        <div>
-                            <div style="font-size:13px; font-weight:700; color:#ddd;">{{ mat.name or mat.item_id }}</div>
-                            <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--c-rarity);">x{{ mat.count }}</div>
+                    <div class="mat">
+                        {% if mat.cover_url %}<img src="{{ mat.cover_url }}">{% endif %}
+                        <div class="mat-info">
+                            <div class="mn">{{ mat.name or mat.item_id }}</div>
+                            <div class="mc">×{{ mat.count }}</div>
                         </div>
                     </div>
                     {% endfor %}
@@ -287,7 +419,7 @@
 
     <div class="footer">
         {% if end_logo %}<img src="{{ end_logo }}" class="footer-logo">{% endif %}
-        <div class="footer-text">WEAPON // {{ wiki.name }}</div>
+        <div class="footer-text">ENDFIELD · WEAPON ARCHIVE // <b>{{ wiki.name }}</b></div>
     </div>
 </body>
 </html>

@@ -38,6 +38,15 @@ def _highlight_numbers(text: str) -> str:
 end_templates.filters["hl_num"] = lambda s: Markup(_highlight_numbers(s))
 
 
+def _stat_value_only(text: str) -> str:
+    """'智识+156' → '+156'。"""
+    m = re.search(r"[+\-]?\d[\d.]*%?", text)
+    return m.group(0) if m else text
+
+
+end_templates.filters["stat_num"] = _stat_value_only
+
+
 # 共用 end_char/texture2d/ 下的 icon（详见 end_wiki/constants.py ATTR_ID_MAP / PROF_ID_MAP）：
 #   属性：灼热 / 电磁 / 寒冷 / 自然 / 物理
 #   职业：近卫 / 术师 / 突击 / 先锋 / 重装 / 辅助
@@ -49,12 +58,23 @@ def _get_texture_icon(name: str) -> str:
     return image_to_base64(path) if path.exists() else ""
 
 
+# 角色按元素着色，未知元素回退 Endfield 黄
+ELEMENT_COLORS = {
+    "灼热": "#ff7a3c",
+    "寒冷": "#4fb6ff",
+    "电磁": "#e0c84a",
+    "自然": "#6fd98a",
+    "物理": "#cfd6e0",
+}
+
+
 async def draw_char_wiki(wiki: CharWiki) -> Union[bytes, str]:
     """Render character wiki detail as image."""
     bg = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
     end_logo = image_to_base64(TEXTURE_PATH / "end.png", quality=75)
     property_icon = _get_texture_icon(wiki.attribute)
     profession_icon = _get_texture_icon(wiki.profession)
+    accent_color = ELEMENT_COLORS.get(wiki.attribute, "#ffe600")
 
     char_img = ""
     char_avatar = ""
@@ -100,6 +120,7 @@ async def draw_char_wiki(wiki: CharWiki) -> Union[bytes, str]:
         "profession_icon": profession_icon,
         "char_img": char_img,
         "char_avatar": char_avatar,
+        "accent_color": accent_color,
     }
 
     img_bytes = await render_html(

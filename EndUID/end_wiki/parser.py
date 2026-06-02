@@ -496,51 +496,57 @@ def _parse_weapon_tab(
         return base_attack, bonuses, passive
 
     doc = document_map[content_id]
-    blocks = doc.get("blockIds", [])
 
-    i = 0
-    while i < len(blocks):
-        bid = blocks[i]
-        kind = _extract_text_kind(doc, bid)
-        text = _extract_text(doc, bid)
+    # Entries are delimited by horizontalLine; the leading heading2 ("属性能力")
+    # sits in its own segment and is ignored. Within an entry the first body
+    # line is the name, heading3 lines are values, and any other body lines are
+    # notes (e.g. 叠加/触发规则) belonging to the entry.
+    segments: list[list[str]] = []
+    cur: list[str] = []
+    for bid in doc.get("blockIds", []):
+        block = doc.get("blockMap", {}).get(bid, {})
+        if block.get("kind") == "horizontalLine":
+            if cur:
+                segments.append(cur)
+                cur = []
+            continue
+        cur.append(bid)
+    if cur:
+        segments.append(cur)
 
-        if kind == "body" and text:
-            # Stat bonus name line, e.g. "敏捷提升·大 1/3"
-            # Next block(s) (heading3) have the value(s)
-            bonus_name = re.sub(r"\s*\d+/\d+\s*$", "", text.strip())
-            if i + 1 < len(blocks):
-                next_text = _extract_text(doc, blocks[i + 1])
-                next_kind = _extract_text_kind(doc, blocks[i + 1])
-                if next_kind == "heading3" and next_text:
-                    # Count consecutive heading3 blocks
-                    h3_lines = [next_text.strip()]
-                    j = i + 2
-                    while j < len(blocks):
-                        jk = _extract_text_kind(doc, blocks[j])
-                        jt = _extract_text(doc, blocks[j])
-                        if jk == "heading3" and jt:
-                            h3_lines.append(jt.strip())
-                            j += 1
-                        else:
-                            break
+    for seg in segments:
+        name = ""
+        content_lines: list[str] = []
+        value_count = 0
+        for bid in seg:
+            kind = _extract_text_kind(doc, bid)
+            text = _extract_text(doc, bid).strip()
+            if not text or kind == "heading2":
+                continue
+            if not name and kind == "body":
+                name = re.sub(r"\s*\d+/\d+\s*$", "", text)
+                continue
+            content_lines.append(text)
+            if kind == "heading3":
+                value_count += 1
 
-                    if len(h3_lines) == 1:
-                        # Single heading3 → stat bonus
-                        bonuses.append(
-                            WeaponStatBonus(
-                                name=bonus_name,
-                                value=h3_lines[0].rstrip("。."),
-                            )
-                        )
-                    else:
-                        # Multiple heading3 → passive skill
-                        passive = WeaponPassive(
-                            name=bonus_name,
-                            description="\n".join(h3_lines),
-                        )
-                    i = j
-                    continue
-        i += 1
+        if not name or not content_lines:
+            continue
+
+        if value_count == 1 and len(content_lines) == 1:
+            # Single value, no notes → stat bonus
+            bonuses.append(
+                WeaponStatBonus(
+                    name=name,
+                    value=content_lines[0].rstrip("。."),
+                )
+            )
+        else:
+            # Effect lines (+ notes) → passive skill
+            passive = WeaponPassive(
+                name=name,
+                description="\n".join(content_lines),
+            )
 
     return base_attack, bonuses, passive
 

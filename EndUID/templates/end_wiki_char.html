@@ -2,582 +2,409 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Endfield Character Wiki</title>
 <style>
     @import url('{{ font_css_url }}');
 
     :root {
-        --c-bg: #0f1014;
-        --c-accent: #ffe600;
-        --c-text: #ffffff;
-        --c-subtext: #8b8b8b;
-        --c-grid: rgba(255, 255, 255, 0.04);
-        --c-card-bg: rgba(20, 21, 24, 0.8);
+        --bg: #0a0b0f;
+        --panel: rgba(255, 255, 255, 0.022);
+        --panel-line: rgba(255, 255, 255, 0.07);
+        --accent: {{ accent_color or '#ffe600' }};
+        --text: #f2f3f5;
+        --sub: #6b6e78;
+        --dim: #9a9da6;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-        width: 800px;
-        min-height: 100vh;
-        background-color: var(--c-bg);
+        width: 820px;
+        background-color: var(--bg);
         font-family: 'Source Han Sans CN', sans-serif;
-        color: var(--c-text);
+        color: var(--text);
+        position: relative;
         overflow: hidden;
-        position: relative;
-    }
-
-    .container {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        padding-bottom: 90px;
     }
 
     .bg-layer {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 0;
-        background: radial-gradient(circle at 70% 30%, #1e1f24 0%, #0f1014 70%);
+        position: absolute; inset: 0; z-index: 0;
+        background:
+            radial-gradient(110% 70% at 78% 0%, {{ accent_color or '#ffe600' }}22 0%, transparent 48%),
+            linear-gradient(180deg, #0d0e13 0%, #0a0b0f 72%, {{ accent_color or '#ffe600' }}0c 100%);
     }
-
-    .grid-deco {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
+    .bg-grid {
+        position: absolute; inset: 0; z-index: 1;
         background-image:
-            linear-gradient(var(--c-grid) 1px, transparent 1px),
-            linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
-        background-size: 60px 60px;
-        z-index: 1;
-        mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+            linear-gradient(rgba(255,255,255,0.026) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.026) 1px, transparent 1px);
+        background-size: 46px 46px;
+        mask-image: linear-gradient(to bottom, black 0%, transparent 45%);
+        -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 45%);
     }
 
+    /* illustration on the right */
     .char-layer {
-        position: absolute;
-        top: 0;
-        right: 0;
-        max-height: 72%;
-        max-width: 75%;
-        width: auto;
-        height: auto;
-        z-index: 5;
-        object-fit: contain;
-        filter: drop-shadow(-10px 5px 20px rgba(0,0,0,0.5));
-        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 25%), linear-gradient(to bottom, black 70%, transparent 100%);
+        position: absolute; top: -10px; right: -10px;
+        max-height: 760px; max-width: 62%;
+        width: auto; height: auto; z-index: 4; object-fit: contain;
+        filter: drop-shadow(-12px 6px 26px rgba(0,0,0,0.55));
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32%), linear-gradient(to bottom, black 72%, transparent 100%);
         -webkit-mask-composite: source-in;
-        mask-image: linear-gradient(to right, transparent 0%, black 25%), linear-gradient(to bottom, black 70%, transparent 100%);
+        mask-image: linear-gradient(to right, transparent 0%, black 32%), linear-gradient(to bottom, black 72%, transparent 100%);
         mask-composite: intersect;
     }
-
-    .ui-layer {
-        position: relative;
-        z-index: 10;
-        padding: 50px;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
+    /* soft left scrim so header text stays legible over art — fades out on
+       every side (radial), so it never shows a hard edge on the illustration */
+    .scrim {
+        position: absolute; top: -80px; left: -80px;
+        width: 660px; height: 760px; z-index: 5; pointer-events: none;
+        background: radial-gradient(56% 52% at 36% 40%,
+            var(--bg) 0%, rgba(10, 11, 15, 0.82) 38%, transparent 70%);
     }
 
-    /* Header */
-    .header-group {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
+    .container { position: relative; z-index: 10; padding: 34px 36px 92px; }
 
-    .rarity-row {
-        display: flex;
-        gap: 2px;
-        height: 24px;
-        align-items: center;
+    .sysbar {
+        display: flex; align-items: center; gap: 10px;
+        font-family: 'JetBrains Mono', monospace; font-size: 11px;
+        letter-spacing: 2px; color: var(--sub); text-transform: uppercase;
+        margin-bottom: 18px;
     }
+    .sysbar .dot { width: 7px; height: 7px; background: var(--accent); transform: rotate(45deg); }
+    .sysbar .line { flex: 1; height: 1px; background: var(--panel-line); }
+    .sysbar .code { color: var(--accent); }
 
-    .rarity-star {
-        width: 24px;
-        height: 24px;
-    }
-
+    /* ---- hero (left column) ---- */
+    .hero { max-width: 470px; margin-bottom: 30px; }
     .char-name {
-        font-size: 96px;
-        font-weight: 900;
-        line-height: 0.9;
-        color: white;
-        text-shadow: 0 5px 15px rgba(0,0,0,0.8);
-        letter-spacing: -2px;
-        margin-left: -4px;
+        font-size: 78px; font-weight: 900; line-height: 0.92; letter-spacing: -2px;
+        text-shadow: 0 6px 22px rgba(0,0,0,0.7);
     }
+    .rarity-row { display: flex; gap: 1px; margin: 12px 0 14px; }
+    .rarity-star { width: 22px; height: 22px; }
 
-    .tags-row {
-        display: flex;
-        gap: 12px;
-        margin-top: 10px;
-        flex-wrap: wrap;
+    .tags-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+    .tag {
+        display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 13px;
+        background: rgba(255,255,255,0.06); border: 1px solid var(--panel-line);
     }
+    .tag span { font-family: 'JetBrains Mono'; font-weight: 700; font-size: 13px; color: #e6e7ea; }
+    .tag.element { background: var(--accent); border: none; }
+    .tag.element span { color: var(--bg); }
+    .tag.profession { border-color: {{ accent_color or '#ffe600' }}55; }
+    .tag-icon { width: 17px; height: 17px; }
 
-    .tag-box {
-        height: 32px;
-        padding: 0 16px;
-        background: rgba(255,255,255,0.08);
-        border-left: 3px solid var(--c-accent);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transform: skewX(-20deg);
-        backdrop-filter: blur(5px);
+    /* info as a single column — borderless, never intrudes on the art */
+    .info-col { display: flex; flex-direction: column; gap: 3px; width: fit-content; }
+    .info-row { display: flex; align-items: baseline; gap: 14px; padding: 5px 0; }
+    .info-key {
+        font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing: 1px;
+        color: var(--sub); text-transform: uppercase; width: 140px; flex-shrink: 0;
     }
+    .info-val { font-size: 16px; font-weight: 700; color: var(--text); }
 
-    .tag-box span {
-        font-family: 'JetBrains Mono', monospace;
-        font-weight: 700;
-        font-size: 14px;
-        transform: skewX(20deg);
-        color: #eee;
+    /* ---- sections ---- */
+    .sections { display: flex; flex-direction: column; gap: 24px; }
+    .sec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .sec-idx {
+        font-family: 'Oswald'; font-size: 13px; font-weight: 700; line-height: 1;
+        color: var(--accent); border: 1px solid {{ accent_color or '#ffe600' }}66;
+        padding: 4px 6px 3px; letter-spacing: 1px;
     }
+    .sec-zh { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+    .sec-en {
+        font-family: 'Oswald'; font-size: 12px; font-weight: 500;
+        letter-spacing: 3px; text-transform: uppercase; color: var(--sub);
+    }
+    .sec-rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--panel-line), transparent); }
+    .hl-num { color: var(--accent); font-weight: 700; font-family: 'JetBrains Mono'; }
 
-    .tag-box.element { background: #b82d22; border: none; }
-    .tag-icon { width: 18px; height: 18px; transform: skewX(20deg); }
+    /* ---- talents ---- */
+    .talent {
+        background: linear-gradient(100deg, {{ accent_color or '#ffe600' }}10 0%, transparent 55%);
+        border: 1px solid var(--panel-line); border-left: 3px solid var(--accent);
+        padding: 16px 20px; margin-bottom: 12px;
+    }
+    .talent-name { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+    .effect { margin-top: 12px; }
+    .phase-badge {
+        display: inline-block; font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 700;
+        color: var(--accent); border: 1px solid {{ accent_color or '#ffe600' }}55;
+        padding: 2px 8px; margin-bottom: 6px; letter-spacing: 0.5px;
+    }
+    .effect-desc { font-size: 14px; line-height: 1.75; color: var(--dim); white-space: pre-wrap; }
 
-    /* Info Grid */
-    .info-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 280px);
-        gap: 12px;
-        margin-top: 10px;
+    /* ---- skills ---- */
+    .skill-card {
+        background: var(--panel); border: 1px solid var(--panel-line);
+        margin-bottom: 16px;
     }
+    .skill-header {
+        display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+        background: linear-gradient(90deg, {{ accent_color or '#ffe600' }}0e 0%, transparent 60%);
+        border-bottom: 1px solid var(--panel-line);
+    }
+    .skill-icon {
+        width: 54px; height: 54px; flex-shrink: 0; object-fit: cover;
+        border: 1px solid {{ accent_color or '#ffe600' }}55; background: rgba(0,0,0,0.3);
+        clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+    }
+    .skill-meta { flex: 1; min-width: 0; }
+    .skill-name-row { display: flex; align-items: center; gap: 10px; }
+    .skill-name { font-size: 21px; font-weight: 800; }
+    .skill-type-badge {
+        font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 700;
+        padding: 2px 9px; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .skill-type-badge.normal { background: #1e2a1e; color: #7ccc7c; border: 1px solid #2f4a2f; }
+    .skill-type-badge.battle { background: #2a1e1e; color: #e06868; border: 1px solid #4a2f2f; }
+    .skill-type-badge.combo  { background: #1e1e2a; color: #7088e0; border: 1px solid #2f2f4a; }
+    .skill-type-badge.ult    { background: #2a261240; color: #e0c040; border: 1px solid #4a4220; }
+    .skill-desc-text { font-size: 13px; color: var(--dim); margin-top: 5px; line-height: 1.6; white-space: pre-wrap; }
+    .skill-body { padding: 14px 20px 18px; }
 
-    .info-card {
-        background: var(--c-card-bg);
-        border: 1px solid rgba(255,255,255,0.1);
-        padding: 10px 15px;
-        display: flex;
-        flex-direction: column;
+    .skill-stats { width: 100%; border-collapse: collapse; }
+    .skill-stats th {
+        font-family: 'Oswald'; color: var(--sub); font-weight: 700; font-size: 13px;
+        padding: 7px 4px; text-align: center; border-bottom: 1px solid var(--panel-line);
+        white-space: nowrap; letter-spacing: 0.5px;
     }
+    .skill-stats th:first-child { text-align: left; padding-left: 12px; width: 150px; }
+    .skill-stats th.mastery { color: var(--accent); }
+    .skill-stats td {
+        padding: 8px 4px; text-align: center; color: #d3d5da;
+        border-bottom: 1px solid rgba(255,255,255,0.035);
+        font-family: 'JetBrains Mono'; font-size: 13px;
+    }
+    .skill-stats td:first-child {
+        text-align: left; padding-left: 12px;
+        font-family: 'Source Han Sans CN'; color: var(--sub); font-size: 13px;
+    }
+    .skill-stats td.mastery { color: var(--accent); font-weight: 700; background: {{ accent_color or '#ffe600' }}0a; }
+    .skill-stats th.mastery { background: {{ accent_color or '#ffe600' }}0a; }
+    .skill-stats tr:last-child td { border-bottom: none; }
 
-    .info-label {
-        font-family: 'JetBrains Mono';
-        font-size: 12px;
-        color: var(--c-subtext);
-        margin-bottom: 2px;
-    }
-    .info-value {
-        font-size: 18px;
-        font-weight: 700;
-        color: white;
-    }
-
-    /* Scrollable Content Area */
-    .scroll-content {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
-        margin-top: 20px;
-    }
-
-    .section-title {
-        font-size: 28px;
-        font-weight: 800;
-        color: var(--c-accent);
-        border-bottom: 2px solid rgba(255,255,255,0.1);
-        padding-bottom: 5px;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: baseline;
-        gap: 10px;
-    }
-    .section-title span {
-        font-family: 'JetBrains Mono';
-        font-size: 16px;
-        color: var(--c-subtext);
-        font-weight: 400;
-    }
-
-    /* Stats Table */
-    .stats-table {
-        width: 100%;
-        background: var(--c-card-bg);
-        border-collapse: collapse;
-        font-family: 'Oswald';
-    }
-    .stats-table th {
-        color: var(--c-accent);
-        font-size: 14px;
-        text-align: center;
-        padding: 8px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .stats-table td {
-        color: white;
-        font-size: 20px;
-        text-align: center;
-        padding: 8px;
+    /* ---- base skills ---- */
+    .base-list { background: var(--panel); border: 1px solid var(--panel-line); padding: 6px 20px; }
+    .base-row {
+        display: flex; gap: 18px; align-items: baseline; padding: 13px 0;
         border-bottom: 1px solid rgba(255,255,255,0.05);
     }
-    .stats-table td:first-child { color: #888; font-size: 14px; }
-
-    /* Generic Feature Cards */
-    .feature-card {
-        background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, transparent 100%);
-        border-left: 4px solid #444;
-        padding: 15px;
-        margin-bottom: 10px;
+    .base-row:last-child { border-bottom: none; }
+    .base-name {
+        font-size: 15px; font-weight: 700; color: #e6e7ea; width: 130px; flex-shrink: 0;
+        display: flex; align-items: center; gap: 8px;
     }
-    .feature-name { font-size: 20px; font-weight: 700; color: white; margin-bottom: 5px; }
-    .feature-desc { font-size: 15px; line-height: 1.5; color: #ccc; white-space: pre-wrap; }
+    .base-name::before { content: ""; width: 3px; height: 14px; background: var(--accent); }
+    .base-desc { font-size: 14px; line-height: 1.6; color: var(--dim); }
 
-    .phase-badge {
-        display: inline-block;
-        font-family: 'JetBrains Mono';
-        font-size: 12px;
-        background: #333;
-        color: var(--c-accent);
-        padding: 2px 6px;
-        margin-bottom: 4px;
-        border-radius: 2px;
+    /* ---- potentials ---- */
+    .pot-list { background: var(--panel); border: 1px solid var(--panel-line); padding: 6px 20px; }
+    .pot-item {
+        display: flex; align-items: flex-start; gap: 16px; padding: 14px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
     }
+    .pot-item:last-child { border-bottom: none; }
+    .pot-rank {
+        flex-shrink: 0; width: 38px; height: 38px; position: relative;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .pot-rank svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .pot-rank span {
+        position: relative; font-family: 'Oswald'; font-size: 16px; font-weight: 700;
+        color: var(--accent);
+    }
+    .pot-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .pot-desc { font-size: 13px; line-height: 1.6; color: var(--dim); white-space: pre-wrap; }
 
-    /* ========== SKILL CARDS (NEW) ========== */
-    .skill-card {
-        background: var(--c-card-bg);
-        border: 1px solid rgba(255,255,255,0.08);
-        margin-bottom: 20px;
-        overflow: hidden;
-    }
-
-    .skill-header {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 16px 20px;
-        background: linear-gradient(90deg, rgba(255,230,0,0.06) 0%, transparent 60%);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .skill-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 8px;
-        border: 2px solid rgba(255,230,0,0.3);
-        object-fit: cover;
-        flex-shrink: 0;
-    }
-
-    .skill-meta {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .skill-name-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .skill-name {
-        font-size: 22px;
-        font-weight: 800;
-        color: white;
-    }
-
-    .skill-type-badge {
-        font-family: 'JetBrains Mono';
-        font-size: 11px;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 3px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        flex-shrink: 0;
-    }
-    .skill-type-badge.normal { background: #2a3a2a; color: #7ccc7c; }
-    .skill-type-badge.battle { background: #3a2a2a; color: #e06060; }
-    .skill-type-badge.combo  { background: #2a2a3a; color: #6080e0; }
-    .skill-type-badge.ult    { background: #3a3a1a; color: #e0c040; }
-
-    .skill-desc-text {
-        font-size: 14px;
-        color: #aaa;
-        margin-top: 4px;
-        line-height: 1.5;
-    }
-
-    .skill-body {
-        padding: 16px 20px;
-    }
-
-    /* Skill Stats Table */
-    .skill-stats {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-    }
-
-    .skill-stats th {
-        background: rgba(255,230,0,0.08);
-        color: var(--c-accent);
-        font-weight: 700;
-        padding: 6px 4px;
-        text-align: center;
-        font-size: 11px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        white-space: nowrap;
-    }
-
-    .skill-stats th:first-child {
-        text-align: left;
-        padding-left: 10px;
-        min-width: 90px;
-    }
-
-    .skill-stats td {
-        padding: 5px 4px;
-        text-align: center;
-        color: #ccc;
-        border-bottom: 1px solid rgba(255,255,255,0.03);
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
-    }
-
-    .skill-stats td:first-child {
-        text-align: left;
-        padding-left: 10px;
-        font-family: 'Source Han Sans CN', sans-serif;
-        color: #999;
-        font-size: 12px;
-    }
-
-    .skill-stats tr:hover td {
-        background: rgba(255,255,255,0.02);
-    }
-
-    /* Mastery columns highlighted */
-    .skill-stats td.mastery {
-        color: var(--c-accent);
-        font-weight: 700;
-    }
-    .skill-stats th.mastery {
-        color: var(--c-accent);
-    }
-
-    /* Potentials */
-    .potential-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 15px;
-        margin-bottom: 12px;
-        padding-bottom: 12px;
-        border-bottom: 1px dashed rgba(255,255,255,0.1);
-    }
-    .p-rank { font-family: 'Oswald'; font-size: 24px; color: var(--c-accent); font-weight: 700; width: 40px; }
-    .p-icon { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
-
-    /* Footer */
+    /* ---- footer ---- */
     .footer {
-        position: absolute;
-        bottom: 0; left: 0; width: 100%;
-        height: 80px;
-        background: rgba(10, 10, 12, 0.98);
-        border-top: 1px solid rgba(255,255,255,0.15);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 40px;
-        z-index: 50;
-        box-sizing: border-box;
+        position: absolute; bottom: 0; left: 0; width: 100%; height: 64px;
+        background: rgba(8,9,12,0.96); border-top: 1px solid {{ accent_color or '#ffe600' }}3a;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 36px; z-index: 50;
     }
-    .footer-logo { height: 32px; opacity: 0.8; }
-    .footer-text { font-family: 'Oswald'; font-size: 18px; color: var(--c-subtext); letter-spacing: 1px; }
-
+    .footer-logo { height: 22px; opacity: 0.6; }
+    .footer-text { font-family: 'JetBrains Mono'; font-size: 12px; letter-spacing: 1px; color: var(--sub); }
+    .footer-text b { color: var(--accent); }
 </style>
 </head>
 <body>
     <div class="bg-layer">
-        {% if bg %}<img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.2;">{% endif %}
+        {% if bg %}<img src="{{ bg }}" style="width:100%;height:100%;object-fit:cover;opacity:0.15;">{% endif %}
     </div>
-    <div class="grid-deco"></div>
+    <div class="bg-grid"></div>
+    {% if char_img %}<img src="{{ char_img }}" class="char-layer">{% endif %}
+    <div class="scrim"></div>
 
     <div class="container">
 
-        {% if char_img %}
-        <img src="{{ char_img }}" class="char-layer">
-        {% endif %}
+        <div class="sysbar">
+            <div class="dot"></div>
+            <span>Operator Archive</span>
+            <span class="code">/ {{ wiki.profession }}</span>
+            <div class="line"></div>
+            <span>★{{ wiki.rarity }}</span>
+        </div>
 
-        <div class="ui-layer">
-
-            <div class="header-group">
-                <div class="char-name">{{ wiki.name }}</div>
-
-                <div class="rarity-row">
-                    {% for _ in range(wiki.rarity) %}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
-                    {% endfor %}
-                </div>
-
-                <div class="tags-row">
-                    <div class="tag-box element">
-                        {% if property_icon %}<img src="{{ property_icon }}" class="tag-icon">{% endif %}
-                        <span>{{ wiki.attribute }}</span>
-                    </div>
-                    <div class="tag-box">
-                        {% if profession_icon %}<img src="{{ profession_icon }}" class="tag-icon">{% endif %}
-                        <span>{{ wiki.profession }}</span>
-                    </div>
-                    {% for tag in wiki.tags %}
-                    <div class="tag-box"><span>{{ tag }}</span></div>
-                    {% endfor %}
-                </div>
-
-                <div class="info-grid">
-                    <div class="info-card">
-                        <div class="info-label">阵营 / FACTION</div>
-                        <div class="info-value">{{ wiki.faction or 'UNKNOWN' }}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-label">种族 / RACE</div>
-                        <div class="info-value">{{ wiki.race or 'UNKNOWN' }}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-label">实装 / DATE</div>
-                        <div class="info-value">{{ wiki.release_date or '-' }}</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="info-label">生日 / BIRTHDAY</div>
-                        <div class="info-value">{{ wiki.birthday or '-' }}</div>
-                    </div>
-                </div>
+        <!-- hero -->
+        <div class="hero">
+            <div class="char-name">{{ wiki.name }}</div>
+            <div class="rarity-row">
+                {% for _ in range(wiki.rarity) %}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                {% endfor %}
             </div>
 
-            <div class="scroll-content">
-
-                {% if wiki.stats %}
-                <div>
-                    <div class="section-title">基础属性 <span>STATS</span></div>
-                    <table class="stats-table">
-                        <tr><th>LV</th><th>STR</th><th>AGI</th><th>INT</th><th>WIL</th><th>ATK</th><th>HP</th><th>DEF</th></tr>
-                        {% for s in wiki.stats %}
-                        <tr>
-                            <td>{{ s.level }}</td>
-                            <td>{{ s.strength }}</td>
-                            <td>{{ s.agility }}</td>
-                            <td>{{ s.intelligence }}</td>
-                            <td>{{ s.will }}</td>
-                            <td>{{ s.base_attack }}</td>
-                            <td>{{ s.base_hp }}</td>
-                            <td>{{ s.base_defense }}</td>
-                        </tr>
-                        {% endfor %}
-                    </table>
+            <div class="tags-row">
+                <div class="tag element">
+                    {% if property_icon %}<img src="{{ property_icon }}" class="tag-icon">{% endif %}
+                    <span>{{ wiki.attribute }}</span>
                 </div>
-                {% endif %}
+                <div class="tag profession">
+                    {% if profession_icon %}<img src="{{ profession_icon }}" class="tag-icon">{% endif %}
+                    <span>{{ wiki.profession }}</span>
+                </div>
+                {% for tag in wiki.tags %}
+                <div class="tag"><span>{{ tag }}</span></div>
+                {% endfor %}
+            </div>
 
-                {% if wiki.talents %}
-                <div>
-                    <div class="section-title">天赋 <span>TALENTS</span></div>
-                    {% for talent in wiki.talents %}
-                    <div class="feature-card">
-                        <div class="feature-name">{{ talent.name }}</div>
-                        {% for eff in talent.effects %}
-                            {% if eff.description %}
-                            <div style="margin-top:8px;">
-                                <div class="phase-badge">{{ eff.phase }}</div>
-                                <div class="feature-desc">{{ eff.description }}</div>
-                            </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
+            <div class="info-col">
+                <div class="info-row"><div class="info-key">阵营 / Faction</div><div class="info-val">{{ wiki.faction or 'UNKNOWN' }}</div></div>
+                <div class="info-row"><div class="info-key">种族 / Race</div><div class="info-val">{{ wiki.race or 'UNKNOWN' }}</div></div>
+                <div class="info-row"><div class="info-key">实装 / Release</div><div class="info-val">{{ wiki.release_date or '-' }}</div></div>
+                <div class="info-row"><div class="info-key">生日 / Birthday</div><div class="info-val">{{ wiki.birthday or '-' }}</div></div>
+            </div>
+        </div>
+
+        <div class="sections">
+
+            {% if wiki.talents %}
+            <div>
+                <div class="sec-head">
+                    <div class="sec-idx">01</div>
+                    <div class="sec-zh">天赋</div>
+                    <div class="sec-en">Talents</div>
+                    <div class="sec-rule"></div>
+                </div>
+                {% for talent in wiki.talents %}
+                <div class="talent">
+                    <div class="talent-name">{{ talent.name }}</div>
+                    {% for eff in talent.effects %}
+                        {% if eff.description %}
+                        <div class="effect">
+                            <div class="phase-badge">{{ eff.phase }}</div>
+                            <div class="effect-desc">{{ eff.description | hl_num }}</div>
+                        </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
-                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
 
-                {% if wiki.skills %}
-                <div>
-                    <div class="section-title">技能 <span>SKILLS</span></div>
-                    {% for skill in wiki.skills %}
-                    <div class="skill-card">
-                        <div class="skill-header">
-                            {% if skill.icon_url %}
-                            <img src="{{ skill.icon_url }}" class="skill-icon">
-                            {% endif %}
-                            <div class="skill-meta">
-                                <div class="skill-name-row">
-                                    <div class="skill-name">{{ skill.name }}</div>
-                                    {% if skill.skill_type %}
-                                    <div class="skill-type-badge {% if skill.skill_type == '普通攻击' %}normal{% elif skill.skill_type == '战技' %}battle{% elif skill.skill_type == '连携技' %}combo{% elif skill.skill_type == '终结技' %}ult{% endif %}">{{ skill.skill_type }}</div>
-                                    {% endif %}
-                                </div>
-                                {% if skill.description %}
-                                <div class="skill-desc-text">{{ skill.description }}</div>
+            {% if wiki.skills %}
+            <div>
+                <div class="sec-head">
+                    <div class="sec-idx">02</div>
+                    <div class="sec-zh">技能</div>
+                    <div class="sec-en">Skills</div>
+                    <div class="sec-rule"></div>
+                </div>
+                {% for skill in wiki.skills %}
+                <div class="skill-card">
+                    <div class="skill-header">
+                        {% if skill.icon_url %}<img src="{{ skill.icon_url }}" class="skill-icon">{% endif %}
+                        <div class="skill-meta">
+                            <div class="skill-name-row">
+                                <div class="skill-name">{{ skill.name }}</div>
+                                {% if skill.skill_type %}
+                                <div class="skill-type-badge {% if skill.skill_type == '普通攻击' %}normal{% elif skill.skill_type == '战技' %}battle{% elif skill.skill_type == '连携技' %}combo{% elif skill.skill_type == '终结技' %}ult{% endif %}">{{ skill.skill_type }}</div>
                                 {% endif %}
                             </div>
-                        </div>
-                        <div class="skill-body">
-                            {% if skill.stats_table %}
-                            <table class="skill-stats">
-                                <tr>
-                                    <th></th>
-                                    {% for h in skill.stats_header %}
-                                    <th {% if '专精' in h %}class="mastery"{% endif %}>{{ h }}</th>
-                                    {% endfor %}
-                                </tr>
-                                {% for row in skill.stats_table %}
-                                <tr>
-                                    <td>{{ row.label }}</td>
-                                    {% for val in row.values %}
-                                    <td {% if loop.index > (row.values | length) - 3 %}class="mastery"{% endif %}>{{ val }}</td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </table>
+                            {% if skill.description %}
+                            <div class="skill-desc-text">{{ skill.description }}</div>
                             {% endif %}
+                        </div>
+                    </div>
+                    {% if skill.stats_table %}
+                    {% set hdr = skill.stats_header[5:] if skill.stats_header|length > 4 else skill.stats_header %}
+                    <div class="skill-body">
+                        <table class="skill-stats">
+                            <tr>
+                                <th></th>
+                                {% for h in hdr %}
+                                <th {% if '专精' in h %}class="mastery"{% endif %}>{{ h | replace('RANK ', 'R') }}</th>
+                                {% endfor %}
+                            </tr>
+                            {% for row in skill.stats_table %}
+                            <tr>
+                                <td>{{ row.label }}</td>
+                                {% for val in (row.values[5:] if row.values|length > 4 else row.values) %}
+                                <td {% if '专精' in (hdr[loop.index0] if loop.index0 < hdr|length else '') %}class="mastery"{% endif %}>{{ val }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if wiki.base_skills %}
+            <div>
+                <div class="sec-head">
+                    <div class="sec-idx">03</div>
+                    <div class="sec-zh">基建技能</div>
+                    <div class="sec-en">Base Skills</div>
+                    <div class="sec-rule"></div>
+                </div>
+                <div class="base-list">
+                    {% for bs in wiki.base_skills %}
+                    <div class="base-row">
+                        <div class="base-name">{{ bs.name }}</div>
+                        <div class="base-desc">{{ bs.description | hl_num }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if wiki.potentials %}
+            <div>
+                <div class="sec-head">
+                    <div class="sec-idx">04</div>
+                    <div class="sec-zh">潜能</div>
+                    <div class="sec-en">Potentials</div>
+                    <div class="sec-rule"></div>
+                </div>
+                <div class="pot-list">
+                    {% for p in wiki.potentials %}
+                    <div class="pot-item">
+                        <div class="pot-rank">
+                            <svg viewBox="0 0 40 40" fill="none"><path d="M20 2 L38 20 L20 38 L2 20 Z" stroke="{{ accent_color or '#ffe600' }}" stroke-width="1.5" fill="{{ accent_color or '#ffe600' }}10"/></svg>
+                            <span>{{ p.rank }}</span>
+                        </div>
+                        <div>
+                            <div class="pot-name">{{ p.name }}</div>
+                            <div class="pot-desc">{{ p.description | hl_num }}</div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
-                {% endif %}
-
-                {% if wiki.base_skills %}
-                <div>
-                    <div class="section-title">基建技能 <span>BASE SKILLS</span></div>
-                    <div class="feature-card">
-                        {% for bs in wiki.base_skills %}
-                        <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">
-                            <div style="font-weight:700; color:#ddd; min-width:120px;">{{ bs.name }}</div>
-                            <div class="feature-desc" style="font-size:14px;">{{ bs.description }}</div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if wiki.potentials %}
-                <div>
-                    <div class="section-title">潜能 <span>POTENTIALS</span></div>
-                    <div class="feature-card">
-                        {% for p in wiki.potentials %}
-                        <div class="potential-item">
-                            <div class="p-rank">P{{ p.rank }}</div>
-                            <div>
-                                <div style="font-weight:700; font-size:16px; margin-bottom:4px;">{{ p.name }}</div>
-                                <div class="feature-desc">{{ p.description }}</div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
             </div>
+            {% endif %}
 
         </div>
     </div>
 
     <div class="footer">
         {% if end_logo %}<img src="{{ end_logo }}" class="footer-logo">{% endif %}
-        <div class="footer-text">WIKI DATABASE // {{ wiki.name }}</div>
+        <div class="footer-text">ENDFIELD · OPERATOR ARCHIVE // <b>{{ wiki.name }}</b></div>
     </div>
 </body>
 </html>
