@@ -24,7 +24,6 @@ from ..utils.render_utils import (
 from ..end_config import PREFIX
 from ..utils.path import (
     AVATAR_CACHE_PATH,
-    CHAR_CACHE_PATH,
     EQUIP_CACHE_PATH,
     PLAYER_PATH,
 )
@@ -339,19 +338,18 @@ def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
 
 async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
     """读取 card_detail.json 并构建头像映射
-    返回 (name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok)
+    返回 (name, level, avatar_b64, char_map, weapon_map, ok)
     """
     name = uid
     level = 0
     avatar_b64 = ""
-    illustration_b64 = ""
     char_map: dict[str, str] = {}
     weapon_map: dict[str, str] = {}
     ok = False
 
     card_path = PLAYER_PATH / uid / "card_detail.json"
     if not card_path.exists():
-        return name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok
+        return name, level, avatar_b64, char_map, weapon_map, ok
 
     try:
         async with aiofiles.open(card_path, "r", encoding="utf-8") as f:
@@ -368,28 +366,36 @@ async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
                         base.avatarUrl, AVATAR_CACHE_PATH
                     )
 
-            last_up_illustration = ""
             for char in detail.chars:
                 cd = char.charData
-                if cd:
-                    if cd.name and cd.avatarSqUrl:
-                        char_map[cd.name] = cd.avatarSqUrl
-                    if cd.labelType == "label_type_up" and cd.illustrationUrl:
-                        last_up_illustration = cd.illustrationUrl
+                if cd and cd.name and cd.avatarSqUrl:
+                    char_map[cd.name] = cd.avatarSqUrl
 
                 wd = char.weapon.weaponData if char.weapon else None
                 if wd and wd.name and wd.iconUrl:
                     weapon_map[wd.name] = wd.iconUrl
 
-            if last_up_illustration:
-                illustration_b64 = await get_image_b64_with_cache(
-                    last_up_illustration, CHAR_CACHE_PATH
-                )
             ok = True
     except Exception as e:
         logger.warning(f"[ENDUID·抽卡] 读取卡片详情失败: {e}")
 
-    return name, level, avatar_b64, illustration_b64, char_map, weapon_map, ok
+    return name, level, avatar_b64, char_map, weapon_map, ok
+
+
+def _calc_grid_columns(pools: list) -> int:
+    """按最大池的六星数量自动选列数，让网格区域接近方形（仿 xwuid）"""
+    ref_n = max((len(p.get("six_star_items", [])) for p in pools), default=0)
+    if ref_n <= 0:
+        return 5
+    item_w, item_h = 178, 212
+    best_col, best_diff = 5, None
+    for col in range(5, 11):
+        rows = ((ref_n - 1) // col) + 1
+        ratio = (item_w * col) / (item_h * rows)
+        diff = abs(ratio - 1.0)
+        if best_diff is None or diff < best_diff:
+            best_col, best_diff = col, diff
+    return best_col
 
 
 def _collect_gacha_char_names(pool_data: dict) -> set:
@@ -432,7 +438,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
             logger.debug(f"[ENDUID·抽卡] 自动刷新失败: {e}")
 
     (
-        name, level, avatar_b64, illustration_b64,
+        name, level, avatar_b64,
         char_avatar_map, weapon_icon_map, _ok,
     ) = await _load_card_maps(uid, user_pref)
 
@@ -448,7 +454,7 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
             ok_refresh, _err = await refresh_card_data(ev.user_id, ev.bot_id)
             if ok_refresh:
                 (
-                    name, level, avatar_b64, illustration_b64,
+                    name, level, avatar_b64,
                     char_avatar_map, weapon_icon_map, _ok,
                 ) = await _load_card_maps(uid, user_pref)
         except Exception as e:
@@ -518,14 +524,17 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
                 except Exception:
                     pass
 
+    columns = _calc_grid_columns(pools)
+
     context = {
         "name": name,
         "uid": hide_uid(uid, user_pref=user_pref),
         "avatar": avatar_b64,
         "level": level,
         "pools": pools,
+        "columns": columns,
+        "card_width": 110 + 178 * columns,
         "data_time": gacha_data.get("data_time", ""),
-        "illustration": illustration_b64,
         "bg": image_to_base64(TEXTURE_PATH / "bg.png", quality=75),
         "end_logo": image_to_base64(TEXTURE_PATH / "end.png", quality=75),
         "up_tag": image_to_base64(TEXTURE_PATH / "up_tag.png"),

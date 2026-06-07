@@ -33,7 +33,7 @@
         }
 
         body {
-            width: 1000px;
+            width: {{ card_width | default(1000) }}px;
             min-height: 600px;
             background-color: var(--c-bg);
             font-family: 'Source Han Sans CN', sans-serif;
@@ -69,39 +69,32 @@
             mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
         }
 
-        .illustration-layer {
-            position: fixed;
-            top: 0;
-            right: -100px;
-            width: 700px;
-            height: 800px;
-            z-index: 0;
-            pointer-events: none;
-            opacity: 0.6;
-            mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%),
-                        linear-gradient(to left, black 0%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 100%);
-        }
-
-        .illustration-layer img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top center;
-            filter: drop-shadow(-10px 0 20px rgba(0,0,0,0.5));
-        }
-
-        .header-section {
-            display: flex;
-            gap: 25px;
-            align-items: center;
+        .hero-section {
             position: relative;
-            z-index: 2;
+            display: flex;
+            background: rgba(20, 21, 24, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: var(--c-accent);
+        }
+
+        .hero-info {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            padding: 22px 36px;
         }
 
         .avatar-box {
-            width: 85px;
-            height: 85px;
+            width: 92px;
+            height: 92px;
             flex-shrink: 0;
             border: 2px solid rgba(255,255,255,0.2);
             background: #111;
@@ -117,35 +110,58 @@
             border-left: 3px solid var(--c-accent);
         }
 
+        .avatar-box::before {
+            content: '';
+            position: absolute;
+            bottom: -5px; right: -5px;
+            width: 20px; height: 20px;
+            border-bottom: 3px solid var(--c-accent);
+            border-right: 3px solid var(--c-accent);
+        }
+
         .avatar-box img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .user-info {
+        .user-meta {
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .user-name {
-            font-size: 40px;
+            font-size: 38px;
             font-weight: 700;
             line-height: 1;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .user-sub {
             display: flex;
             align-items: center;
-            gap: 12px;
-            text-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            gap: 10px;
+        }
+
+        .lv-tag {
+            font-family: 'Oswald', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f1014;
+            background: var(--c-accent);
+            padding: 3px 10px;
+            letter-spacing: 1px;
         }
 
         .uid-tag {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 16px;
+            font-size: 15px;
             color: var(--c-accent);
             background: rgba(255, 230, 0, 0.1);
-            padding: 4px 8px;
+            padding: 3px 8px;
             border: 1px solid rgba(255, 230, 0, 0.3);
             letter-spacing: 1px;
         }
@@ -153,7 +169,7 @@
         .data-time {
             font-family: 'JetBrains Mono', monospace;
             color: var(--c-subtext);
-            font-size: 14px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -241,7 +257,7 @@
 
         .six-star-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat({{ columns | default(5) }}, 1fr);
             gap: 10px;
             margin-top: 8px;
         }
@@ -387,6 +403,7 @@
             font-family: 'Oswald', sans-serif;
             font-weight: 700;
             font-size: 14px;
+            margin-left: auto;
         }
 
         .pool-label-tag {
@@ -444,32 +461,25 @@
     </div>
     <div class="grid-deco"></div>
 
-    {% if illustration %}
-    <div class="illustration-layer">
-        <img src="{{ illustration }}">
-    </div>
-    {% endif %}
-
     <div class="container">
 
-        <div class="header-section">
-            <div class="avatar-box">
-                {% if avatar %}
-                <img src="{{ avatar }}">
-                {% else %}
-                <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; font-size:40px; color:#333;">?</div>
-                {% endif %}
-            </div>
-            <div class="user-info">
-                <div class="user-name">
-                    {{ name }}
-                    {% if uid %}
-                    <span class="uid-tag">UID_{{ uid }}</span>
+        <div class="hero-section">
+            <div class="hero-info">
+                <div class="avatar-box">
+                    {% if avatar %}
+                    <img src="{{ avatar }}">
+                    {% else %}
+                    <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; font-size:40px; color:#333;">?</div>
                     {% endif %}
                 </div>
-                <div class="data-time">
+                <div class="user-meta">
+                    <div class="user-name">{{ name }}</div>
+                    <div class="user-sub">
+                        {% if level %}<span class="lv-tag">LV.{{ level }}</span>{% endif %}
+                        {% if uid %}<span class="uid-tag">UID_{{ uid }}</span>{% endif %}
+                    </div>
                     {% if data_time %}
-                    LAST_UPDATE: {{ data_time }}
+                    <div class="data-time">LAST_UPDATE: {{ data_time }}</div>
                     {% endif %}
                 </div>
             </div>
