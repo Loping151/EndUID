@@ -12,6 +12,14 @@ from gsuid_core.models import Event
 sv_end_code = SV("终末地兑换码")
 
 url = "https://newsimg.5054399.com/comm/mlcxqcommon/static/wap/js/data_171.js?{}&callback=?&_={}"
+request_headers = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+    ),
+    "Referer": "https://www.4399.com/",
+    "Accept": "*/*",
+}
 
 
 @sv_end_code.on_fullmatch(
@@ -53,7 +61,8 @@ async def get_code_list():
         now_time = int(time.time() * 1000)
         new_url = url.format(time_string, now_time)
         async with httpx.AsyncClient(timeout=None) as client:
-            res = await client.get(new_url, timeout=10)
+            res = await client.get(new_url, headers=request_headers, timeout=10)
+            res.raise_for_status()
             json_data = res.text.split("=", 1)[1].strip().rstrip(";")
             logger.debug(f"[ENDUID·获取兑换码] url:{new_url}, codeList:{json_data}")
             return json.loads(json_data)
