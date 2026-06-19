@@ -25,11 +25,11 @@ exec_list.extend(
     [
         "ALTER TABLE EndUser DROP COLUMN model_bg_value",
         "ALTER TABLE EndUser ADD COLUMN game_id INTEGER DEFAULT 3 NOT NULL",
-        'ALTER TABLE EndBind ADD COLUMN ark_uid TEXT DEFAULT ""',
-        'ALTER TABLE EndUser ADD COLUMN hg_token TEXT DEFAULT ""',
-        'ALTER TABLE EndUser ADD COLUMN hide_uid_self_value TEXT DEFAULT ""',
-        'ALTER TABLE EndUser ADD COLUMN platform_avatar TEXT DEFAULT ""',
-        'ALTER TABLE EndUser ADD COLUMN platform_nickname TEXT DEFAULT ""',
+        "ALTER TABLE EndBind ADD COLUMN ark_uid TEXT DEFAULT ''",
+        "ALTER TABLE EndUser ADD COLUMN hg_token TEXT DEFAULT ''",
+        "ALTER TABLE EndUser ADD COLUMN hide_uid_self_value TEXT DEFAULT ''",
+        "ALTER TABLE EndUser ADD COLUMN platform_avatar TEXT DEFAULT ''",
+        "ALTER TABLE EndUser ADD COLUMN platform_nickname TEXT DEFAULT ''",
     ]
 )
 
