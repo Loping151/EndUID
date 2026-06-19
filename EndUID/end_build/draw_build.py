@@ -19,7 +19,7 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
-from ..end_config import PREFIX
+from ..utils.tips import TIP_NOT_BOUND, TIP_NO_LOCAL_CARD
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
 from ..end_char.draw_card import _format_awaken_time
 
@@ -45,7 +45,7 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
 
     uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
     if not uid:
-        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+        return TIP_NOT_BOUND
     user_pref = await get_hide_uid_pref(uid, target_user_id, ev.bot_id)
 
     from ..end_char import refresh_card_data
@@ -60,7 +60,7 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
         data_res = json.loads(raw)
     except Exception as e:
         logger.warning(f"[ENDUID·配置渲染] 本地卡片数据读取失败: {e}")
-        return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
+        return TIP_NO_LOCAL_CARD
 
     if data_res.get("code") != 0:
         msg = data_res.get("message", "未知错误")

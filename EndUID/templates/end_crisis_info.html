@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>危机合约·信息</title>
+<style>
+    @import url('{{ font_css_url }}');
+    :root { --c-bg: #0b0808; --c-accent: #e23b3b; --c-line: rgba(255,255,255,0.10); --c-sub: #9a9296; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1500px; background-color: var(--c-bg); font-family: 'Source Han Sans CN', sans-serif; color: #fff; }
+    .container { position: relative; width: 100%; padding-bottom: 44px; overflow: hidden; }
+    .bg-stack { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 0%, #2a1414 0%, #170d0d 45%, #0a0707 100%); }
+    .grid-tile { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05; mix-blend-mode: screen; }
+    .ui-layer { position: relative; z-index: 10; padding: 38px 44px 0; display: flex; flex-direction: column; gap: 24px; }
+
+    .page-head { display: flex; align-items: baseline; gap: 20px; padding: 18px 26px; background: rgba(10,7,7,0.86); border: 1px solid var(--c-line); border-left: 4px solid var(--c-accent); }
+    .page-head .t { font-size: 40px; font-weight: 800; letter-spacing: 0.05em; }
+    .page-head .s { font-size: 22px; color: var(--c-sub); }
+
+    .section-title { font-size: 30px; font-weight: 800; border-left: 6px solid var(--c-accent); padding-left: 14px; letter-spacing: 0.05em; display:flex; align-items:center; gap:12px; }
+    .section-title .en { font-family: 'Oswald', sans-serif; font-size: 16px; color: var(--c-sub); font-weight: 600; }
+
+    .level-head { display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 16px; border-left: 4px solid var(--lc); background: linear-gradient(90deg, color-mix(in srgb, var(--lc) 22%, transparent), transparent); margin-top: 8px; }
+    .level-head .ico { height: 28px; width: auto; object-fit: contain; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--lc) 60%, transparent)); }
+    .level-head .lt { font-size: 25px; font-weight: 800; letter-spacing: 0.05em; color: var(--lc); }
+    .level-head .stars { display: flex; gap: 5px; margin-left: 2px; }
+    .level-head .star { width: 16px; height: 16px; background: var(--lc); clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+
+    .ind-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .ind-card { display: flex; gap: 14px; padding: 14px 16px; background: rgba(24,15,15,0.92); border: 1px solid var(--c-line); border-left: 3px solid var(--lc); }
+    .ind-card.key { border-left-color: #ffce6a; box-shadow: inset 0 0 16px rgba(255,184,74,0.08); }
+    .ind-card.locked { opacity: 0.5; }
+    .ind-ic { width: 58px; height: 58px; flex-shrink: 0; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; }
+    .ind-ic img { width: 52px; height: 52px; object-fit: contain; }
+    .ind-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .ind-name-row { display: flex; align-items: center; gap: 10px; }
+    .ind-name { font-size: 21px; font-weight: 700; }
+    .ind-key-tag { font-size: 13px; font-weight: 700; color: #2a1c00; background: #ffce6a; padding: 1px 7px; }
+    .ind-award { font-size: 13px; font-weight: 700; color: #ffce6a; border: 1px solid rgba(255,206,106,0.45); background: rgba(255,206,106,0.10); padding: 1px 7px; }
+    .ind-dep { font-size: 13px; font-weight: 700; color: #9ec8ff; border: 1px solid rgba(110,160,255,0.4); background: rgba(110,160,255,0.10); padding: 1px 7px; }
+    .ind-desc { font-size: 16px; line-height: 1.5; color: #cdbfbf; }
+    .ind-desc span { font-weight: 700; }
+
+    .dungeon-desc { font-size: 19px; line-height: 1.7; color: #d8cccc; white-space: pre-line; background: rgba(24,15,15,0.8); border: 1px solid var(--c-line); padding: 18px 22px; }
+
+    .enemy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .enemy-card { background: rgba(24,15,15,0.92); border: 1px solid var(--c-line); overflow: hidden; display: flex; flex-direction: column; }
+    .enemy-img { position: relative; width: 100%; height: 220px; background: radial-gradient(circle at 50% 40%, #2a1818, #120b0b); display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+    .enemy-img img { height: 100%; object-fit: contain; }
+    .enemy-img .none { color: #553; font-size: 40px; align-self: center; }
+    .enemy-img .lv { position: absolute; right: 8px; top: 8px; font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; color: #ff9a6a; background: rgba(0,0,0,0.6); padding: 2px 10px; }
+    .enemy-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .enemy-name { font-size: 22px; font-weight: 800; }
+    .enemy-ability { font-size: 16px; line-height: 1.5; color: #c8baba; }
+    .enemy-ability .lab { color: var(--c-accent); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-stack"></div>
+    {% if asset_grid_tile %}<div class="grid-tile" style="background-image: url('{{ asset_grid_tile }}'); background-repeat: repeat; background-size: 160px 160px;"></div>{% endif %}
+    <div class="ui-layer">
+
+        <div class="page-head"><span class="t">危机合约 · 指标信息</span><span class="s">{{ act_name }}</span></div>
+
+        {% for g in groups %}
+        <div class="level-head" style="--lc: {{ g.color }};">
+            {% if asset_indicator %}<img class="ico" src="{{ asset_indicator }}">{% endif %}
+            <span class="lt">{{ g.level }} 级指标</span>
+        </div>
+        <div class="ind-grid" style="--lc: {{ g.color }};">
+            {% for ind in g.inds %}
+            <div class="ind-card {% if ind.isKey %}key{% endif %} {% if not ind.isUnlock %}locked{% endif %}" style="--lc: {{ g.color }};">
+                <div class="ind-ic">{% if ind.icon_b64 %}<img src="{{ ind.icon_b64 }}">{% endif %}</div>
+                <div class="ind-main">
+                    <div class="ind-name-row">
+                        <span class="ind-name">{{ ind.name }}</span>
+                        {% if ind.isKey %}<span class="ind-key-tag">密钥</span>{% endif %}
+                        {% if ind.depends_names %}<span class="ind-dep">依赖密钥</span>{% endif %}
+                        {% if ind.hasAward and is_own %}<span class="ind-award">挑战奖励</span>{% endif %}
+                    </div>
+                    <div class="ind-desc">{{ ind.desc | safe }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div class="section-title">关卡信息 <span class="en">DUNGEON · {{ dungeon_name }}</span></div>
+        {% if dungeon_desc %}<div class="dungeon-desc">{{ dungeon_desc }}{% if dungeon_feature %}
+
+{{ dungeon_feature }}{% endif %}</div>{% endif %}
+
+        <div class="section-title">敌人信息 <span class="en">ENEMIES · {{ enemies|length }}</span></div>
+        <div class="enemy-grid">
+            {% for en in enemies %}
+            <div class="enemy-card">
+                <div class="enemy-img">
+                    {% if en.img_b64 %}<img src="{{ en.img_b64 }}">{% else %}<div class="none">?</div>{% endif %}
+                    <div class="lv">Lv.{{ en.level }}</div>
+                </div>
+                <div class="enemy-body">
+                    <div class="enemy-name">{{ en.name }}</div>
+                    {% if en.ability %}<div class="enemy-ability"><span class="lab">能力 </span>{{ en.ability }}</div>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+</body>
+</html>

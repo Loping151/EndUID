@@ -28,7 +28,7 @@ from ..utils.alias_map import (
     update_alias_map_from_chars,
 )
 from ..utils.util import hide_uid
-from ..end_config import PREFIX
+from ..utils.tips import TIP_NO_CRED
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
@@ -93,7 +93,7 @@ async def draw_end_daily_img(ev: Event, uid: str):
 
     _, cred = await end_api.get_ck_result(uid, target_user_id, ev.bot_id)
     if not cred:
-        return f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
+        return TIP_NO_CRED
 
     user_record = await EndUser.select_end_user(uid, target_user_id, ev.bot_id)
     user_pref = (

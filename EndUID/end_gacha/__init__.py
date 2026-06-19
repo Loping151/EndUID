@@ -8,6 +8,7 @@ from gsuid_core.logger import logger
 from gsuid_core.segment import MessageSegment
 
 from ..end_config import PREFIX
+from ..utils.tips import TIP_NOT_BOUND
 from ..end_config.config_default import EndConfig
 from ..utils.database.models import EndBind, EndUser
 from ..utils.api.requests import end_api
@@ -20,6 +21,8 @@ from .get_gachalogs import (
     delete_gachalogs,
 )
 from .draw_gachalogs import draw_gacha_card, draw_gacha_help
+from .web_view import make_gacha_web_url, feature_disabled_msg, _is_feature_enabled
+from ..utils.util import get_hide_uid_pref
 
 sv_gacha_help = SV("End抽卡帮助")
 sv_gacha_tool = SV("End抽卡工具")
@@ -27,6 +30,7 @@ sv_gacha_import = SV("End导入抽卡记录", priority=4)
 sv_gacha_record = SV("End抽卡记录")
 sv_gacha_export = SV("End导出抽卡记录")
 sv_gacha_delete = SV("End删除抽卡记录")
+sv_gacha_web = SV("End抽卡网页")
 
 
 def _parse_gacha_token(text: str) -> tuple[str, str, str]:
@@ -125,9 +129,7 @@ async def import_gacha_by_file(bot: Bot, ev: Event):
 async def import_gacha_record(bot: Bot, ev: Event):
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
-        return await bot.send(
-            f"未绑定终末地账号，请先使用「{PREFIX}登录」绑定"
-        )
+        return await bot.send(TIP_NOT_BOUND)
 
     if is_uid_locked(uid):
         return
@@ -206,7 +208,7 @@ async def export_gacha_record(bot: Bot, ev: Event):
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
         return await bot.send(
-            f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+            TIP_NOT_BOUND
         )
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)
@@ -224,12 +226,44 @@ async def export_gacha_record(bot: Bot, ev: Event):
     await bot.send(MessageSegment.file(export["url"], export["name"]))
 
 
+@sv_gacha_web.on_fullmatch(
+    ("抽卡页面", "抽卡网页", "网页抽卡记录", "抽卡记录网页"),
+    block=True,
+    to_ai="""返回自己终末地抽卡记录的网页查看链接（10 分钟内有效）。
+
+当用户问「终末地抽卡页面 / 抽卡网页 / 网页看抽卡记录」时调用。需先导入抽卡记录，且主人已开启网页开关。
+
+Args:
+    text: 无需参数。
+""",
+)
+async def send_gacha_web_link(bot: Bot, ev: Event):
+    if not _is_feature_enabled():
+        return await bot.send(feature_disabled_msg())
+
+    uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
+    if not uid:
+        return await bot.send(TIP_NOT_BOUND)
+
+    user_pref = await get_hide_uid_pref(uid, ev.user_id, ev.bot_id)
+    url, msg = await make_gacha_web_url(uid, ev, user_pref)
+    if not url:
+        return await bot.send(msg)
+
+    title = f"「终末地」UID{hide_uid(uid, user_pref)} 的抽卡记录网页"
+    expire = "该链接 10 分钟内有效，过期后请重新发送指令。"
+    if not ev.group_id and ev.bot_id == "onebot":
+        await bot.send("\n".join([title, url, expire]))
+    else:
+        await bot.send(MessageSegment.node([title, f" {url}", expire]))
+
+
 @sv_gacha_delete.on_command(("删除抽卡记录", "scckjl"), block=True)
 async def delete_gacha_record(bot: Bot, ev: Event):
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
         return await bot.send(
-            f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+            TIP_NOT_BOUND
         )
 
     user = await EndUser.select_end_user(uid, ev.user_id, ev.bot_id)

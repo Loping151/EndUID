@@ -58,6 +58,16 @@ class Skill(BaseModel):
     descLevelParams: Dict[str, SkillDescLevelParams] = Field(default_factory=dict)
 
 
+class Talent(BaseModel):
+    """天赋节点（属性/战斗/养成）"""
+    id: str = ""
+    name: str = ""
+    iconUrl: str = ""
+    desc: str = ""
+    descParams: Dict[str, Any] = Field(default_factory=dict)
+    lockedIconUrl: str = ""
+
+
 class CharData(BaseModel):
     """角色基础数据"""
     id: str = ""
@@ -72,6 +82,9 @@ class CharData(BaseModel):
     labelType: str = ""
     illustrationUrl: str = ""
     tags: List[str] = Field(default_factory=list)
+    abilityTalents: List[Talent] = Field(default_factory=list)
+    combatTalents: List[Talent] = Field(default_factory=list)
+    cultivationTalents: List[Talent] = Field(default_factory=list)
 
 
 class UserSkill(BaseModel):
@@ -165,6 +178,15 @@ class Weapon(BaseModel):
     gem: Optional[Gem] = None
 
 
+class CharTalent(BaseModel):
+    """角色天赋阵列已解锁节点集合"""
+    latestBreakNode: str = ""
+    attrNodes: List[str] = Field(default_factory=list)
+    latestPassiveSkillNodes: List[str] = Field(default_factory=list)
+    latestFactorySkillNodes: List[str] = Field(default_factory=list)
+    latestSpaceshipSkillNodes: List[str] = Field(default_factory=list)
+
+
 class Character(BaseModel):
     """角色完整信息"""
     charData: CharData = Field(default_factory=CharData)
@@ -181,6 +203,7 @@ class Character(BaseModel):
     weapon: Weapon = Field(default_factory=Weapon)
     gender: Optional[str] = ""
     ownTs: Optional[str] = ""
+    talent: CharTalent = Field(default_factory=CharTalent)
 
 
 class AchieveDisplay(BaseModel):
@@ -402,6 +425,166 @@ class IndieHardResponse(BaseModel):
     message: str = ""
     timestamp: str = ""
     data: IndieHardData = Field(default_factory=IndieHardData)
+
+
+class CrisisChar(BaseModel):
+    """危机合约通关阵容角色"""
+    charId: str = ""
+    level: int = 0
+    potentialLevel: int = 0
+    avatarUrl: str = ""
+
+
+class CrisisRecord(BaseModel):
+    """危机合约单条记录"""
+    id: str = ""
+    chars: List[CrisisChar] = Field(default_factory=list)
+    ts: str = ""
+    passTs: str = ""
+    isPass: bool = False
+    indicatorCount: int = 0
+    passWave: int = 0
+    isBest: bool = False
+
+
+class CrisisHistory(BaseModel):
+    """危机合约历史记录"""
+    records: List[CrisisRecord] = Field(default_factory=list)
+    bestRecord: Optional[CrisisRecord] = None
+
+
+class CrisisMissionCount(BaseModel):
+    """危机合约任务进度"""
+    count: int = 0
+    total: int = 0
+
+
+class CrisisStatus(BaseModel):
+    """危机合约当期状态"""
+    id: str = ""
+    name: str = ""
+    highest: int = 0
+    challengeCount: int = 0
+    kvImage: str = ""
+    headerImage: str = ""
+    weeklyMission: CrisisMissionCount = Field(default_factory=CrisisMissionCount)
+    indicatorMission: CrisisMissionCount = Field(default_factory=CrisisMissionCount)
+    stageMission: CrisisMissionCount = Field(default_factory=CrisisMissionCount)
+    startAtTs: str = ""
+    endAtTs: str = ""
+    gameplayEndAtTs: str = ""
+    achieve: Optional[IndieHardAchieve] = None
+
+
+class CrisisIndicator(BaseModel):
+    """危机合约指标"""
+    id: str = ""
+    icon: str = ""
+    name: str = ""
+    desc: str = ""
+    descParams: Dict[str, Any] = Field(default_factory=dict)
+    hasAward: bool = False
+    type: int = 0
+    depends: List[str] = Field(default_factory=list)
+    openTs: str = "0"
+    score: int = 0
+    isUnlock: bool = False
+    unlockScore: int = 0
+
+
+class CrisisDungeon(BaseModel):
+    """危机合约副本信息"""
+    id: str = ""
+    name: str = ""
+    desc: str = ""
+    feature: str = ""
+    recommendLevel: int = 0
+    enemies: List[IndieHardEnemy] = Field(default_factory=list)
+
+
+class CrisisContract(BaseModel):
+    """危机合约"""
+    status: CrisisStatus = Field(default_factory=CrisisStatus)
+    history: CrisisHistory = Field(default_factory=CrisisHistory)
+    indicators: List[CrisisIndicator] = Field(default_factory=list)
+    dungeon: CrisisDungeon = Field(default_factory=CrisisDungeon)
+
+
+class CrisisContractData(BaseModel):
+    """crisis-contract 接口 data 容器"""
+    crisisContract: CrisisContract = Field(default_factory=CrisisContract)
+
+
+class CrisisContractResponse(BaseModel):
+    """crisis-contract 接口响应"""
+    code: int = 0
+    message: str = ""
+    timestamp: str = ""
+    data: CrisisContractData = Field(default_factory=CrisisContractData)
+
+
+class CrisisWeapon(BaseModel):
+    """危机合约详情-武器"""
+    id: str = ""
+    icon: str = ""
+    level: int = 0
+    refineLevel: int = 0
+    weaponTerms: List[int] = Field(default_factory=list)
+    rarity: KeyValuePair = Field(default_factory=KeyValuePair)
+
+
+class CrisisEquip(BaseModel):
+    """危机合约详情-单件装备"""
+    id: str = ""
+    icon: str = ""
+    enhanceStatus: int = 0
+    rarity: KeyValuePair = Field(default_factory=KeyValuePair)
+
+
+class CrisisEquips(BaseModel):
+    """危机合约详情-装备组"""
+    bodyEquip: Optional[CrisisEquip] = None
+    armEquip: Optional[CrisisEquip] = None
+    firstAccessory: Optional[CrisisEquip] = None
+    secondAccessory: Optional[CrisisEquip] = None
+
+
+class CrisisDetailChar(BaseModel):
+    """危机合约详情-角色"""
+    charId: str = ""
+    level: int = 0
+    potentialLevel: int = 0
+    avatarUrl: str = ""
+    rarity: KeyValuePair = Field(default_factory=KeyValuePair)
+    weapon: Optional[CrisisWeapon] = None
+    equips: CrisisEquips = Field(default_factory=CrisisEquips)
+
+
+class CrisisRecordDetail(BaseModel):
+    """危机合约单条记录详情"""
+    id: str = ""
+    chars: List[CrisisDetailChar] = Field(default_factory=list)
+    ts: str = ""
+    passTs: str = ""
+    isPass: bool = False
+    indicatorCount: int = 0
+    passWave: int = 0
+    isBest: bool = False
+    indicators: List[CrisisIndicator] = Field(default_factory=list)
+    indicatorIds: List[str] = Field(default_factory=list)
+
+
+class CrisisRecordData(BaseModel):
+    """crisis-contract/record 接口 data 容器"""
+    recordDetail: CrisisRecordDetail = Field(default_factory=CrisisRecordDetail)
+
+
+class CrisisRecordResponse(BaseModel):
+    """crisis-contract/record 接口响应"""
+    code: int = 0
+    message: str = ""
+    timestamp: str = ""
+    data: CrisisRecordData = Field(default_factory=CrisisRecordData)
 
 
 class WeeklyMission(BaseModel):

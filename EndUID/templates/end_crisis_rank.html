@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>危机合约排行</title>
+<style>
+    @import url('{{ font_css_url }}');
+    :root { --c-bg: #0b0808; --c-accent: #e23b3b; --c-accent-2: #ff6a4d; --c-line: rgba(255,255,255,0.10); --c-sub: #9a9296; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1280px; background-color: var(--c-bg); font-family: 'Source Han Sans CN', sans-serif; color: #fff; }
+    .container { position: relative; width: 100%; padding-bottom: 40px; overflow: hidden; }
+    .bg-stack { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 0%, #2a1414 0%, #170d0d 45%, #0a0707 100%); }
+    .grid-tile { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05; mix-blend-mode: screen; }
+    .ui-layer { position: relative; z-index: 10; padding: 36px 44px 0; display: flex; flex-direction: column; gap: 16px; }
+
+    .head { display: flex; align-items: flex-end; gap: 18px; padding: 18px 26px; background: rgba(10,7,7,0.86); border: 1px solid var(--c-line); border-left: 4px solid var(--c-accent); }
+    .head .t { font-size: 44px; font-weight: 800; letter-spacing: 0.04em; }
+    .head .sub { font-size: 22px; color: #e6cccc; }
+    .head .pg { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--c-sub); }
+
+    .rows { display: flex; flex-direction: column; gap: 10px; }
+    .row { display: flex; align-items: center; gap: 18px; padding: 12px 22px 12px 14px; background: rgba(24,15,15,0.92); border: 1px solid var(--c-line); }
+    .row.top1 { border-color: rgba(255,206,106,0.6); box-shadow: inset 0 0 24px rgba(255,206,106,0.10); }
+    .row.top2 { border-color: rgba(210,210,220,0.5); }
+    .row.top3 { border-color: rgba(214,158,110,0.5); }
+    .rk { width: 64px; text-align: center; font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 40px; color: #c9bcbc; flex-shrink: 0; }
+    .row.top1 .rk { color: #ffce6a; } .row.top2 .rk { color: #dfe3ea; } .row.top3 .rk { color: #e7a86a; }
+    .rk small { display: block; font-size: 13px; font-weight: 600; color: var(--c-sub); letter-spacing: 0.1em; }
+    .av { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #1a1010; border: 2px solid rgba(255,255,255,0.15); }
+    .row.top1 .av { border-color: #ffce6a; }
+    .av img { width: 100%; height: 100%; object-fit: cover; }
+    .av .none { width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#553;font-size:34px; }
+    .name { flex: 1; min-width: 0; display: flex; align-items: center; }
+    .name .nm { font-size: 30px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .stats { display: flex; align-items: center; justify-content: space-between; width: 300px; flex-shrink: 0; }
+    .stat { display: flex; align-items: center; gap: 8px; }
+    .stat img { width: 30px; height: 30px; object-fit: contain; }
+    .stat .v { font-family: 'Oswald', sans-serif; font-size: 40px; font-weight: 700; line-height: 1; }
+    .stat.dur .v { color: #ff9a6a; font-size: 34px; }
+
+    .squad { display: flex; gap: 7px; width: 261px; flex-shrink: 0; }
+    .squad .c { width: 60px; height: 60px; background: #1a1010; border: 1px solid rgba(255,255,255,0.10); overflow: hidden; }
+    .squad .c img { width: 100%; height: 100%; object-fit: cover; }
+    .squad .c .none { width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#553;font-size:20px; }
+
+    /* 表头 */
+    .rank-head { display: flex; align-items: center; gap: 18px; padding: 6px 22px 6px 14px; color: var(--c-sub); font-size: 19px; font-weight: 700; letter-spacing: 0.06em; }
+    .rank-head .h-rk { width: 64px; text-align: center; flex-shrink: 0; }
+    .rank-head .h-name { flex: 1; margin-left: 102px; }
+    .rank-head .h-stats { width: 300px; display: flex; justify-content: space-between; flex-shrink: 0; }
+    .rank-head .h-sq { width: 261px; flex-shrink: 0; }
+
+    .empty { color: #9a8a8a; font-size: 22px; padding: 12px 4px; }
+    .footer-note { text-align: center; color: #6a5e5e; font-size: 16px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-stack"></div>
+    {% if asset_grid_tile %}<div class="grid-tile" style="background-image: url('{{ asset_grid_tile }}'); background-repeat: repeat; background-size: 160px 160px;"></div>{% endif %}
+    <div class="ui-layer">
+
+        <div class="head">
+            <span class="t">危机合约排行</span>
+            {% if act_name %}<span class="sub">{{ act_name }}</span>{% endif %}
+            <span class="pg">第 {{ page }} / {{ total_pages }} 页 · 共 {{ total }} 人</span>
+        </div>
+
+        <div class="rank-head">
+            <span class="h-rk">排名</span>
+            <span class="h-name">玩家</span>
+            <span class="h-stats"><span>指标总计</span><span>战斗时长</span></span>
+            <span class="h-sq">通关阵容</span>
+        </div>
+
+        <div class="rows">
+            {% for r in rows %}
+            <div class="row {% if r.rank == 1 %}top1{% elif r.rank == 2 %}top2{% elif r.rank == 3 %}top3{% endif %}">
+                <div class="rk">{{ r.rank }}<small>RANK</small></div>
+                <div class="av">{% if r.avatar_b64 %}<img src="{{ r.avatar_b64 }}">{% else %}<div class="none">?</div>{% endif %}</div>
+                <div class="name"><div class="nm">{{ r.nickname }}</div></div>
+                <div class="stats">
+                    <div class="stat"><img src="{{ asset_score_success }}"><span class="v">{{ r.count }}</span></div>
+                    <div class="stat dur">{% if asset_clock %}<img src="{{ asset_clock }}">{% endif %}<span class="v">{{ r.duration }}</span></div>
+                </div>
+                <div class="squad">
+                    {% for c in r.chars %}<div class="c">{% if c %}<img src="{{ c }}">{% else %}<div class="none">?</div>{% endif %}</div>{% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="footer-note">EndUID · 危机合约排行 · 「{{ prefix }}危机合约排行N」翻页 · 指标总计↓ 用时↑</div>
+    </div>
+</div>
+</body>
+</html>

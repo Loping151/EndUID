@@ -20,6 +20,10 @@ SCAN_LOGIN_API = "https://as.hypergryph.com/general/v1/gen_scan/login"
 SCAN_STATUS_API = "https://as.hypergryph.com/general/v1/scan_status"
 TOKEN_BY_SCAN_CODE_API = "https://as.hypergryph.com/user/auth/v1/token_by_scan_code"
 
+# 手机号登录
+SEND_PHONE_CODE_API = "https://as.hypergryph.com/general/v1/send_phone_code"
+TOKEN_BY_PHONE_CODE_API = "https://as.hypergryph.com/user/auth/v1/token_by_phone_code"
+
 # Token 刷新
 REFRESH_TOKEN_URL = f"{MAIN_URL}api/{API_VERSION}/auth/refresh"
 
@@ -49,6 +53,10 @@ CARD_DETAIL_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/detail"
 
 # 影拓丰碑（Shadowmark Monolith）详情
 INDIE_HARD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/indie-hard"
+
+# 危机合约首页 / 记录详情
+CRISIS_CONTRACT_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/crisis-contract"
+CRISIS_CONTRACT_RECORD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/crisis-contract/record"
 
 
 # 公告相关

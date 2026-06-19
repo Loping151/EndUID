@@ -4,8 +4,16 @@
     "data": [
       {
         "name": "登录",
-        "desc": "扫码登录或直接传 cred/token",
+        "desc": "手机号短信验证码登录",
         "eg": "登录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "扫码登录",
+        "desc": "森空岛APP扫码登录",
+        "eg": "扫码登录",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -84,6 +92,38 @@
         "desc": "查看影拓丰碑通关进度",
         "eg": "丰碑 苦难/普通",
         "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "危机合约",
+        "desc": "当期最佳记录+历史记录概览",
+        "eg": "危机合约",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "危机合约记录",
+        "desc": "查看历史记录列表 / 第N条(0或最佳=最佳记录)详情",
+        "eg": "合约记录1",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "危机合约信息",
+        "desc": "本期指标buff/关卡/敌人信息",
+        "eg": "合约信息",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "危机合约排行",
+        "desc": "本群危机合约最佳记录排行(指标↓用时↑)",
+        "eg": "危机合约排行/合约排行2",
+        "need_ck": false,
         "need_sk": false,
         "need_admin": false
       },
@@ -176,6 +216,14 @@
         "name": "抽卡记录",
         "desc": "查看抽卡记录统计",
         "eg": "抽卡记录",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "抽卡页面",
+        "desc": "获取抽卡记录详情网页链接(需主人开启)",
+        "eg": "抽卡页面",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false

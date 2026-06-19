@@ -9,7 +9,7 @@ from gsuid_core.logger import logger
 from gsuid_core.segment import MessageSegment
 from gsuid_core.utils.cookie_manager.qrlogin import get_qrcode_base64
 
-from ..end_config import PREFIX
+from ..end_config import PREFIX, EndConfig
 from ..utils.api.requests import end_api
 from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
 from ..utils.database.models import EndBind, EndUser
@@ -71,18 +71,11 @@ async def send_end_bind_msg(bot: Bot, ev: Event):
     return await _send_text(bot, ev, msg)
 
 
-@EndLogin.on_command(("登录", "登陆", "登入", "登龙", "login", "dl"), block=True)
-async def send_end_login_msg(bot: Bot, ev: Event):
-    text = _normalize_text(ev.text)
-    if text:
-        kind, credential = _parse_credential(text)
-        if kind == "token":
-            return await check_token(bot, ev, credential)
-        if kind == "cred":
-            return await check_cred(bot, ev, credential)
-        msg = f"{GAME_TITLE} 登录参数错误，请使用「{PREFIX}登录」扫码"
-        return await _send_text(bot, ev, msg)
-
+@EndLogin.on_command(
+    ("扫码登录", "扫码登陆", "扫码登入", "扫码登龙", "扫码login", "扫码dl"),
+    block=True,
+)
+async def send_end_scan_login_msg(bot: Bot, ev: Event):
     at_sender = True if ev.group_id else False
 
     scan_id = await end_api.get_scan_id()
@@ -144,15 +137,31 @@ async def send_end_login_msg(bot: Bot, ev: Event):
     )
 
 
-async def check_cred(
-    bot: Bot,
-    ev: Event,
+@EndLogin.on_command(("登录", "登陆", "登入", "登龙", "login", "dl"), block=True)
+async def send_end_phone_login_msg(bot: Bot, ev: Event):
+    if not EndConfig.get_config("EndLoginUrl").data:
+        return await send_end_scan_login_msg(bot, ev)
+
+    from .web_login import phone_web_login_entry
+
+    return await phone_web_login_entry(bot, ev)
+
+
+async def _persist_login_cred(
+    user_id: str,
+    bot_id: str,
+    group_id,
     cred: str,
     used_token: str = None,
     used_device_token: str = "",
     skland_user_id: str = None,
     gacha_grant_token: str = None,
-):
+) -> tuple:
+    """将 cred 绑定入库（纯入库，不依赖 bot）。
+
+    返回 (result, None) 或 (None, 错误文案)。result 为可 JSON 序列化的摘要，
+    交给 notify_login_success 在 bot 上下文里发消息与同步抽卡。
+    """
     if not skland_user_id:
         try:
             user_info = await end_api.get_user_info(cred)
@@ -172,7 +181,7 @@ async def check_cred(
         res = await end_api.get_binding(cred) # 再来一次
         if not res or res.get("code") != 0 or res.get("message") != "OK":
             logger.error(f"[ENDUID·绑定] 绑定失败，响应: {res}")
-            return await _send_text(bot, ev, f"{GAME_TITLE} 绑定失败，请检查 cred 是否正确")
+            return None, f"{GAME_TITLE} 绑定失败，请检查 cred 是否正确"
 
     binding_list = res.get("data", {}).get("list", [])
     GAME_ID_SET = {ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID}
@@ -232,7 +241,7 @@ async def check_cred(
 
     if not roles:
         logger.warning(f"[ENDUID·绑定] 请求返回：{binding_list}，请汇报此结果")
-        return await _send_text(bot, ev, f"{GAME_TITLE} 未找到账号绑定信息")
+        return None, f"{GAME_TITLE} 未找到账号绑定信息"
 
     # 绑定 UID 到 EndBind
     endfield_uid = None
@@ -243,34 +252,34 @@ async def check_cred(
             endfield_uid = role["role_id"]
             endfield_record_uid = role["record_uid"]
             endfield_server_id = role["server_id"]
-            result = await EndBind.insert_end_uid(
-                user_id=ev.user_id,
-                bot_id=ev.bot_id,
+            r = await EndBind.insert_end_uid(
+                user_id=user_id,
+                bot_id=bot_id,
                 uid=role["role_id"],
-                group_id=ev.group_id,
+                group_id=group_id,
             )
-            if result == -1:
-                return await _send_text(bot, ev, f"{GAME_TITLE} 终末地 UID 格式错误")
-            if result == -3:
-                return await _send_text(bot, ev, f"{GAME_TITLE} 终末地 UID 包含非法字符")
+            if r == -1:
+                return None, f"{GAME_TITLE} 终末地 UID 格式错误"
+            if r == -3:
+                return None, f"{GAME_TITLE} 终末地 UID 包含非法字符"
         elif role["game_id"] == ARKNIGHTS_GAME_ID:
-            result = await EndBind.insert_ark_uid(
-                user_id=ev.user_id,
-                bot_id=ev.bot_id,
+            r = await EndBind.insert_ark_uid(
+                user_id=user_id,
+                bot_id=bot_id,
                 uid=role["role_id"],
-                group_id=ev.group_id,
+                group_id=group_id,
             )
-            if result == -1:
-                return await _send_text(bot, ev, f"{GAME_TITLE} 明日方舟 UID 格式错误")
-            if result == -3:
-                return await _send_text(bot, ev, f"{GAME_TITLE} 明日方舟 UID 包含非法字符")
+            if r == -1:
+                return None, f"{GAME_TITLE} 明日方舟 UID 格式错误"
+            if r == -3:
+                return None, f"{GAME_TITLE} 明日方舟 UID 包含非法字符"
 
     # 为每个角色创建/更新 EndUser
     for role in roles:
         gid = role["game_id"]
         rid = role["role_id"]
 
-        exists = await EndUser.select_end_user(rid, ev.user_id, ev.bot_id, game_id=gid)
+        exists = await EndUser.select_end_user(rid, user_id, bot_id, game_id=gid)
         user_data = {
             "cookie": cred,
             "nickname": role["nickname"],
@@ -286,35 +295,60 @@ async def check_cred(
 
         if not exists:
             await EndUser.insert_data(
-                user_id=ev.user_id,
-                bot_id=ev.bot_id,
+                user_id=user_id,
+                bot_id=bot_id,
                 uid=rid,
                 **user_data,
             )
         else:
             await EndUser.update_data_by_uid(
                 rid,
-                ev.bot_id,
+                bot_id,
                 cookie_status="",
                 **user_data,
             )
 
-    # 构建绑定成功消息
     endfield_role = next((r for r in roles if r["game_id"] == ENDFIELD_GAME_ID), None)
+    result = {
+        "endfield": (
+            {
+                "nickname": endfield_role["nickname"],
+                "channel": endfield_role["channel"],
+                "uid": endfield_role["role_id"],
+            }
+            if endfield_role else None
+        ),
+        "ark_count": sum(1 for r in roles if r["game_id"] == ARKNIGHTS_GAME_ID),
+        "endfield_uid": endfield_uid,
+        "record_uid": endfield_record_uid,
+        "server_id": endfield_server_id,
+        "gacha_grant_token": gacha_grant_token,
+    }
+    return result, None
+
+
+async def do_login_notify(send, user_id: str, bot_id: str, result: dict):
+    """绑定成功后的发消息 + 后台同步抽卡 + 刷新面板。
+
+    send: async callable(text) —— 由调用方决定走 bot.send（扫码/聊天内）还是
+    服务端主动推送（网页登录，不依赖轮询循环，超时/重启也能收到）。
+    """
+    endfield = result.get("endfield")
     msg_lines = [f"{GAME_TITLE} 绑定成功！"]
-    if endfield_role:
-        msg_lines.append(f"游戏昵称: {endfield_role['nickname']}")
-        msg_lines.append(f"服务器: {endfield_role['channel']}")
-        msg_lines.append(f"UID: {hide_uid(endfield_role['role_id'])}")
-    ark_count = sum(1 for r in roles if r["game_id"] == ARKNIGHTS_GAME_ID)
-    if ark_count > 0:
-        msg_lines.append(f"绑定明日方舟UID {ark_count} 个")
+    if endfield:
+        msg_lines.append(f"游戏昵称: {endfield['nickname']}")
+        msg_lines.append(f"服务器: {endfield['channel']}")
+        msg_lines.append(f"UID: {hide_uid(endfield['uid'])}")
+    if result.get("ark_count", 0) > 0:
+        msg_lines.append(f"绑定明日方舟UID {result['ark_count']} 个")
+    endfield_uid = result.get("endfield_uid")
     if endfield_uid:
         msg_lines.append(f"将在后台同步抽卡记录，请勿立即触发！后续更新抽卡记录使用：{PREFIX}更新抽卡记录")
-    await _send_text(bot, ev, "\n".join(msg_lines))
+    await send("\n".join(msg_lines))
 
-    record_uid = endfield_record_uid
-    server_id = endfield_server_id
+    gacha_grant_token = result.get("gacha_grant_token")
+    record_uid = result.get("record_uid")
+    server_id = result.get("server_id", "1")
     if gacha_grant_token and record_uid:
         async def _sync_gacha():
             try:
@@ -330,7 +364,7 @@ async def check_cred(
                         server_id=server_id,
                     )
                     if success and gacha_msg:
-                        await _send_text(bot, ev, f"已同步抽卡记录: {gacha_msg}")
+                        await send(f"已同步抽卡记录: {gacha_msg}")
                     elif gacha_msg:
                         logger.warning(f"[ENDUID·绑定] 自动同步抽卡记录失败: {gacha_msg}")
                 else:
@@ -343,11 +377,42 @@ async def check_cred(
     try:
         from ..end_char import refresh_card_data
 
-        card_ok, card_err = await refresh_card_data(ev.user_id, ev.bot_id)
+        card_ok, card_err = await refresh_card_data(user_id, bot_id)
         if not card_ok and card_err:
             logger.warning(f"[ENDUID·绑定] 登录时自动刷新面板失败: {card_err}")
     except Exception as e:
         logger.warning(f"[ENDUID·绑定] 登录时自动刷新面板异常: {e}")
+
+
+async def notify_login_success(bot: Bot, ev: Event, result: dict):
+    async def _send(text):
+        return await _send_text(bot, ev, text)
+
+    await do_login_notify(_send, ev.user_id, ev.bot_id, result)
+
+
+async def check_cred(
+    bot: Bot,
+    ev: Event,
+    cred: str,
+    used_token: str = None,
+    used_device_token: str = "",
+    skland_user_id: str = None,
+    gacha_grant_token: str = None,
+):
+    result, err = await _persist_login_cred(
+        ev.user_id,
+        ev.bot_id,
+        ev.group_id,
+        cred,
+        used_token=used_token,
+        used_device_token=used_device_token,
+        skland_user_id=skland_user_id,
+        gacha_grant_token=gacha_grant_token,
+    )
+    if err:
+        return await _send_text(bot, ev, err)
+    await notify_login_success(bot, ev, result)
 
 
 async def check_token(bot: Bot, ev: Event, token: str):
@@ -471,3 +536,7 @@ async def switch_or_view_uid(bot: Bot, ev: Event):
             lines.append(f"{idx}. [明日方舟] {hide_uid(uid)}")
             idx += 1
         return await _send_text(bot, ev, "\n".join(lines))
+
+
+# 注册网页登录路由（/end/i、/end/sendCode、/end/login）
+from . import web_login  # noqa: E402,F401

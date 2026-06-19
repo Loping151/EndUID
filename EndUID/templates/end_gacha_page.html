@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>终末地 · 寻访档案</title>
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root {
+    --bg: #0c0e13;
+    --panel: #14161d;
+    --panel-2: #1a1d26;
+    --line: rgba(255,255,255,0.08);
+    --accent: #ffe600;
+    --accent-soft: #ffd34d;
+    --text: #f3f3f3;
+    --sub: #8b91a0;
+    --good: #38d27a;
+    --mid: #f3f3f3;
+    --bad: #ff5b3d;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --num: 'Oswald', 'JetBrains Mono', sans-serif;
+    --sans: 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.5;
+    min-height: 100vh; overflow-x: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -2;
+    background: radial-gradient(900px 520px at 50% -8%, #1b1e28 0%, #0c0e13 64%);
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: -1; opacity: .5;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 36px 36px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 8%, transparent 78%);
+    mask-image: linear-gradient(to bottom, #000 8%, transparent 78%);
+  }
+  #app { max-width: 720px; margin: 0 auto; padding: 16px 14px calc(96px + env(safe-area-inset-bottom)); }
+
+  .loader { min-height: 60vh; display:flex; flex-direction:column; gap:16px; align-items:center; justify-content:center; color: var(--sub); font-family: var(--mono); font-size: 13px; }
+  .loader .ring { width: 38px; height: 38px; border: 3px solid rgba(255,255,255,0.12); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-card { min-height: 56vh; display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; text-align:center; }
+  .error-card h2 { color: var(--accent); font-size: 18px; }
+  .error-card p { color: var(--sub); font-size: 13px; max-width: 300px; line-height: 1.7; }
+
+  .header { position: relative; padding: 18px 18px 20px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 14px; }
+  .header::before { content:""; position:absolute; top:0; left:0; width:4px; height:100%; background: var(--accent); }
+  .brand-line { display:flex; align-items:center; gap:8px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px; color: var(--sub); text-transform: uppercase; }
+  .brand-line .dot { width:6px; height:6px; background: var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent); }
+  .brand-line .sep { flex:1; height:1px; background: var(--line); }
+  .brand-line .stamp { color: var(--accent-soft); }
+  .title-zh { font-size: 26px; font-weight: 700; margin: 10px 0 2px; letter-spacing: 1px; }
+  .title-en { font-family: var(--mono); font-size: 10.5px; letter-spacing: 3px; color: var(--sub); text-transform: uppercase; }
+  .user-card { display:flex; align-items:center; gap:16px; margin-top: 18px; }
+  .emblem { position: relative; width: 70px; height: 70px; flex-shrink:0; }
+  .emblem .pic { width:100%; height:100%; background:#0c0e13; border:1px solid rgba(255,255,255,0.16); overflow:hidden; }
+  .emblem .pic img { width:100%; height:100%; object-fit: cover; }
+  .emblem .pl { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family: var(--num); font-size:30px; color:#3a3d46; }
+  .emblem::after { content:""; position:absolute; top:-4px; left:-4px; width:15px; height:15px; border-top:2px solid var(--accent); border-left:2px solid var(--accent); }
+  .emblem::before { content:""; position:absolute; bottom:-4px; right:-4px; width:15px; height:15px; border-bottom:2px solid var(--accent); border-right:2px solid var(--accent); }
+  .user-meta { min-width:0; flex:1; }
+  .user-name { font-size: 21px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .user-uid { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-top: 3px; }
+  .stats-row { display:flex; gap: 18px; margin-top: 12px; }
+  .stat-cell { display:flex; flex-direction:column; }
+  .stat-cell .num { font-family: var(--num); font-weight:700; font-size: 22px; line-height:1; }
+  .stat-cell .lbl { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top: 4px; letter-spacing:.5px; }
+  .timestamp-line { display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:16px; padding-top:12px; border-top:1px solid var(--line); font-family: var(--mono); font-size: 10.5px; color: var(--sub); }
+  .timestamp-line .pulse { display:inline-block; width:6px; height:6px; border-radius:50%; background: var(--good); margin-right:5px; }
+
+  .tab-strip { position: sticky; top: 0; z-index: 20; background: rgba(12,14,19,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin: 0 -14px 14px; padding: 8px 14px; }
+  .tab-strip .inner { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+  .tab-strip .inner::-webkit-scrollbar { display:none; }
+  .tab { flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:8px 13px; background: var(--panel); border:1px solid var(--line); color: var(--sub); font-size: 13.5px; font-weight:500; font-family: var(--sans); cursor:pointer; white-space:nowrap; transition: color .15s, border-color .15s; }
+  .tab .badge { font-family: var(--num); font-weight:700; font-size: 11px; color: var(--accent); }
+  .tab.active { color: var(--text); border-color: rgba(255,230,0,0.5); }
+  .tab.active::after { content:""; }
+
+  .pool-section { display:none; }
+  .pool-section.active { display:block; }
+  .pool-title { display:none; font-size: 18px; font-weight:700; margin: 4px 0 12px; }
+  .pool-stats { display:grid; grid-template-columns: repeat(4, 1fr) auto; gap: 8px; margin-bottom: 16px; }
+  .metric { background: var(--panel); border:1px solid var(--line); padding: 11px 10px; }
+  .metric .v { font-family: var(--num); font-weight:700; font-size: 24px; line-height:1; }
+  .metric .l { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top:5px; letter-spacing:.5px; }
+  .metric.range { grid-column: 1 / -1; display:flex; align-items:center; }
+  .metric.range .l { margin-top:0; font-size: 11px; }
+  .v.gold { color: var(--accent); }
+  .v.good { color: var(--good); } .v.mid { color: var(--mid); } .v.bad { color: var(--bad); }
+
+  .subpools { display:flex; flex-wrap:wrap; gap:7px; margin: -6px 0 16px; }
+  .chip { display:flex; align-items:center; gap:7px; background: var(--panel-2); border:1px solid var(--line); padding:5px 10px; font-size: 12.5px; }
+  .chip .cn { font-weight:700; } .chip .cs { font-family: var(--mono); font-size:11px; color: var(--sub); }
+  .chip .cp { font-family: var(--num); font-weight:700; }
+
+  .empty-pool { color: var(--sub); font-family: var(--mono); font-size: 13px; text-align:center; padding: 28px; border:1px dashed var(--line); }
+
+  .date-group { margin-bottom: 16px; }
+  .date-head { display:flex; align-items:center; gap:12px; margin-bottom: 10px; }
+  .date-chip { display:flex; align-items:baseline; gap:7px; }
+  .date-chip .day { font-family: var(--num); font-weight:700; font-size: 22px; color: var(--accent); line-height:1; }
+  .date-chip .ym { font-size: 12px; color: var(--text); }
+  .date-chip .wd { font-family: var(--mono); font-size: 11px; color: var(--sub); }
+  .date-line { flex:1; height:1px; background: var(--line); }
+
+  .fs-card { display:grid; grid-template-columns: 28px 5em 26px 5.2em 1fr 24px 10px; align-items:center; gap: 7px; background: var(--panel); border:1px solid var(--line); border-left: 3px solid #ff7a4d; padding: 5px 11px; margin-bottom: 4px; }
+  .fs-card.is-up { border-left-color: var(--accent); }
+  .fs-icon { width:28px; height:28px; background: var(--panel-2); overflow:hidden; }
+  .fs-icon img { width:100%; height:100%; object-fit: cover; }
+  .fs-icon .pl { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family: var(--num); font-size:13px; color:#3a3d46; }
+  .fs-name { font-weight:700; font-size: 14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fs-tagcell { display:flex; align-items:center; }
+  .fs-rt { min-width:0; font-family: var(--mono); font-size: 10.5px; color: var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fs-rt .bn { color: var(--accent-soft); }
+  .tag { font-family: var(--num); font-weight:700; font-size: 10px; letter-spacing:1px; padding: 0 5px; line-height: 1.6; flex-shrink:0; }
+  .tag.up { background: var(--accent); color:#1a1402; }
+  .tag.wai { background:#c01e36; color:#fff; }
+  .tag.std { background: rgba(255,255,255,0.08); color: var(--sub); }
+
+  .belt { position:relative; height:9px; background:#0a0c12; border-radius:3px; overflow:hidden; }
+  .belt > i { position:absolute; inset:0 auto 0 0; width: var(--w); color: var(--accent-soft);
+    background-color: currentColor;
+    background-image: repeating-linear-gradient(90deg, transparent 0 23px, rgba(0,0,0,.72) 23px 28px);
+    background-repeat: repeat-x; background-position: 0 center; background-size: 28px 5px;
+    animation: beltRun 2.4s linear infinite; }
+  @keyframes beltRun { to { background-position: 28px center; } }
+  .belt > i.good { color: var(--good); } .belt > i.mid { color: var(--accent-soft); } .belt > i.bad { color: var(--bad); }
+  @media (prefers-reduced-motion: reduce) { .belt > i { animation:none; } }
+  .fs-pity { font-family: var(--num); font-weight:700; font-size: 19px; text-align:right; }
+  .fs-pity.good { color: var(--good); } .fs-pity.mid { color: var(--accent-soft); } .fs-pity.bad { color: var(--bad); }
+
+  @media (max-width: 440px) {
+    .fs-card { grid-template-columns: 28px 26px 5.2em 1fr 24px 10px; }
+    .fs-name { display:none; }
+  }
+
+  .wsum { font-family: var(--mono); font-size:11px; color: var(--sub); margin: -2px 0 14px; letter-spacing:.5px; }
+  .banner-block { margin-bottom: 20px; }
+  .banner-head { display:flex; align-items:baseline; gap:10px; padding:7px 12px; background: var(--panel-2); border-left:3px solid var(--accent); margin-bottom:10px; }
+  .banner-head .bn { font-weight:700; font-size:14.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .banner-head .bm { font-family: var(--mono); font-size:11px; color: var(--sub); }
+
+  .fs-card.expandable { cursor:pointer; }
+  .fs-caret { display:flex; align-items:center; justify-content:center; color: var(--sub); transition: transform .2s; }
+  .fs-pkg.open .fs-caret { transform: rotate(180deg); }
+  .fs-tray { display:none; flex-direction:column; gap:6px; padding:8px 12px 9px 50px; background: var(--panel); border:1px solid var(--line); border-top:none; margin:-4px 0 4px; font-size:12px; }
+  .fs-pkg.open .fs-tray { display:flex; }
+  .tray-row { display:flex; gap:7px; align-items:baseline; }
+  .tray-k { flex-shrink:0; font-family: var(--num); font-weight:700; letter-spacing:1px; font-size:11px; padding:0 5px; line-height:1.7; }
+  .tray-k.r5 { background:#5a3fb8; color:#fff; }
+  .tray-k.r4 { background: rgba(255,255,255,0.1); color: var(--sub); }
+  .tray-v { color: var(--text); line-height:1.7; }
+  .tray-v .x { color: var(--sub); font-family: var(--mono); font-size:11px; }
+  .tray-empty { color: var(--sub); }
+  .export-mode .belt > i { animation:none !important; }
+  .export-mode .fs-tray { display:flex !important; }
+  .export-mode .fs-caret { display:none !important; }
+
+  .fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40; display:flex; align-items:center; gap:8px; padding: 12px 18px; background: var(--accent); color:#1a1402; border:none; border-radius: 30px; font-family: var(--sans); font-weight:700; font-size: 14px; cursor:pointer; box-shadow: 0 6px 22px rgba(0,0,0,0.45); }
+  .fab svg { width:18px; height:18px; }
+  .fab.exporting { opacity:.7; pointer-events:none; }
+  .toast { position: fixed; left:50%; bottom: 90px; transform: translateX(-50%) translateY(12px); z-index: 50; background:#23262f; color:#fff; padding: 9px 16px; border-radius: 8px; font-size: 13px; opacity:0; pointer-events:none; transition: opacity .2s, transform .2s; }
+  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+
+  .export-mode .tab-strip { display:none !important; }
+  .export-mode .pool-section { display:block !important; }
+  .export-mode .pool-title { display:block !important; }
+  .export-mode .fab, .export-mode .toast { display:none !important; }
+  .export-mode #app { background: var(--bg); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loader"><div class="ring"></div><div>正在解析寻访档案 …</div></div>
+</div>
+
+<button class="fab" id="exportBtn" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  <span>导出 PNG</span>
+</button>
+<div class="toast" id="toast"></div>
+
+<script>
+const $app = document.getElementById('app');
+const $fab = document.getElementById('exportBtn');
+const $toast = document.getElementById('toast');
+const DATA_URL = location.pathname.replace(/\/+$/, '') + '/data';
+const WD = ['日','一','二','三','四','五','六'];
+
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function showToast(msg, ms=1800) {
+  $toast.textContent = msg; $toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => $toast.classList.remove('show'), ms);
+}
+
+function nClass(n, isWeapon) {
+  if (isWeapon) return n >= 50 ? 'bad' : (n >= 20 ? 'mid' : 'good');
+  return n >= 80 ? 'bad' : (n >= 50 ? 'mid' : 'good');
+}
+function pct(n, isWeapon) { const d = isWeapon ? 50 : 80; return Math.max(4, Math.min(100, Math.round(n / d * 100))); }
+
+function tsToDate(ts) {
+  if (ts == null || ts === '') return null;
+  let n = Number(ts);
+  if (Number.isFinite(n) && String(ts).trim() !== '') {
+    if (n > 1e12) n = Math.floor(n / 1000);
+    return new Date(n * 1000);
+  }
+  const d = new Date(String(ts).replace(' ', 'T'));
+  return isNaN(d.getTime()) ? null : d;
+}
+function dayKey(ts) { const d = tsToDate(ts); if (!d) return '——'; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDay(key) {
+  if (key === '——') return { day:'—', ym:'未知时间', wd:'' };
+  const [y,m,d] = key.split('-').map(s => parseInt(s,10));
+  return { day: String(d).padStart(2,'0'), ym: `${y}年${String(m).padStart(2,'0')}月`, wd: '周'+WD[new Date(y,m-1,d).getDay()] };
+}
+function fmtTime(ts) { const d = tsToDate(ts); if (!d) return ''; return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+
+function avatarHTML(b64, name) {
+  if (b64) return `<img src="${esc(b64)}" alt="${esc(name||'')}">`;
+  return `<div class="pl">${esc((name||'?').slice(0,1))}</div>`;
+}
+
+function renderHeader(base, pools, now) {
+  const total = pools.reduce((s,p) => s + (p.total||0), 0);
+  const six = pools.reduce((s,p) => s + (p.six_star_count||0), 0);
+  const up = pools.reduce((s,p) => s + (p.up_count||0), 0);
+  const stats = [
+    [base.level || '—', '等级'],
+    [total, '总抽数'],
+    [six, '六星'],
+    [up || '·', 'UP'],
+  ];
+  return `
+    <header class="header">
+      <div class="brand-line"><span class="dot"></span><span>ENDFIELD · GACHA ARCHIVE</span><span class="sep"></span><span class="stamp">v.终末地</span></div>
+      <h1 class="title-zh">寻访档案</h1>
+      <div class="title-en">CONVENE RECORDS · ENDFIELD LEDGER</div>
+      <div class="user-card">
+        <div class="emblem"><div class="pic">${avatarHTML(base.avatar, base.name)}</div></div>
+        <div class="user-meta">
+          <div class="user-name">${esc(base.name || '指挥官')}</div>
+          <div class="user-uid">UID ${esc(base.uid)}</div>
+          <div class="stats-row">
+            ${stats.map(([v,l]) => `<div class="stat-cell"><span class="num">${esc(v)}</span><span class="lbl">${esc(l)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="timestamp-line">
+        <span><span class="pulse"></span>最后更新 ${esc(base.data_time || now)}</span>
+        <span>查看时间 ${esc((now||'').slice(0,16))}</span>
+      </div>
+    </header>`;
+}
+
+function renderTabs(pools) {
+  const list = pools.length ? pools : [];
+  return `
+    <nav class="tab-strip"><div class="inner">
+      ${list.map((p,i) => `<button class="tab ${i===0?'active':''}" data-target="pool-${i}">${esc(p.pool_name)}${p.six_star_count?`<span class="badge">${esc(p.six_star_count)}</span>`:''}</button>`).join('')}
+    </div></nav>
+    <main id="poolsRoot">
+      ${list.map((p,i) => renderPool(p, i, i===0)).join('')}
+    </main>`;
+}
+
+const WEAPON_CTX = { pool_type: 'weapon', has_up: false };
+
+function metricsRow(cells, range) {
+  return `<div class="pool-stats">${cells.join('')}${range != null ? `<div class="metric range"><div class="l">${esc(range)}</div></div>` : ''}</div>`;
+}
+function metric(v, l, cls) { return `<div class="metric"><div class="v ${cls||''}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`; }
+function rangeShortOf(tr) {
+  const r = (tr || '').split(' - ');
+  const ymd = s => (s || '').slice(0, 10);
+  return r.length===2 ? `${ymd(r[0])} → ${ymd(r[1])}` : ymd(r[0]);
+}
+
+function renderPool(pool, idx, active) {
+  const title = `<h2 class="pool-title">${esc(pool.pool_name)}</h2>`;
+  if (!pool.total) {
+    return `<section class="pool-section ${active?'active':''}" id="pool-${idx}">${title}<div class="empty-pool">「${esc(pool.pool_name)}」暂无寻访数据</div></section>`;
+  }
+
+  let body;
+  if (pool.banners) {
+    const sum = `<div class="wsum">共 ${esc(pool.banners.length)} 个卡池 · 总 ${esc(pool.total)} 抽 · 六星 ${esc(pool.six_star_count)} · UP ${esc(pool.up_count||0)}</div>`;
+    body = sum + pool.banners.map(renderWeaponBanner).join('');
+    return `<section class="pool-section ${active?'active':''}" id="pool-${idx}">${title}${body}</section>`;
+  }
+
+  const third = pool.has_up ? metric(pool.up_count||'·', 'UP', 'gold') : metric(pool.six_star_count, '六星', 'gold');
+  const fourth = pool.has_up
+    ? metric(pool.remain, '未出UP', nClass(pool.remain,false))
+    : metric(pool.pity, '未出六星', nClass(pool.pity,false));
+  const metrics = metricsRow([metric(pool.total,'总抽数'), third, metric(pool.avg_pulls,'平均'), fourth], rangeShortOf(pool.time_range));
+  return `
+    <section class="pool-section ${active?'active':''}" id="pool-${idx}">
+      ${title}${metrics}
+      ${renderDateGroups(pool.six_star_items || [], pool, true)}
+    </section>`;
+}
+
+function renderWeaponBanner(banner) {
+  const head = `<div class="banner-head"><span class="bn">${esc(banner.name)}</span></div>`;
+  const metrics = metricsRow([
+    metric(banner.total, '总抽数'),
+    metric(banner.six_star_count, '六星', 'gold'),
+    metric(banner.up_count||'·', 'UP', 'gold'),
+    metric(banner.pity, '未出六星', nClass(banner.pity, true)),
+  ], rangeShortOf(banner.time_range));
+  return `<div class="banner-block">${head}${metrics}${renderDateGroups(banner.six_star_items || [], WEAPON_CTX, false)}</div>`;
+}
+
+function renderDateGroups(items, pool, showBanner) {
+  const groups = {}; const order = [];
+  items.forEach(it => { const k = dayKey(it.gacha_ts); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(it); });
+  return order.map(k => {
+    const f = fmtDay(k);
+    return `
+      <div class="date-group">
+        <div class="date-head">
+          <div class="date-chip"><span class="day">${esc(f.day)}</span><span class="ym">${esc(f.ym)}</span><span class="wd">${esc(f.wd)}</span></div>
+          <div class="date-line"></div>
+        </div>
+        ${groups[k].map(it => renderItem(it, pool, showBanner)).join('')}
+      </div>`;
+  }).join('');
+}
+
+function itemList(items) {
+  return items.map(it => `${esc(it.name)}${it.count > 1 ? `<span class="x">×${esc(it.count)}</span>` : ''}`).join('、');
+}
+
+function renderItem(item, pool, showBanner) {
+  const isWeapon = (item.type || pool.pool_type) === 'weapon';
+  const n = isWeapon ? (item.color_pulls != null ? item.color_pulls : item.pull_count) : item.pull_count;
+  const c = nClass(n, isWeapon);
+  let tag = '';
+  if (item.is_up) tag = `<span class="tag up">UP</span>`;
+  else if (pool.has_up) tag = `<span class="tag wai">歪</span>`;
+  else tag = `<span class="tag std">常驻</span>`;
+  const rt = showBanner
+    ? `<span class="fs-rt">${item.banner ? `<span class="bn">${esc(item.banner)}</span>` : ''}</span>`
+    : `<span class="fs-rt"><span class="tm">${esc(fmtTime(item.gacha_ts))}</span></span>`;
+
+  const five = item.five_items || [], four = item.four_items || [];
+  const expandable = !isWeapon && (five.length + four.length > 0);
+  const caret = expandable
+    ? `<span class="fs-caret"><svg viewBox="0 0 10 10" width="10" height="10"><path d="M1 3 L5 7 L9 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>`
+    : `<span class="fs-caret" style="visibility:hidden"></span>`;
+  let tray = '';
+  if (expandable) {
+    const rows = [];
+    if (five.length) rows.push(`<div class="tray-row"><span class="tray-k r5">五星</span><span class="tray-v">${itemList(five)}</span></div>`);
+    if (four.length) rows.push(`<div class="tray-row"><span class="tray-k r4">四星</span><span class="tray-v">${itemList(four)}</span></div>`);
+    tray = `<div class="fs-tray">${rows.join('') || '<span class="tray-empty">本周期无五星四星</span>'}</div>`;
+  }
+  const tip = esc(`${item.name}${item.banner ? ' · ' + item.banner : ''} · ${dayKey(item.gacha_ts)} ${fmtTime(item.gacha_ts)} · ${n}抽`);
+  return `
+    <div class="fs-pkg">
+      <div class="fs-card ${item.is_up?'is-up':''} ${expandable?'expandable':''}" title="${tip}">
+        <div class="fs-icon">${avatarHTML(item.avatar, item.name)}</div>
+        <span class="fs-name">${esc(item.name)}</span>
+        <span class="fs-tagcell">${tag}</span>
+        ${rt}
+        <div class="belt"><i class="${c}" style="--w:${pct(n, isWeapon)}%"></i></div>
+        <span class="fs-pity ${c}">${esc(n)}</span>
+        ${caret}
+      </div>
+      ${tray}
+    </div>`;
+}
+
+function bindRowToggle() {
+  document.body.addEventListener('click', (e) => {
+    const card = e.target.closest('.fs-card.expandable');
+    if (!card) return;
+    card.parentElement.classList.toggle('open');
+  });
+}
+
+function bindTabs() {
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.target;
+      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.pool-section').forEach(s => s.classList.toggle('active', s.id === id));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+async function exportPNG() {
+  if (!window.html2canvas) { showToast('导出库未加载，请稍后再试'); return; }
+  $fab.classList.add('exporting');
+  $fab.querySelector('span').textContent = '生成中…';
+  document.body.classList.add('export-mode');
+  try {
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const target = document.getElementById('app');
+    const canvas = await html2canvas(target, {
+      backgroundColor: '#0c0e13',
+      scale: Math.min(window.devicePixelRatio || 1, 2),
+      useCORS: true, logging: false,
+      windowWidth: Math.max(720, target.scrollWidth),
+    });
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'endfield_gacha_' + Date.now() + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showToast('已导出至下载目录');
+  } catch (e) {
+    console.error(e);
+    showToast('导出失败：' + ((e && e.message) || '未知'));
+  } finally {
+    document.body.classList.remove('export-mode');
+    $fab.classList.remove('exporting');
+    $fab.querySelector('span').textContent = '导出 PNG';
+  }
+}
+
+(async function boot() {
+  try {
+    const r = await fetch(DATA_URL, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) {
+      $app.innerHTML = `<div class="error-card"><h2>页面已过期</h2><p>抽卡记录页面仅在 10 分钟内有效，请重新发送「抽卡页面」获取新链接。</p></div>`;
+      return;
+    }
+    const data = await r.json();
+    $app.innerHTML = renderHeader(data.base || {}, data.pools || [], data.now) + renderTabs(data.pools || []);
+    bindTabs();
+    bindRowToggle();
+    $fab.hidden = false;
+    $fab.addEventListener('click', exportPNG);
+  } catch (e) {
+    console.error(e);
+    $app.innerHTML = `<div class="error-card"><h2>加载失败</h2><p>${esc((e && e.message) || '网络异常')}</p></div>`;
+  }
+})();
+</script>
+</body>
+</html>

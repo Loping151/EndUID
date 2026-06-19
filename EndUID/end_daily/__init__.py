@@ -3,7 +3,7 @@ from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
 from .draw_end_daily import draw_end_daily_img
-from ..end_config import PREFIX
+from ..utils.tips import TIP_NOT_BOUND
 from ..utils.database.models import EndBind
 
 end_daily = SV("End每日")
@@ -30,6 +30,6 @@ async def send_daily_info_pic(bot: Bot, ev: Event):
     from ..utils.at_help import ruser_id
     uid = await EndBind.get_bound_uid(ruser_id(ev), ev.bot_id)
     if not uid:
-        return await bot.send(f"未绑定终末地账号，请先使用「{PREFIX}登录」")
+        return await bot.send(TIP_NOT_BOUND)
 
     return await bot.send(await draw_end_daily_img(ev, uid))

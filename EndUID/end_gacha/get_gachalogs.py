@@ -315,6 +315,9 @@ async def _get_new_gachalog(
     msg = f"导入完成！新增 {total_new} 条，共 {total_records} 条记录"
     if first_error:
         msg += f"\n（部分池请求失败: {first_error}）"
+    if EndConfig.get_config("EndGachaWebPage").data:
+        from ..end_config import PREFIX
+        msg += f"\n可发送 {PREFIX}抽卡页面 查看更具体记录"
     return True, msg, result
 
 

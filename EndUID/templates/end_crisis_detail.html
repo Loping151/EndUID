@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>危机合约·挑战详情</title>
+<style>
+    @import url('{{ font_css_url }}');
+    :root { --c-bg: #0b0808; --c-accent: #e23b3b; --c-accent-2: #ff6a4d; --c-line: rgba(255,255,255,0.10); --c-sub: #9a9296; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1280px; background-color: var(--c-bg); font-family: 'Source Han Sans CN', sans-serif; color: #fff; }
+    .container { position: relative; width: 100%; padding-bottom: 40px; overflow: hidden; }
+    .bg-stack { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 0%, #2a1414 0%, #170d0d 45%, #0a0707 100%); }
+    .grid-tile { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05; mix-blend-mode: screen; }
+    .ui-layer { position: relative; z-index: 10; padding: 34px 40px 0; display: flex; flex-direction: column; gap: 22px; }
+
+    .header { display: flex; align-items: center; gap: 22px; padding: 18px 26px; background: rgba(10,7,7,0.86); border: 1px solid var(--c-line); border-left: 4px solid var(--c-accent); }
+    .avatar { width: 84px; height: 84px; background: #1a1010; border: 1px solid var(--c-accent); flex-shrink: 0; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar .placeholder { width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#663;font-size:32px; }
+    .h-name { font-size: 38px; font-weight: 700; }
+    .h-uid { font-family: 'JetBrains Mono', monospace; font-size: 17px; color: var(--c-sub); margin-left: 14px; }
+    .h-right { margin-left: auto; text-align: right; }
+    .h-title { font-size: 30px; font-weight: 800; letter-spacing: 0.05em; }
+    .h-sub { font-size: 17px; color: var(--c-sub); margin-top: 4px; }
+
+    /* ResultSummary */
+    .result { position: relative; border: 1px solid var(--c-line); overflow: hidden; padding: 24px 28px; background: #160d0d; }
+    .result.pass { background: linear-gradient(120deg, rgba(80,12,12,0.55), rgba(22,13,13,0.55)); }
+    .result-top { display: flex; align-items: center; justify-content: space-between; }
+    .result-title { font-size: 44px; font-weight: 800; letter-spacing: 0.06em; position: relative; padding-bottom: 11px; }
+    .result-title.pass { color: #fff; } .result-title.fail { color: #b9c0d8; }
+    .result-title::after { content:""; position:absolute; left:0; bottom:0; width: 116%; height: 4px; border-radius: 2px; }
+    .result-title.pass::after { background: linear-gradient(90deg, #ffb14d, #ff5a2e 45%, #e21f1f); box-shadow: 0 0 14px rgba(255,90,46,0.85); }
+    .result-title.fail::after { background: linear-gradient(90deg, #8aa0ff, #cfd8ff); box-shadow: 0 0 10px rgba(140,160,255,0.6); }
+    .result-rt { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 9px; }
+    .rec-time { font-family: 'JetBrains Mono', monospace; font-size: 19px; color: rgba(255,255,255,0.55); }
+    .waves { display: flex; align-items: center; gap: 2px; }
+    .waves img { width: 46px; height: 46px; object-fit: contain; }
+    .result-bottom { display: grid; grid-template-columns: 232fr 118fr; gap: 16px; margin-top: 20px; }
+    .ind-total { display: flex; align-items: center; gap: 12px; padding: 0 22px; height: 96px; position: relative; }
+    .ind-total.pass { background: #CC1F1B; } .ind-total.fail { background: rgba(68,68,68,0.85); }
+    .ind-total .lab { font-size: 25px; font-weight: 700; flex: 1; }
+    .ind-total .newrec { font-size: 16px; font-weight: 700; background: #434242; color: #fff; padding: 4px 11px; }
+    .ind-total .ico { width: 38px; height: 38px; object-fit: contain; }
+    .ind-total .num { font-family: 'Oswald', sans-serif; font-size: 52px; font-weight: 700; line-height: 1; }
+    .ind-total.fail .num { color: #AFBEFF; }
+    .bd-box { display: flex; align-items: center; gap: 12px; padding: 0 22px; height: 96px; background: rgba(68,68,68,0.85); }
+    .bd-box .lab { font-size: 25px; font-weight: 700; flex: 1; }
+    .bd-box .clk { width: 28px; height: 28px; object-fit: contain; }
+    .bd-box .t { font-family: 'Oswald', sans-serif; font-size: 46px; font-weight: 700; line-height: 1; }
+
+    /* ===== 角色卡（参考详情页截图）===== */
+    .char-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .ccard { position: relative; border: 1px solid #3a2a2a; background: #130c0c; overflow: hidden; }
+    .ccard .av { position: relative; width: 100%; aspect-ratio: 5 / 6; overflow: hidden; background: #1a1010; }
+    .ccard .av img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; }
+    .ccard .av .none { width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#553;font-size:38px; }
+    .ccard .av .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.35) 0, transparent 20%, transparent 58%, rgba(19,12,12,0.97) 100%); }
+    .ccard .av .pot { position: absolute; top: 8px; right: 8px; width: 42px; height: 42px; }
+    .ccard .av .pot img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.9)); }
+    .ccard .av .lv { position: absolute; left: 12px; bottom: 10px; font-family: 'Oswald', sans-serif; font-weight: 700; color: #fff; line-height: 0.95; text-shadow: 0 2px 6px rgba(0,0,0,0.95); }
+    .ccard .av .lv small { display: block; font-size: 18px; font-weight: 400; letter-spacing: 0.1em; }
+    .ccard .av .lv b { font-size: 44px; font-weight: 700; }
+    .ccard-body { padding: 10px; display: flex; flex-direction: column; gap: 9px; }
+
+    /* 武器卡：图标居中放大，潜能(精炼)左上，等级右下，词条渐变灰 */
+    .weapon { position: relative; height: 98px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-line); }
+    .weapon .wimg { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 78px; height: 78px; object-fit: contain; }
+    .weapon .refine { position: absolute; top: 6px; left: 6px; width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9)); }
+    .weapon .wrarity { position: absolute; left: 8px; bottom: 10px; width: 36px; height: 3px; }
+    .weapon .wlv { position: absolute; right: 9px; bottom: 7px; font-family: 'Oswald', sans-serif; font-size: 27px; font-weight: 700; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.95); }
+    .weapon .wlv small { font-size: 15px; font-weight: 400; margin-right: 1px; }
+    .weapon .wterms { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; gap: 3px; }
+    .weapon .wterm { min-width: 42px; height: 21px; padding: 0 8px; font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; line-height: 21px; text-align: right; color: #ffcf65; background: linear-gradient(90deg, rgba(124,124,124,0.92), rgba(46,46,46,0.92)); }
+
+    .equips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .eq { position: relative; aspect-ratio: 36 / 28; background: rgba(255,255,255,0.03); border: 1px solid var(--c-line); display: flex; align-items: center; justify-content: center; }
+    .eq img.icon { width: 92%; height: 92%; object-fit: contain; }
+    .eq .none { color: #443; font-size: 17px; }
+    .eq .erar { position: absolute; left: 4px; bottom: 3px; width: 18px; height: 2px; }
+    .eq .enh { position: absolute; right: 3px; top: 3px; width: 20px; height: 15px; object-fit: contain; }
+
+    /* ===== 已选指标 buff 详情（同合约信息）===== */
+    .section-title { font-size: 28px; font-weight: 800; border-left: 6px solid var(--c-accent); padding-left: 14px; letter-spacing: 0.05em; display: flex; align-items: center; gap: 12px; }
+    .section-title .en { font-family: 'Oswald', sans-serif; font-size: 15px; color: var(--c-sub); font-weight: 600; }
+    .ind-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .ind-card { display: flex; gap: 14px; padding: 14px 16px; background: rgba(24,15,15,0.92); border: 1px solid var(--c-line); border-left: 3px solid var(--lc); }
+    .ind-ic { width: 56px; height: 56px; flex-shrink: 0; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; }
+    .ind-ic img { width: 50px; height: 50px; object-fit: contain; }
+    .ind-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .ind-name-row { display: flex; align-items: center; gap: 10px; }
+    .ind-name { font-size: 21px; font-weight: 700; }
+    .ind-score { font-family: 'Oswald', sans-serif; font-size: 20px; color: var(--lc); font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+    .ind-score img { width: 22px; height: 22px; object-fit: contain; }
+    .ind-desc { font-size: 16px; line-height: 1.5; color: #cdbfbf; }
+    .ind-desc span { font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-stack"></div>
+    {% if asset_grid_tile %}<div class="grid-tile" style="background-image: url('{{ asset_grid_tile }}'); background-repeat: repeat; background-size: 160px 160px;"></div>{% endif %}
+    <div class="ui-layer">
+
+        <div class="header">
+            <div class="avatar">{% if avatar_url %}<img src="{{ avatar_url }}">{% else %}<div class="placeholder">?</div>{% endif %}</div>
+            <div><span class="h-name">{{ user_name }}</span>{% if uid %}<span class="h-uid">UID {{ uid }}</span>{% endif %}</div>
+            <div class="h-right"><div class="h-title">挑战详情 {{ record_label }}</div><div class="h-sub">{{ act_name }}</div></div>
+        </div>
+
+        <div class="result {% if isPass %}pass{% endif %}">
+            <div class="result-top">
+                <div class="result-title {% if isPass %}pass{% else %}fail{% endif %}">{% if isPass %}挑战成功{% else %}挑战失败{% endif %}</div>
+                <div class="result-rt">
+                    {% if passDate %}<div class="rec-time">{{ passDate }}</div>{% endif %}
+                    <div class="waves">{% for w in waves %}{% if w %}<img src="{{ w }}">{% endif %}{% endfor %}</div>
+                </div>
+            </div>
+            <div class="result-bottom">
+                <div class="ind-total {% if isPass %}pass{% else %}fail{% endif %}">
+                    <span class="lab">指标总计</span>
+                    {% if isBest %}<span class="newrec">新记录</span>{% endif %}
+                    <img class="ico" src="{{ asset_score_success if isPass else asset_score_fail }}">
+                    <span class="num">{{ indicatorCount }}</span>
+                </div>
+                <div class="bd-box">
+                    <span class="lab">战斗时长</span>{% if asset_clock %}<img class="clk" src="{{ asset_clock }}">{% endif %}
+                    <span class="t">{{ passDuration or '--:--' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="char-row">
+            {% for c in chars %}
+            <div class="ccard">
+                <div class="av">
+                    {% if c.avatar_b64 %}<img src="{{ c.avatar_b64 }}">{% else %}<div class="none">?</div>{% endif %}
+                    <div class="shade"></div>
+                    {% if c.potentialIcon %}<div class="pot"><img src="{{ c.potentialIcon }}"></div>{% endif %}
+                    <div class="lv"><small>LV</small><b>{{ c.level }}</b></div>
+                </div>
+                <div class="ccard-body">
+                    {% if c.weapon %}
+                    <div class="weapon">
+                        {% if c.weapon.icon_b64 %}<img class="wimg" src="{{ c.weapon.icon_b64 }}">{% endif %}
+                        {% if c.weapon.refine_icon %}<img class="refine" src="{{ c.weapon.refine_icon }}">{% endif %}
+                        <div class="wterms">{% for t in c.weapon.terms %}<span class="wterm">{{ t }}</span>{% endfor %}</div>
+                        <div class="wrarity" style="background: {{ c.weapon.rarity_color }};"></div>
+                        <div class="wlv"><small>Lv.</small>{{ c.weapon.level }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="equips">
+                        {% for e in c.equips %}
+                        <div class="eq">
+                            {% if e.icon_b64 %}<img class="icon" src="{{ e.icon_b64 }}">{% else %}<div class="none">—</div>{% endif %}
+                            <div class="erar" style="background: {{ e.rarity_color }};"></div>
+                            {% if e.enhance_icon %}<img class="enh" src="{{ e.enhance_icon }}">{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if indicators %}
+        <div class="section-title">已选指标 <span class="en">SELECTED · {{ indicators|length }}</span></div>
+        <div class="ind-grid">
+            {% for ind in indicators %}
+            <div class="ind-card" style="--lc: {{ ind.color }};">
+                <div class="ind-ic">{% if ind.icon_b64 %}<img src="{{ ind.icon_b64 }}">{% endif %}</div>
+                <div class="ind-main">
+                    <div class="ind-name-row"><span class="ind-name">{{ ind.name }}</span><span class="ind-score">{{ ind.score }}{% if asset_indicator %}<img src="{{ asset_indicator }}">{% endif %}</span></div>
+                    <div class="ind-desc">{{ ind.desc | safe }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

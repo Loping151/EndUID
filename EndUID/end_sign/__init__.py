@@ -11,7 +11,8 @@ from gsuid_core.subscribe import gs_subscribe
 
 from .sign_handler import end_sign_handler, end_auto_sign
 from .sign_state import signing_state
-from ..end_config import EndConfig, PREFIX
+from ..end_config import EndConfig
+from ..utils.tips import TIP_NOT_BOUND
 
 TASK_NAME_SIGN_RESULT = "订阅终末地签到结果"
 
@@ -75,7 +76,7 @@ async def enable_auto_sign(bot: Bot, ev: Event):
 
     bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
     if not bind_data or not bind_data.uid:
-        return await bot.send(f"未绑定终末地账号，请先使用「{PREFIX}登录」")
+        return await bot.send(TIP_NOT_BOUND)
 
     # 收集所有游戏 UID（终末地 + 明日方舟）
     all_uids = [u for u in bind_data.uid.split("_") if u]
@@ -103,7 +104,7 @@ async def disable_auto_sign(bot: Bot, ev: Event):
 
     bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
     if not bind_data or not bind_data.uid:
-        return await bot.send(f"未绑定终末地账号，请先使用「{PREFIX}登录」")
+        return await bot.send(TIP_NOT_BOUND)
 
     # 收集所有游戏 UID（终末地 + 明日方舟）
     all_uids = [u for u in bind_data.uid.split("_") if u]

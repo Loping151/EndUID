@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>危机合约</title>
+<style>
+    @import url('{{ font_css_url }}');
+    :root {
+        --c-bg: #0b0808; --c-accent: #e23b3b; --c-accent-2: #ff6a4d;
+        --c-line: rgba(255,255,255,0.10); --c-line-2: rgba(255,255,255,0.05); --c-sub: #9a9296;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1280px; background-color: var(--c-bg); font-family: 'Source Han Sans CN', sans-serif; color: #fff; }
+    .container { position: relative; width: 100%; padding-bottom: 40px; overflow: hidden; }
+    .bg-stack { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 0%, #2a1414 0%, #170d0d 45%, #0a0707 100%); }
+    .grid-tile { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05; mix-blend-mode: screen; }
+    .grid-deco { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+        background-image: linear-gradient(rgba(226,59,59,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(226,59,59,0.025) 1px, transparent 1px); background-size: 64px 64px; }
+    .ui-layer { position: relative; z-index: 10; padding: 34px 40px 0; display: flex; flex-direction: column; gap: 24px; }
+
+    .header { display: flex; align-items: center; gap: 24px; padding: 20px 26px; background: rgba(10,7,7,0.86); border: 1px solid var(--c-line); border-left: 4px solid var(--c-accent); }
+    .avatar { width: 100px; height: 100px; background: #1a1010; border: 1px solid var(--c-accent); flex-shrink: 0; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar .placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #663; font-size: 38px; }
+    .user-details { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .name-row { display: flex; align-items: baseline; gap: 16px; }
+    .user-name { font-size: 50px; font-weight: 700; line-height: 1; letter-spacing: 1px; }
+    .user-uid { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--c-sub); background: rgba(255,255,255,0.05); padding: 4px 12px; }
+    .info-tags { display: flex; gap: 12px; flex-wrap: wrap; }
+    .tag { font-family: 'Oswald', sans-serif; font-size: 18px; color: #f0f0f0; background: rgba(0,0,0,0.55); padding: 5px 14px; border: 1px solid rgba(255,255,255,0.14); display: inline-flex; align-items: center; gap: 8px; letter-spacing: 1px; }
+    .tag strong { color: var(--c-accent-2); font-size: 22px; font-weight: 700; }
+
+    /* ===== HERO (完整 KV) ===== */
+    .hero { position: relative; width: 100%; aspect-ratio: 1074 / 384; border: 1px solid var(--c-line); overflow: hidden; background: #1a0e0e; }
+    .hero .kv { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hero-title { position: absolute; top: 11%; left: 2.8%; right: 32%; }
+    .hero-title .nm { font-family: 'Source Han Serif CN', serif; font-size: 48px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.1; text-shadow: 0 3px 12px rgba(0,0,0,0.9); }
+    .hero-title .period { font-family: 'JetBrains Mono', monospace; font-size: 27px; font-weight: 600; color: #f2dcdc; margin-top: 12px; text-shadow: 0 2px 6px rgba(0,0,0,0.95); }
+    .hero-state { display: inline-flex; align-items: center; gap: 9px; font-size: 21px; font-weight: 700; padding: 5px 16px; margin-top: 14px; border: 1px solid var(--c-line); background: rgba(0,0,0,0.5); }
+    .hero-state .dot { width: 11px; height: 11px; background: var(--c-accent-2); box-shadow: 0 0 8px var(--c-accent-2); }
+    .hero-state.ended { color: #b0a8a8; } .hero-state.ended .dot { background: #777; box-shadow: none; }
+    /* 最高记录条：叠在 KV 自带底栏上；底栏右端(~89%)已烘焙指标icon，故 right:12% 让镀层+数字落在它左侧 */
+    .hero-highest { position: absolute; left: 3.3%; right: 12%; bottom: 6.2%; height: 17%; display: flex; align-items: center; gap: 14px; }
+    .hero-highest .label { font-size: 28px; font-weight: 700; color: #ffe2dc; letter-spacing: 0.08em; flex: 1; text-shadow: 0 2px 5px rgba(0,0,0,0.9); }
+    .hero-highest .medal { height: 122%; width: auto; object-fit: contain; filter: drop-shadow(0 1px 5px rgba(0,0,0,0.85)); }
+    .hero-highest .medal.locked { filter: grayscale(90%) brightness(0.5); }
+    .hero-highest .val { font-family: 'Oswald', sans-serif; font-size: 50px; font-weight: 700; line-height: 1; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.95); }
+
+    .section-title { font-size: 30px; font-weight: 800; display: flex; align-items: center; gap: 14px; color: #fff; border-left: 6px solid var(--c-accent); padding-left: 14px; letter-spacing: 0.05em; }
+    .section-title .en { font-family: 'Oswald', 'JetBrains Mono', sans-serif; font-size: 16px; color: var(--c-sub); font-weight: 600; letter-spacing: 0.06em; }
+    .section-title .title-hint { margin-left: auto; font-size: 18px; font-weight: 600; color: var(--c-sub); letter-spacing: 0.03em; }
+
+    /* ===== MISSION GRID (一行两个) ===== */
+    .metric-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .metric { position: relative; display: flex; align-items: center; gap: 14px; padding: 18px 24px; min-height: 86px; background: #1a0f0f; border: 1px solid var(--c-line); overflow: hidden; }
+    .metric .m-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5; }
+    .metric .m-ico { position: relative; z-index: 1; width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
+    .metric .m-label { position: relative; z-index: 1; flex: 1; font-size: 28px; color: #ecdada; font-weight: 700; letter-spacing: 0.06em; }
+    .metric .m-value { position: relative; z-index: 1; font-family: 'Oswald', sans-serif; font-size: 40px; font-weight: 700; line-height: 1; }
+    .metric .m-value .unit { font-size: 22px; color: #b39; color: #c9b3b3; margin-left: 4px; font-weight: 600; }
+
+    /* ===== RECORD CARD ===== */
+    .records-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .records-grid.single { grid-template-columns: 1fr; }
+    .record { position: relative; display: grid; grid-template-columns: 290px 1fr; border: 1px solid var(--c-line); overflow: hidden; background: #160d0d; }
+    .records-grid.single .record { grid-template-columns: 360px 1fr; }
+    .record.best { border-color: rgba(255,120,90,0.55); box-shadow: 0 0 0 1px rgba(226,59,59,0.3), 0 0 26px rgba(226,59,59,0.15); }
+    .record .rec-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+    .record .rec-bg-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,8,8,0.85) 0%, rgba(14,8,8,0.5) 60%, rgba(14,8,8,0.72) 100%); }
+    .rec-left { position: relative; z-index: 2; padding: 20px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
+    .rec-tag { position: absolute; left: 0; top: 0; z-index: 3; font-size: 17px; font-weight: 700; letter-spacing: 0.06em; padding: 4px 14px; color: #fff; background: rgba(0,0,0,0.6); border-right: 1px solid var(--c-line); border-bottom: 1px solid var(--c-line); }
+    .rec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .rec-head .idx { font-family: 'Oswald', sans-serif; font-size: 21px; font-weight: 700; color: #ff8a6a; }
+    .rec-head .date { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: #9a8a8a; }
+    .rec-status { display: flex; align-items: center; margin-top: 6px; }
+    .rec-status .txt { position: relative; font-size: 27px; font-weight: 800; letter-spacing: 0.05em; padding-bottom: 9px; }
+    .records-grid.single .rec-status .txt { font-size: 34px; }
+    .rec-status .txt::after { content: ""; position: absolute; left: 0; bottom: 0; width: 108%; height: 3px; border-radius: 2px; }
+    .rec-status.pass .txt { color: #ff7a5e; }
+    .rec-status.pass .txt::after { background: linear-gradient(90deg, #ffb14d, #ff5a2e 45%, #e21f1f); box-shadow: 0 0 12px rgba(255,90,46,0.85); }
+    .rec-status.fail .txt { color: #9aa0b5; }
+    .rec-status.fail .txt::after { background: linear-gradient(90deg, #8aa0ff, #cfd8ff); box-shadow: 0 0 10px rgba(140,160,255,0.6); }
+    .wave-row { display: flex; align-items: center; gap: 4px; }
+    .wave-row img { width: 26px; height: 26px; object-fit: contain; }
+    .records-grid.single .wave-row { gap: 8px; }
+    .records-grid.single .wave-row img { width: 60px; height: 60px; }
+
+    /* best: 指标总计/战斗时长 两行盒子（标签行 + 大数值行），填满左侧高度 */
+    .stat-boxes { display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: center; }
+    .stat-box { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; }
+    .stat-box.ind { background: #CC1F1B; }
+    .stat-box.ind.fail { background: rgba(58,58,62,0.96); }
+    .stat-box.dur { background: rgba(58,58,62,0.96); }
+    .stat-box .sb-head { display: flex; align-items: center; gap: 10px; }
+    .stat-box .lab { font-size: 27px; font-weight: 700; }
+    .stat-box .newrec { font-size: 15px; font-weight: 700; background: #434242; color: #fff; padding: 3px 9px; margin-left: auto; }
+    .stat-box .sb-val { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+    .stat-box .ic { width: 36px; height: 36px; object-fit: contain; }
+    .stat-box .num { font-family: 'Oswald', sans-serif; font-size: 52px; font-weight: 700; line-height: 1; }
+    .stat-box.ind.fail .num { color: #AFBEFF; }
+
+    /* history: 仅 icon + 数值，无文字标签 */
+    .stat-mini { display: flex; align-items: center; gap: 22px; margin-top: 2px; }
+    .stat-mini .item { display: flex; align-items: center; gap: 8px; }
+    .stat-mini .item img { width: 28px; height: 28px; object-fit: contain; }
+    .stat-mini .item .v { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 700; line-height: 1; color: #fff; }
+    .stat-mini .item.dur .v { color: #ff9a6a; }
+
+    .rec-date { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #9a8a8a; margin-top: auto; }
+    .rec-right { position: relative; z-index: 2; padding: 16px 18px; display: flex; align-items: center; }
+    .squad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
+    .records-grid.single .squad { gap: 12px; }
+    .char-cell { position: relative; }
+    /* 头像高度完整、仅裁掉左右各 25%（中间 50% 宽度）：
+       背景图按高度铺满(auto 100%)居中，格子宽高比≈头像比例的一半 → 横向只露中间 50% */
+    .char-av { position: relative; width: 100%; aspect-ratio: 99 / 277; background-color: #1a1010; background-repeat: no-repeat; background-position: center; background-size: auto 100%; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+    .char-av .none { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#553; font-size:26px; }
+    .char-av .shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(12,8,8,0.92) 100%); }
+    .level-corner { position: absolute; left: 0; bottom: 0; z-index: 2; padding: 2px 7px; font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 700; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.95); }
+    .records-grid.single .level-corner { font-size: 30px; padding: 2px 10px; }
+    .level-corner small { font-size: 13px; font-weight: 400; margin-right: 2px; }
+    .records-grid.single .level-corner small { font-size: 17px; }
+    .potential-corner { position: absolute; right: 3px; bottom: 3px; z-index: 2; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
+    .potential-corner img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9)); }
+    .records-grid.single .potential-corner { width: 50px; height: 50px; }
+    .footer-note { text-align: center; color: #6a5e5e; font-size: 15px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-stack"></div>
+    {% if asset_grid_tile %}<div class="grid-tile" style="background-image: url('{{ asset_grid_tile }}'); background-repeat: repeat; background-size: 160px 160px;"></div>{% endif %}
+    <div class="grid-deco"></div>
+    <div class="ui-layer">
+
+        <div class="header">
+            <div class="avatar">{% if avatar_url %}<img src="{{ avatar_url }}">{% else %}<div class="placeholder">?</div>{% endif %}</div>
+            <div class="user-details">
+                <div class="name-row">
+                    <div class="user-name">{{ user_name }}</div>
+                    {% if uid %}<div class="user-uid">UID {{ uid }}</div>{% endif %}
+                </div>
+                <div class="info-tags">
+                    <div class="tag">LEVEL <strong>{{ user_level }}</strong></div>
+                    <div class="tag">WORLD <strong>{{ world_level }}</strong></div>
+                    {% if create_time %}<div class="tag">苏醒日 <strong>{{ create_time }}</strong></div>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="hero">
+            {% if kv_b64 %}<img class="kv" src="{{ kv_b64 }}">{% endif %}
+            <div class="hero-title">
+                <div class="nm">{{ act_name }}</div>
+                {% if date_text %}<div class="period">{{ date_text }}</div>{% endif %}
+                <div class="hero-state {% if not is_in_activity %}ended{% endif %}"><span class="dot"></span>{% if is_in_activity %}进行中{% else %}已结束{% endif %}</div>
+            </div>
+            <div class="hero-highest">
+                <span class="label">最高记录</span>
+                {% if medal and medal.icon_b64 %}<img class="medal {% if not medal.obtained %}locked{% endif %}" src="{{ medal.icon_b64 }}">{% endif %}
+                <span class="val">{{ highest }}</span>
+            </div>
+        </div>
+
+        <div class="metric-wrap">
+            <div class="metric">{% if asset_mission_bg %}<img class="m-bg" src="{{ asset_mission_bg }}">{% endif %}{% if icon_challenge %}<img class="m-ico" src="{{ icon_challenge }}">{% endif %}<span class="m-label">挑战次数</span><span class="m-value">{{ challenge_count }}</span></div>
+            <div class="metric">{% if asset_mission_bg %}<img class="m-bg" src="{{ asset_mission_bg }}">{% endif %}{% if icon_weekly %}<img class="m-ico" src="{{ icon_weekly }}">{% endif %}<span class="m-label">周期任务</span><span class="m-value">{{ weekly.count }}<span class="unit">/{{ weekly.total }}</span></span></div>
+            <div class="metric">{% if asset_mission_bg %}<img class="m-bg" src="{{ asset_mission_bg }}">{% endif %}{% if icon_indicator %}<img class="m-ico" src="{{ icon_indicator }}">{% endif %}<span class="m-label">指标任务</span><span class="m-value">{{ indicator_mission.count }}<span class="unit">/{{ indicator_mission.total }}</span></span></div>
+            <div class="metric">{% if asset_mission_bg %}<img class="m-bg" src="{{ asset_mission_bg }}">{% endif %}{% if icon_stage %}<img class="m-ico" src="{{ icon_stage }}">{% endif %}<span class="m-label">阶段任务</span><span class="m-value">{{ stage.count }}<span class="unit">/{{ stage.total }}</span></span></div>
+        </div>
+
+        {% macro char_cell(c, is_best) %}
+        <div class="char-cell">
+            <div class="char-av" {% if c.avatar_b64 %}style="background-image: url('{{ c.avatar_b64 }}')"{% endif %}>
+                {% if not c.avatar_b64 %}<div class="none">?</div>{% endif %}
+                <div class="shade"></div>
+                <div class="level-corner">{% if is_best %}<small>Lv.</small>{% endif %}{{ c.level }}</div>
+                {% if c.potentialIcon %}<div class="potential-corner"><img src="{{ c.potentialIcon }}"></div>{% endif %}
+            </div>
+        </div>
+        {% endmacro %}
+
+        {% macro record_card(r, is_best) %}
+        <div class="record {% if is_best %}best{% endif %}">
+            {% if r.isPass and asset_card_success %}<img class="rec-bg" src="{{ asset_card_success }}">{% elif not r.isPass and asset_card_fail %}<img class="rec-bg" src="{{ asset_card_fail }}">{% endif %}
+            <div class="rec-bg-shade"></div>
+            <div class="rec-left">
+                {% if not is_best %}
+                <div class="rec-head"><span class="idx">{% if r.index == 0 %}最佳 #0{% else %}#{{ r.index }}{% endif %}</span>{% if r.passDate %}<span class="date">{{ r.passDate }}</span>{% endif %}</div>
+                {% endif %}
+                <div class="rec-status {% if r.isPass %}pass{% else %}fail{% endif %}">
+                    <span class="txt">{% if r.isPass %}挑战成功{% else %}挑战失败{% endif %}</span>
+                </div>
+                <div class="wave-row">{% for w in r.waves %}{% if w %}<img src="{{ w }}">{% endif %}{% endfor %}</div>
+                {% if is_best %}
+                <div class="stat-boxes">
+                    <div class="stat-box ind {% if not r.isPass %}fail{% endif %}">
+                        <div class="sb-head"><span class="lab">指标总计</span>{% if r.isBest %}<span class="newrec">新记录</span>{% endif %}</div>
+                        <div class="sb-val"><img class="ic" src="{{ asset_score_success if r.isPass else asset_score_fail }}"><span class="num">{{ r.indicatorCount }}</span></div>
+                    </div>
+                    <div class="stat-box dur">
+                        <div class="sb-head"><span class="lab">战斗时长</span></div>
+                        <div class="sb-val">{% if asset_clock %}<img class="ic" src="{{ asset_clock }}">{% endif %}<span class="num">{{ r.passDuration or '--:--' }}</span></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="stat-mini">
+                    <div class="item"><img src="{{ asset_score_success if r.isPass else asset_score_fail }}"><span class="v">{{ r.indicatorCount }}</span></div>
+                    <div class="item dur">{% if asset_clock %}<img src="{{ asset_clock }}">{% endif %}<span class="v">{{ r.passDuration or '--:--' }}</span></div>
+                </div>
+                {% endif %}
+                {% if is_best and r.passDate %}<div class="rec-date">{{ r.passDate }}</div>{% endif %}
+            </div>
+            <div class="rec-right">
+                <div class="squad">{% for c in r.chars %}{{ char_cell(c, is_best) }}{% endfor %}</div>
+            </div>
+        </div>
+        {% endmacro %}
+
+        {% if best %}
+        <div class="section-title">最佳记录 <span class="en">BEST RECORD</span><span class="title-hint">「{{ prefix }}合约记录最佳」查看详情</span></div>
+        <div class="records-grid single">{{ record_card(best, true) }}</div>
+        {% endif %}
+
+        {% if history %}
+        <div class="section-title">历史记录 <span class="en">HISTORY · {{ history_total }}</span>{% if mode == 'history' %}<span class="title-hint">「{{ prefix }}合约历史N」查看详情</span>{% endif %}</div>
+        <div class="records-grid">
+            {% for r in history %}{{ record_card(r, false) }}{% endfor %}
+        </div>
+        {% elif not best %}
+        <div class="section-title">历史记录 <span class="en">HISTORY</span></div>
+        <div style="color:#9a8a8a;font-size:22px;padding:8px 4px;">// 暂无历史记录</div>
+        {% endif %}
+
+        <div class="footer-note">EndUID · 危机合约 / CRISIS CONTRACT{% if mode != 'history' %} · 「{{ prefix }}危机合约历史」查看更多 · 「{{ prefix }}危机合约记录N」查看详情{% endif %}</div>
+    </div>
+</div>
+</body>
+</html>

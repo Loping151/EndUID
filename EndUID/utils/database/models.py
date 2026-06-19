@@ -28,6 +28,8 @@ exec_list.extend(
         'ALTER TABLE EndBind ADD COLUMN ark_uid TEXT DEFAULT ""',
         'ALTER TABLE EndUser ADD COLUMN hg_token TEXT DEFAULT ""',
         'ALTER TABLE EndUser ADD COLUMN hide_uid_self_value TEXT DEFAULT ""',
+        'ALTER TABLE EndUser ADD COLUMN platform_avatar TEXT DEFAULT ""',
+        'ALTER TABLE EndUser ADD COLUMN platform_nickname TEXT DEFAULT ""',
     ]
 )
 
@@ -48,6 +50,44 @@ class EndBind(Bind, table=True):
         default=None,
         title="明日方舟 UID"
     )
+
+    @classmethod
+    @with_session
+    async def get_group_all_binds(
+        cls,
+        session: AsyncSession,
+        group_id: str,
+        bot_id: Optional[str] = None,
+    ) -> List["EndBind"]:
+        """该群号下所有绑定记录。
+
+        group_id 以 "_" 拼接多个群，contains 仅作粗筛，再按拆分后的精确成员判定，
+        避免子串误含（如 "123" 命中 "1234"）；并按 bot_id 过滤防止跨适配器混入。
+        """
+        stmt = select(cls).where(col(cls.group_id).contains(group_id))
+        if bot_id:
+            stmt = stmt.where(cls.bot_id == bot_id)
+        result = await session.scalars(stmt)
+        return [
+            r for r in result.all()
+            if group_id in (r.group_id or "").split("_")
+        ]
+
+    @classmethod
+    async def add_group(cls, user_id: str, bot_id: str, group_id: str) -> None:
+        """把当前群追加进该用户绑定记录的 group_id（进群即入榜，已存在则跳过）"""
+        if not group_id:
+            return
+        data = await cls.select_data(user_id, bot_id)
+        if not data or not data.uid:
+            return
+        groups = [g for g in (data.group_id or "").split("_") if g]
+        if group_id in groups:
+            return
+        groups.append(group_id)
+        await cls.update_data(
+            user_id=user_id, bot_id=bot_id, group_id="_".join(groups)
+        )
 
     @classmethod
     @with_session
@@ -221,7 +261,7 @@ class EndBind(Bind, table=True):
         user_id: str,
         bot_id: str,
     ) -> list[str]:
-        """读取当前用户的绑定群 ID 列表"""
+        """读取当前用户的绑定群 ID 列表（group_id 以 "_" 拼接，需拆分去重）"""
         stmt = select(cls.group_id).where(
             and_(
                 cls.user_id == user_id,
@@ -229,7 +269,12 @@ class EndBind(Bind, table=True):
             )
         )
         result = await session.execute(stmt)
-        return [gid for gid in result.scalars().all() if gid]
+        ids: list[str] = []
+        for raw in result.scalars().all():
+            for gid in (raw or "").split("_"):
+                if gid and gid not in ids:
+                    ids.append(gid)
+        return ids
 
     @classmethod
     @with_session
@@ -289,6 +334,10 @@ class EndUser(User, table=True):
     bbs_sign_switch: str = Field(default="off", title="签到开关")
     stamina_bg_value: str = Field(default="", title="体力背景")
     hide_uid_self_value: str = Field(default="", title="隐藏UID")
+
+    # 平台头像/昵称（用于群排行展示）
+    platform_avatar: str = Field(default="", title="平台头像")
+    platform_nickname: str = Field(default="", title="平台昵称")
 
     # 时间戳
     created_time: Optional[int] = Field(default=None, title="创建时间（秒）")
@@ -453,7 +502,7 @@ class EndUser(User, table=True):
 
         threshold = int(time.time()) - (active_days * 86400)
 
-        users = await cls.get_all_data()
+        users = await cls.get_all_data() or []
         valid_users = [
             u for u in users
             if u.cookie
@@ -470,7 +519,7 @@ class EndUser(User, table=True):
         """获取活跃用户数量"""
         threshold = int(time.time()) - (active_days * 86400)
 
-        users = await cls.get_all_data()
+        users = await cls.get_all_data() or []
         active_users = [
             u for u in users
             if u.cookie

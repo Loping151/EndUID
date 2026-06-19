@@ -213,6 +213,50 @@ def update_alias_map_from_chars(chars: Iterable[Any]) -> None:
         _save_alias_map(data)
 
 
+_AVATAR_BY_ID_CACHE: Dict[str, Any] = {"mtime": None, "map": {}}
+
+
+def _avatar_index() -> Dict[str, AliasEntry]:
+    """id -> entry 索引，仅在 map.json 变更时重建；只读不触发合并写盘。"""
+    try:
+        mtime = MAP_PATH.stat().st_mtime if MAP_PATH.exists() else None
+    except Exception:
+        mtime = None
+    if _AVATAR_BY_ID_CACHE["mtime"] != mtime:
+        index: Dict[str, AliasEntry] = {}
+        try:
+            if MAP_PATH.exists():
+                raw = json.loads(MAP_PATH.read_text(encoding="utf-8") or "{}")
+                for entry in raw.values():
+                    cid = str(entry.get("id", "")).strip() if isinstance(entry, dict) else ""
+                    if cid:
+                        index[cid] = entry
+        except Exception as e:
+            logger.warning(f"[ENDUID·别名映射] 构建头像索引失败: {e}")
+        _AVATAR_BY_ID_CACHE["mtime"] = mtime
+        _AVATAR_BY_ID_CACHE["map"] = index
+    return _AVATAR_BY_ID_CACHE["map"]
+
+
+def get_avatar_by_id(char_id: str, prefer: str = "rt") -> str:
+    """按角色 ID 从别名映射取头像 URL（与角色面板同一份 map.json）。
+
+    prefer: "rt"=半身像(与危机/丰碑接口 avatarUrl 同图) / "sq"=方头像。
+    找不到返回 ""，由调用方回退接口自带 URL。
+    """
+    cid = str(char_id or "").strip()
+    if not cid:
+        return ""
+    entry = _avatar_index().get(cid)
+    if not isinstance(entry, dict):
+        return ""
+    order = ("avatarRtUrl", "avatarSqUrl") if prefer == "rt" else ("avatarSqUrl", "avatarRtUrl")
+    for key in order:
+        if entry.get(key):
+            return entry[key]
+    return ""
+
+
 def resolve_alias_entry(value: str) -> Optional[Tuple[str, AliasEntry]]:
     if not value:
         return None

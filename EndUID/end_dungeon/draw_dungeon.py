@@ -17,24 +17,22 @@ from ..utils.api.model import IndieHardResponse, IndieHardGroup
 from ..utils.database.models import EndUser
 from ..utils.render_utils import (
     render_html,
-    image_to_base64,
     get_image_b64_with_cache,
 )
 from ..utils.util import hide_uid
-from ..end_config import PREFIX
+from ..utils.tips import TIP_NO_CRED
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
+from ..utils.resources import attr_icon_b64, potential_b64, res_b64
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 
-TEXTURE_PATH = Path(__file__).parent / "texture2d"
-
 PROPERTY_ICON = {
-    "char_property_physical": "物理.png",
-    "char_property_fire":     "灼热.png",
-    "char_property_pulse":    "电磁.png",
-    "char_property_cryst":    "寒冷.png",
-    "char_property_natural":  "自然.png",
+    "char_property_physical": "物理",
+    "char_property_fire":     "灼热",
+    "char_property_pulse":    "电磁",
+    "char_property_cryst":    "寒冷",
+    "char_property_natural":  "自然",
 }
 
 from ..utils.colors import RARITY_COLORS as _RARITY_COLORS
@@ -42,10 +40,6 @@ from ..utils.colors import RARITY_COLORS as _RARITY_COLORS
 RARITY_COLOR = {f"rarity_{k}": v for k, v in _RARITY_COLORS.items()}
 RARITY_COLOR.setdefault("rarity_2", "#888888")
 RARITY_COLOR.setdefault("rarity_1", "#666666")
-
-
-def _local_b64(filename: str, quality: int = 0) -> str:
-    return image_to_base64(TEXTURE_PATH / filename, quality=quality)
 
 
 def _fmt_date(ts: str) -> str:
@@ -81,26 +75,23 @@ def _fmt_duration(secs: str) -> str:
 
 
 def _property_icon_b64(key: str) -> str:
-    fn = PROPERTY_ICON.get(key)
-    if not fn:
-        return ""
-    return _local_b64(fn)
+    return attr_icon_b64(PROPERTY_ICON.get(key, ""))
 
 
 async def _bake_chars(chars) -> List[dict]:
     out = []
     for c in chars or []:
         avatar_b64 = ""
-        if c.avatarUrl:
+        # 优先按角色 ID 取头像(与角色面板同一份 map.json)，缺失回退接口 avatarUrl
+        from ..utils.alias_map import get_avatar_by_id
+        avatar_url = get_avatar_by_id(c.charId) or c.avatarUrl
+        if avatar_url:
             try:
-                avatar_b64 = await get_image_b64_with_cache(c.avatarUrl, AVATAR_CACHE_PATH)
+                avatar_b64 = await get_image_b64_with_cache(avatar_url, AVATAR_CACHE_PATH)
             except Exception as e:
                 logger.warning(f"[ENDUID·关卡] 阵容头像下载失败 {c.charId}: {e}")
 
-        # 潜能图标（webpack publicPath 中 potential_2~5.png 已下载；0-1 不显示）
-        potential_icon = ""
-        if 2 <= c.potentialLevel <= 5:
-            potential_icon = _local_b64(f"potential_{c.potentialLevel}.png")
+        potential_icon = potential_b64(c.potentialLevel)
 
         out.append({
             "level": c.level,
@@ -184,7 +175,7 @@ async def draw_dungeon_img(
 
     _, cred = await end_api.get_ck_result(uid, target_user_id, ev.bot_id)
     if not cred:
-        return f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
+        return TIP_NO_CRED
 
     user_record = await EndUser.select_end_user(uid, target_user_id, ev.bot_id)
     user_pref = (
@@ -211,10 +202,14 @@ async def draw_dungeon_img(
     try:
         player_dir = PLAYER_PATH / uid
         player_dir.mkdir(parents=True, exist_ok=True)
+        from ..utils.util import scrub_urls
         async with aiofiles.open(player_dir / "indie_hard.json", "w", encoding="utf-8") as f:
-            await f.write(json.dumps(res, ensure_ascii=False))
+            await f.write(json.dumps(scrub_urls(res), ensure_ascii=False))
     except Exception as e:
         logger.warning(f"[ENDUID·关卡] 丰碑详情写入失败: {e}")
+
+    from ..utils.util import record_group_and_profile
+    await record_group_and_profile(ev, uid)
 
     try:
         parsed = IndieHardResponse.model_validate(res).data.indieHard
@@ -294,7 +289,7 @@ async def draw_dungeon_img(
     medals_plated = sum(1 for g in groups_ctx if g["medal"].get("isPlated"))
 
     context = {
-        "asset_grid_tile": _local_b64("grid_tile.png"),
+        "asset_grid_tile": res_b64("grid_tile.png"),
 
         "diff": diff,
         "diff_label": "苦难" if diff == "hard" else "普通",

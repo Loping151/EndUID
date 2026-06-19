@@ -36,6 +36,31 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         ],
     ),
 
+    # ==================== 登录配置 ====================
+    "EndLoginUrl": GsStrConfig(
+        "终末地登录url",
+        "EndUID 登录/抽卡网页的对外地址（域名/穿透/反代到本 core）。留空则用 core 的 HOST:PORT，"
+        "群聊远端用户需能访问到该地址，建议反代后在此填写。",
+        "",
+        secret=True,
+    ),
+    "EndQRLogin": GsBoolConfig(
+        "登录链接变二维码",
+        "开启后，登录链接以二维码图片形式发送，用浏览器扫描打开。",
+        False,
+    ),
+    "EndLoginForward": GsBoolConfig(
+        "登录链接转发消息",
+        "开启后，登录链接以合并转发消息形式发送。",
+        False,
+    ),
+    "EndGachaWebPage": GsBoolConfig(
+        "抽卡记录网页开关",
+        "开启后，用户可发送「抽卡页面」获取 10 分钟内有效的抽卡记录详情网页链接；"
+        "更新抽卡记录时也会附带网页查看提示。需可访问到本 core 的对外地址。",
+        False,
+    ),
+
     # ==================== 攻略配置 ====================
     "EndGuideMaxSize": GsIntConfig(
         "攻略图片最大大小(M)",

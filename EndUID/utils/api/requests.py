@@ -628,6 +628,130 @@ class EndApi:
             accept_encoding="gzip, deflate",
         )
 
+    async def get_crisis_contract(
+        self,
+        cred: str,
+        uid: str,
+        server_id: str = "1",
+        user_id: Optional[str] = None,
+        contract_id: Optional[str] = None,
+        qq_user_id: Optional[str] = None,
+        bot_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """获取危机合约详情（当期状态 + 历史/最佳记录 + 指标 + 副本敌人）
+
+        Args:
+            cred: 森空岛 Cred
+            uid: 游戏 UID (roleId)
+            server_id: 服务器 ID
+            user_id: 森空岛用户 ID（不传时从 EndUser/user_info 回填）
+            contract_id: 合约期次 ID，留空则返回当期
+            qq_user_id / bot_id: 用于补 skland_user_id
+        """
+        resolved_user_id = user_id
+        resolved_server_id = server_id
+
+        if qq_user_id and bot_id:
+            stored = await EndUser.select_end_user(uid, qq_user_id, bot_id)
+            if stored:
+                if not resolved_user_id and stored.skland_user_id:
+                    resolved_user_id = stored.skland_user_id
+                if stored.server_id:
+                    resolved_server_id = stored.server_id
+
+        if not resolved_user_id:
+            user_info = await self.get_user_info(cred)
+            if user_info and user_info.get("code") == 0:
+                skland_user_id = (
+                    user_info.get("data", {}).get("user", {}).get("id")
+                )
+                if skland_user_id:
+                    resolved_user_id = str(skland_user_id)
+                    if qq_user_id and bot_id:
+                        await EndUser.update_data_by_uid(
+                            uid, bot_id, skland_user_id=resolved_user_id,
+                        )
+
+        if not resolved_user_id:
+            logger.error("[ENDUID·API] 获取 Skland 用户 ID 失败，无法请求 crisis-contract")
+            return None
+
+        params = {
+            "roleId": uid,
+            "serverId": resolved_server_id,
+            "userId": resolved_user_id,
+        }
+        if contract_id:
+            params["contractId"] = contract_id
+
+        return await self.request(
+            url=CRISIS_CONTRACT_URL,
+            method="GET",
+            cred=cred,
+            uid=None,
+            game_id=None,
+            params=params,
+            use_device_id=True,
+            extra_headers=get_endfield_web_headers(),
+            accept_encoding="gzip, deflate",
+        )
+
+    async def get_crisis_record(
+        self,
+        cred: str,
+        uid: str,
+        contract_id: str,
+        record_id: str,
+        server_id: str = "1",
+        user_id: Optional[str] = None,
+        qq_user_id: Optional[str] = None,
+        bot_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """获取危机合约单条记录详情（武器/装备/已选指标）"""
+        resolved_user_id = user_id
+        resolved_server_id = server_id
+
+        if qq_user_id and bot_id:
+            stored = await EndUser.select_end_user(uid, qq_user_id, bot_id)
+            if stored:
+                if not resolved_user_id and stored.skland_user_id:
+                    resolved_user_id = stored.skland_user_id
+                if stored.server_id:
+                    resolved_server_id = stored.server_id
+
+        if not resolved_user_id:
+            user_info = await self.get_user_info(cred)
+            if user_info and user_info.get("code") == 0:
+                skland_user_id = (
+                    user_info.get("data", {}).get("user", {}).get("id")
+                )
+                if skland_user_id:
+                    resolved_user_id = str(skland_user_id)
+
+        if not resolved_user_id:
+            logger.error("[ENDUID·API] 获取 Skland 用户 ID 失败，无法请求 crisis-contract/record")
+            return None
+
+        params = {
+            "roleId": uid,
+            "serverId": resolved_server_id,
+            "userId": resolved_user_id,
+            "contractId": contract_id,
+            "recordId": record_id,
+        }
+
+        return await self.request(
+            url=CRISIS_CONTRACT_RECORD_URL,
+            method="GET",
+            cred=cred,
+            uid=None,
+            game_id=None,
+            params=params,
+            use_device_id=True,
+            extra_headers=get_endfield_web_headers(),
+            accept_encoding="gzip, deflate",
+        )
+
     # ===================== OAuth 相关方法（扫码登录）=====================
 
     async def get_scan_id(self) -> Optional[str]:
@@ -743,6 +867,79 @@ class EndApi:
             logger.error(f"[ENDUID·获取Token] {e}")
             return None
 
+    async def send_phone_code(self, phone: str) -> tuple[bool, str]:
+        """发送手机号登录短信验证码
+
+        Returns:
+            (是否成功, 提示信息)
+        """
+        headers = get_oauth_header()
+        body = {"phone": phone, "type": 1}
+
+        session = await self.get_session()
+        proxy = self._get_proxy()
+
+        try:
+            logger.debug(f"[ENDUID·手机登录] POST {SEND_PHONE_CODE_API}")
+            async with session.post(
+                SEND_PHONE_CODE_API,
+                headers=headers,
+                json=body,
+                proxy=proxy,
+                timeout=aiohttp.ClientTimeout(total=25)
+            ) as resp:
+                res = await resp.json()
+                logger.debug(f"[ENDUID·手机登录] [send_code] response: {res}")
+                if res.get("status") == 0:
+                    return True, "OK"
+                msg = res.get("msg") or "发送验证码失败"
+                logger.warning(f"[ENDUID·手机登录] 发送验证码失败: {res}")
+                return False, msg
+        except Exception as e:
+            logger.error(f"[ENDUID·手机登录] 发送验证码异常: {e}")
+            return False, "发送验证码异常，请稍后重试"
+
+    async def get_token_by_phone_code(
+        self, phone: str, code: str
+    ) -> tuple[Optional[str], str]:
+        """通过手机号 + 短信验证码获取鹰角账号 token
+
+        Returns:
+            (token 或 None, 提示信息)
+        """
+        headers = get_oauth_header()
+        body = {"phone": phone, "code": code}
+
+        session = await self.get_session()
+        proxy = self._get_proxy()
+
+        try:
+            logger.debug(f"[ENDUID·手机登录] POST {TOKEN_BY_PHONE_CODE_API}")
+            async with session.post(
+                TOKEN_BY_PHONE_CODE_API,
+                headers=headers,
+                json=body,
+                proxy=proxy,
+                timeout=aiohttp.ClientTimeout(total=25)
+            ) as resp:
+                res = await resp.json()
+                logger.debug(f"[ENDUID·手机登录] [token_by_phone] response: {res}")
+                if res.get("status") != 0:
+                    msg = res.get("msg") or "验证码错误或已过期"
+                    logger.warning(f"[ENDUID·手机登录] 换取 token 失败: {res}")
+                    return None, msg
+
+                token = (res.get("data") or {}).get("token", "")
+                if not token:
+                    logger.error(f"[ENDUID·手机登录] 响应缺少 token: {res}")
+                    return None, "登录失败，请重试"
+
+                logger.info(f"[ENDUID·手机登录] 获取到Token（长度: {len(token)}）")
+                return token, "OK"
+        except Exception as e:
+            logger.error(f"[ENDUID·手机登录] 换取 token 异常: {e}")
+            return None, "登录异常，请稍后重试"
+
     async def get_cred_info_by_token(self, token: str) -> Optional[dict]:
         """通过 token 获取 cred 与 skland_user_id"""
         headers = get_oauth_header()
@@ -793,6 +990,7 @@ class EndApi:
                 CRED_API,
                 headers=headers,
                 json=body,
+                proxy=proxy,
                 timeout=aiohttp.ClientTimeout(total=25)
             ) as resp:
                 if not resp.ok:

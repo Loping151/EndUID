@@ -261,9 +261,9 @@
             top: 6px;
             right: 6px;
             z-index: 2;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.45);
             border-left: 3px solid var(--c-accent);
-            padding: 2px 8px;
+            padding: 3px;
             transform: skewX(-10deg);
             backdrop-filter: blur(4px);
         }
@@ -274,30 +274,40 @@
         .potential-badge.p-4 { border-left-color: #ffc900; color: #ffc900; }
         .potential-badge.p-5 { border-left-color: #ff4e20; color: #ff4e20; }
 
-        .potential-num {
-            font-family: 'Oswald', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            color: inherit;
-            line-height: 1;
+        .potential-icon {
+            display: block;
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
             transform: skewX(10deg);
         }
 
-        
+
         .char-lvl {
             position: absolute;
             bottom: 45px;
             right: 5px;
             font-family: 'Oswald', sans-serif;
             font-weight: 700;
-            font-size: 24px;
+            font-size: 30px;
             color: #fff;
             text-shadow: 0 2px 5px rgba(0,0,0,0.9);
             z-index: 2;
         }
+
+        .evolve-phase {
+            position: absolute;
+            bottom: 45px;
+            left: 6px;
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            z-index: 2;
+        }
         
         .char-lvl small {
-            font-size: 14px;
+            font-size: 18px;
             font-weight: 400;
             margin-right: 2px;
         }
@@ -466,12 +476,13 @@
                         {% endif %}
                     </div>
 
-                    {% if char.potentialLevel > 0 %}
+                    {% if char.potential_icon %}
                     <div class="potential-badge p-{{ char.potentialLevel }}">
-                        <span class="potential-num">P{{ char.potentialLevel }}</span>
+                        <img class="potential-icon" src="{{ char.potential_icon }}">
                     </div>
                     {% endif %}
 
+                    {% if char.evolve_icon %}<img class="evolve-phase" src="{{ char.evolve_icon }}">{% endif %}
                     <div class="char-lvl"><small>Lv.</small>{{ char.level }}</div>
 
                     <div class="name-bar">

@@ -16,6 +16,7 @@ from ..utils.alias_map import update_alias_map_from_chars
 from ..utils.database.models import EndBind, EndUser
 from ..utils.util import get_hide_uid_pref, hide_uid
 from ..end_config import PREFIX
+from ..utils.tips import TIP_NOT_BOUND, TIP_NO_CRED
 from ..utils import CHAR_NAME_PATTERN
 from ..utils.path import PLAYER_PATH
 
@@ -32,11 +33,11 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
     """
     uid = await EndBind.get_bound_uid(user_id, bot_id)
     if not uid:
-        return False, f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+        return False, TIP_NOT_BOUND
 
     _, cred = await end_api.get_ck_result(uid, user_id, bot_id)
     if not cred:
-        return False, f"❌ 未找到可用凭证，请使用「{PREFIX}登录」重新绑定"
+        return False, TIP_NO_CRED
 
     user_record = await EndUser.select_end_user(uid, user_id, bot_id)
     skland_user_id = user_record.skland_user_id if user_record and user_record.skland_user_id else None
@@ -112,7 +113,7 @@ async def send_char_card_handler(bot: Bot, ev: Event):
     await bot.send(im)
 
 
-@sv_refresh.on_command(
+@sv_refresh.on_fullmatch(
     ("刷新", "更新", "刷新数据", "刷新面板", "更新数据", "upd"),
     block=True,
     to_ai="""刷新自己终末地全部角色面板的缓存数据（实时拉接口）。

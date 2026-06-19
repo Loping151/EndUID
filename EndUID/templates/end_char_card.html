@@ -16,7 +16,7 @@
         --c-grid: rgba(255, 255, 255, 0.05);
         --footer-h: 80px;
         --content-bottom-gap: 40px;
-        --content-top: 420px;
+        --content-top: 300px;
     }
 
     * {
@@ -27,7 +27,7 @@
 
     body {
         width: 1000px;
-        height: 1750px; 
+        min-height: 1750px;
         background-color: var(--c-bg);
         font-family: 'Source Han Sans CN', sans-serif;
         overflow: hidden;
@@ -37,8 +37,10 @@
     .container {
         position: relative;
         width: 100%;
-        height: 100%;
+        min-height: 1750px;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 
     .bg-layer {
@@ -86,11 +88,10 @@
 
     
     .ui-layer {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
+        position: relative;
         z-index: 10;
+        flex: 1 1 auto;
         padding: 50px;
-        padding-bottom: calc(var(--footer-h) + var(--content-bottom-gap));
         display: flex;
         flex-direction: column;
     }
@@ -124,7 +125,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        margin: 10px 0 20px 5px;
+        margin: 24px 0 20px 5px;
     }
 
     .rarity-star {
@@ -207,8 +208,23 @@
         text-shadow: 0 0 50px rgba(0,0,0,0.5);
     }
 
+    .phase-row {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 16px;
+    }
+
+    .phase-icon {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    }
+
     .phase-badge {
-        margin-top: 5px;
+        margin-top: 18px;
         background: var(--c-accent);
         color: #0f1014;
         font-family: 'JetBrains Mono', monospace;
@@ -219,7 +235,7 @@
         display: inline-block;
         box-shadow: 0 5px 15px rgba(255, 230, 0, 0.2);
     }
-    
+
     .phase-badge span {
         display: block;
         transform: skewX(20deg);
@@ -231,9 +247,7 @@
         width: 900px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
-        margin-top: 30px;
-        flex: 1 1 auto;
+        margin-top: var(--content-top);
         gap: 30px;
         z-index: 10;
     }
@@ -314,6 +328,89 @@
         text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     }
 
+    .talent-block {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding-left: 10px;
+    }
+
+    .talent-row {
+        display: flex;
+        gap: 92px;
+    }
+
+    .talent-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 44px;
+    }
+
+    /* 连线只填相邻容器之间的空隙，不穿过透明容器 */
+    .talent-group .talent-icon:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        width: 44px;
+        height: 4px;
+        transform: translateY(-50%);
+        background: rgba(255,255,255,0.22);
+        z-index: 0;
+    }
+
+    .talent-icon {
+        position: relative;
+        z-index: 1;
+        width: 64px;
+        height: 64px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .talent-icon.round { border-radius: 50%; }
+    .talent-icon.square { border-radius: 10px; }
+
+    .talent-icon.lit {
+        background: rgba(255, 230, 0, 0.16);
+        border: 2px solid rgba(255, 230, 0, 0.5);
+    }
+
+    .talent-icon.dim {
+        background: rgba(20, 20, 20, 0.6);
+        border: 2px solid rgba(255,255,255,0.12);
+        opacity: 0.45;
+    }
+
+    .talent-icon img {
+        width: 78%;
+        height: 78%;
+        object-fit: contain;
+    }
+
+    .talent-batt {
+        position: absolute;
+        right: 2px;
+        bottom: 2px;
+        display: flex;
+        gap: 2px;
+        transform: skewX(-30deg);
+        z-index: 2;
+    }
+
+    .batt-cell {
+        width: 3px;
+        height: 9px;
+        background: rgba(255,255,255,0.3);
+    }
+
+    .batt-cell.on {
+        background: var(--c-accent);
+    }
+
     .weapon-row {
         width: 100%;
         margin-bottom: 5px;
@@ -322,7 +419,7 @@
     .weapon-card {
         width: 100%;
         height: 140px;
-        background: #e0e0e0;
+        background: rgba(182, 187, 194, 0.86);
         position: relative;
         display: flex;
         align-items: center;
@@ -340,12 +437,25 @@
         color: #1a1a1a;
     }
 
+    .weapon-level-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
     .weapon-level {
         font-family: 'Oswald', sans-serif;
         font-weight: 700;
         font-size: 60px;
         line-height: 1;
         letter-spacing: -1px;
+    }
+
+    .weapon-refine-icon {
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
     }
 
     .weapon-level small {
@@ -563,9 +673,7 @@
     }
 
     .footer {
-        position: absolute;
-        bottom: 0;
-        left: 0;
+        position: relative;
         width: 100%;
         height: var(--footer-h);
         background: rgba(12, 13, 16, 0.95);
@@ -695,6 +803,10 @@
                 <div class="phase-badge">
                     <span>PHASE {{ evolve_phase }} / POTENTIAL {{ potential }}</span>
                 </div>
+                <div class="phase-row">
+                    {% if evolve_icon %}<img class="phase-icon" src="{{ evolve_icon }}">{% endif %}
+                    {% if potential_icon %}<img class="phase-icon" src="{{ potential_icon }}">{% endif %}
+                </div>
             </div>
         </div>
 
@@ -715,13 +827,47 @@
                 </div>
             </div>
 
+            {% set talent_groups = [(talents.ability, false), (talents.combat, false), (talents.cultivation, true)] %}
+            {% if talents.ability or talents.combat or talents.cultivation %}
+            <div>
+                <div class="section-title">天赋 <span>TALENT</span></div>
+                <div class="talent-block">
+                    {% for groups, square in talent_groups %}
+                    {% if groups %}
+                    <div class="talent-row">
+                        {% for group in groups %}
+                        <div class="talent-group {{ 'linked' if group|length > 1 else '' }}">
+                            {% for t in group %}
+                            <div class="talent-icon {{ 'square' if square else 'round' }} {{ 'lit' if t.unlocked else 'dim' }}">
+                                {% if t.icon %}<img src="{{ t.icon }}">{% endif %}
+                                {% if t.seg_total > 1 %}
+                                <div class="talent-batt">
+                                    {% for i in range(t.seg_total) %}
+                                    <span class="batt-cell {{ 'on' if i < t.seg_index else '' }}"></span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div>
                 <div class="section-title">武器 <span>WEAPON</span></div>
                 <div class="weapon-row">
                     {% if weapon %}
                     <div class="weapon-card">
                         <div class="weapon-info">
-                            <div class="weapon-level">{{ weapon.level }}<small>Lv</small></div>
+                            <div class="weapon-level-row">
+                                <div class="weapon-level">{{ weapon.level }}<small>Lv</small></div>
+                                {% if weapon.refine_icon %}<img class="weapon-refine-icon" src="{{ weapon.refine_icon }}">{% endif %}
+                            </div>
                             <div class="weapon-stars">
                                 {% for _ in range(weapon.rarity|int) %}
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="weapon-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__weapon_{{ loop.index }}" clip-rule="evenodd"><path fill="#333333" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#444444" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#555555" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__weapon_{{ loop.index }}"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>

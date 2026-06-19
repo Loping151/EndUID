@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>终末地 · 登录</title>
+  <style>
+    :root {
+      --c-bg: #0f1014;
+      --c-surface: rgba(20, 21, 24, 0.62);
+      --c-line: rgba(255, 255, 255, 0.08);
+      --c-accent: #ffe600;
+      --c-text: #f3f3f3;
+      --c-sub: #8b8b8b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      background: radial-gradient(circle at 50% -10%, #1a1b22 0%, #0f1014 70%);
+      color: var(--c-text);
+      font-family: 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 18px;
+    }
+    .card {
+      position: relative;
+      width: 100%; max-width: 340px;
+      background: var(--c-surface);
+      border: 1px solid var(--c-line);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      padding: 26px 22px 24px;
+    }
+    .card::before {
+      content: ""; position: absolute; top: 0; left: 0;
+      width: 4px; height: 100%; background: var(--c-accent);
+    }
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 2px; color: var(--c-sub); text-transform: uppercase;
+    }
+    .eyebrow b { color: var(--c-accent); font-weight: 700; }
+    h1 { font-size: 22px; font-weight: 700; margin: 6px 0 22px; }
+    label { display: block; font-size: 13px; color: var(--c-sub); margin: 0 0 7px; }
+    .field { margin-bottom: 16px; }
+    input[type="tel"], input[type="text"] {
+      width: 100%; padding: 12px 13px; border: none; border-radius: 6px;
+      font-size: 16px; background: rgba(255,255,255,0.92); color: #111;
+    }
+    input:focus { outline: none; box-shadow: 0 0 0 2px rgba(255,230,0,0.55); }
+    .code-row { display: flex; gap: 8px; }
+    .code-row input { flex: 1; }
+    button {
+      border: none; border-radius: 6px; cursor: pointer;
+      font-size: 15px; font-weight: 700; font-family: inherit;
+      background: var(--c-accent); color: #0f1014;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    button:hover:not(:disabled) { background: #ffd000; }
+    button:disabled { background: #4a4d55; color: #9aa0ab; cursor: not-allowed; }
+    #getCodeBtn { padding: 0 14px; white-space: nowrap; }
+    #loginBtn { width: 100%; padding: 13px; margin-top: 6px; }
+    .uid-note {
+      text-align: center; color: var(--c-accent); font-size: 12px;
+      margin: 14px 0 12px; line-height: 1.5;
+    }
+    .tip {
+      color: var(--c-sub); font-size: 11.5px; line-height: 1.6;
+      margin-top: 16px; border-top: 1px solid var(--c-line); padding-top: 12px;
+    }
+    .expired { text-align: center; padding: 8px 0 4px; }
+    .expired h2 { color: var(--c-accent); font-size: 18px; margin-bottom: 8px; }
+    .expired p { color: var(--c-sub); font-size: 13px; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">// <b>ENDFIELD</b> 终末地登录</div>
+    <h1>欢迎登录</h1>
+
+    {% if expired %}
+    <div class="expired">
+      <h2>链接已失效</h2>
+      <p>登录会话已超时或不存在，<br>请回到聊天重新发送【登录】获取新链接。</p>
+    </div>
+    {% else %}
+    <form id="loginForm">
+      <div class="field">
+        <label for="phone">手机号</label>
+        <input type="tel" id="phone" required pattern="[0-9]{11}" placeholder="鹰角账号绑定的11位手机号">
+      </div>
+      <div class="field">
+        <label for="code">短信验证码</label>
+        <div class="code-row">
+          <input type="text" id="code" required placeholder="请输入验证码" inputmode="numeric">
+          <button type="button" id="getCodeBtn" disabled>获取验证码</button>
+        </div>
+      </div>
+      <div class="uid-note">你的账号: {{ userId }}，请勿使用别人的链接</div>
+      <button type="submit" id="loginBtn" disabled>登录</button>
+    </form>
+    <div class="tip">⚠️ 本工具不会保存你的手机号，且不用于查询以外的其他任何用途</div>
+    {% endif %}
+  </div>
+
+  <script>
+    const expired = {{ 'true' if expired else 'false' }};
+    if (!expired) {
+      const serverUrl = "{{ server_url }}";
+      const auth = "{{ auth }}";
+      const phoneInput = document.getElementById('phone');
+      const codeInput = document.getElementById('code');
+      const getCodeBtn = document.getElementById('getCodeBtn');
+      const loginBtn = document.getElementById('loginBtn');
+      const loginForm = document.getElementById('loginForm');
+
+      function isPhone(v) { return /^1\d{10}$/.test(v); }
+      function refresh() {
+        getCodeBtn.disabled = !isPhone(phoneInput.value);
+        loginBtn.disabled = !isPhone(phoneInput.value) || codeInput.value.trim() === "";
+      }
+      phoneInput.addEventListener('input', refresh);
+      codeInput.addEventListener('input', refresh);
+
+      async function postJSON(path, body) {
+        const r = await fetch(serverUrl + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        return r.json();
+      }
+
+      getCodeBtn.addEventListener('click', async function () {
+        getCodeBtn.disabled = true;
+        try {
+          const res = await postJSON('/end/sendCode', { auth: auth, phone: phoneInput.value });
+          alert(res.success ? '验证码已发送' : ('验证码发送失败：' + (res.msg || '')));
+        } catch (e) {
+          alert('请求出错，请检查网络');
+        }
+        let countdown = 60;
+        const timer = setInterval(() => {
+          getCodeBtn.textContent = countdown + '秒后重试';
+          countdown--;
+          if (countdown < 0) {
+            clearInterval(timer);
+            getCodeBtn.textContent = '获取验证码';
+            refresh();
+          }
+        }, 1000);
+      });
+
+      loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        loginBtn.disabled = true;
+        loginBtn.textContent = '登录中...';
+        try {
+          const res = await postJSON('/end/login', {
+            auth: auth, phone: phoneInput.value, code: codeInput.value.trim(),
+          });
+          if (res.success) {
+            alert('登录成功！可返回聊天查看绑定结果，本页可关闭。');
+          } else {
+            alert('登录失败：' + (res.msg || '请重试'));
+          }
+        } catch (e) {
+          alert('登录失败，请重试');
+        }
+        loginBtn.textContent = '登录';
+        refresh();
+      });
+    }
+  </script>
+</body>
+</html>

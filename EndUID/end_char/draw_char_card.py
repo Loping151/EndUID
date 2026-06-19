@@ -1,4 +1,5 @@
 import io
+import re
 import base64
 import json
 from pathlib import Path
@@ -22,6 +23,8 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..end_config import PREFIX
+from ..utils.tips import TIP_NOT_BOUND, TIP_NO_LOCAL_CARD
+from ..utils.resources import attr_icon_b64, potential_b64, evolve_b64
 from ..utils.path import (
     AVATAR_CACHE_PATH,
     CHAR_CACHE_PATH,
@@ -85,14 +88,14 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     # 1. 角色别名解析
     resolved = resolve_alias_entry(char_name)
     if not resolved:
-        return f"❌ 未找到角色，请检查名称或稍后更新数据"
+        return f"❌ 未找到角色，请检查名称或尝试「{PREFIX}更新」"
     
     real_name, entry = resolved
     char_id = entry.get("id")
     
     if not char_id:
         logger.warning(f"[ENDUID·角色面板] 角色 {real_name} 的数据条目缺少 ID")
-        return
+        return f"❌ {real_name} 暂无角色数据，可尝试「{PREFIX}刷新」"
 
     # 2. 获取用户绑定信息
     from ..utils.at_help import ruser_id
@@ -100,7 +103,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
 
     uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
     if not uid:
-        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+        return TIP_NOT_BOUND
     user_pref = await get_hide_uid_pref(uid, target_user_id, ev.bot_id)
 
     # 3. 读取本地数据（由刷新指令写入）
@@ -121,7 +124,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         data_res = json.loads(raw)
     except Exception as e:
         logger.warning(f"[ENDUID·角色面板] 本地卡片数据读取失败: {e}")
-        return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
+        return TIP_NO_LOCAL_CARD
          
     if data_res.get("code") != 0:
         msg = data_res.get("message", "未知错误")
@@ -190,7 +193,72 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
             "icon": icon_b64,
             "level": sk_level
         })
-        
+
+    # 天赋阵列（属性 / 战斗 / 养成），按 talent 解锁集合判定是否点亮
+    tinfo = target.talent
+
+    def _talent_unlocked(node_id: str) -> bool:
+        if node_id in tinfo.attrNodes:
+            return True
+        m = re.match(r"^(.*)_(\d+)_(\d+)$", node_id)
+        if not m:
+            return False
+        base, branch, lvl = m.group(1), m.group(2), int(m.group(3))
+        for latest in (
+            tinfo.latestPassiveSkillNodes,
+            tinfo.latestFactorySkillNodes,
+            tinfo.latestSpaceshipSkillNodes,
+        ):
+            for nid in latest:
+                mm = re.match(r"^(.*)_(\d+)_(\d+)$", nid)
+                if mm and mm.group(1) == base and mm.group(2) == branch and int(mm.group(3)) >= lvl:
+                    return True
+        return False
+
+    def _natural_key(node_id: str):
+        """JSON 节点无序，按 id 末尾数字升序（skill 为 分支_等级，属性为 等级）"""
+        m = re.match(r"^.*_(\d+)_(\d+)$", node_id)
+        if m:
+            return (int(m.group(1)), int(m.group(2)))
+        m2 = re.match(r"^.*_(\d+)$", node_id)
+        if m2:
+            return (int(m2.group(1)), 0)
+        return (0, 0)
+
+    async def _bake_talents(items):
+        items = items or []
+        # 图标相同视为同一天赋线（含 β/γ 同图不同名），按图标分组、组内按节点升序
+        groups_map: dict = {}
+        for t in items:
+            groups_map.setdefault(t.iconUrl or t.id, []).append(t)
+        groups = []
+        for gitems in groups_map.values():
+            gitems = sorted(gitems, key=lambda t: _natural_key(t.id))
+            total = len(gitems)
+            baked = []
+            for pos, t in enumerate(gitems):
+                ic = ""
+                if t.iconUrl:
+                    try:
+                        ic = await get_image_b64_with_cache(t.iconUrl, SKILL_CACHE_PATH)
+                    except Exception as e:
+                        logger.debug(f"[ENDUID·角色面板] 天赋图标下载失败 {t.id}: {e}")
+                baked.append({
+                    "icon": ic,
+                    "unlocked": _talent_unlocked(t.id),
+                    "seg_index": pos + 1,
+                    "seg_total": total,
+                })
+            groups.append({"items": baked, "key": _natural_key(gitems[0].id)})
+        groups.sort(key=lambda g: g["key"])
+        return [g["items"] for g in groups]
+
+    talents = {
+        "ability": await _bake_talents(c_data.abilityTalents),
+        "combat": await _bake_talents(c_data.combatTalents),
+        "cultivation": await _bake_talents(c_data.cultivationTalents),
+    }
+
     # 装备 - 武器
     weapon_info = None
     wp_data = target.weapon
@@ -237,6 +305,8 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
                 "icon": wp_icon_b64,
                 "level": wp_data.level,
                 "rarity": wp_detail.rarity.value if wp_detail.rarity else 1,
+                "refineLevel": wp_data.refineLevel,
+                "refine_icon": potential_b64(wp_data.refineLevel),
                 "gem": gem_info,
             }
             
@@ -314,15 +384,8 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         user_avatar = at_avatar
 
     # 加载属性和职业图标
-    property_icon = ""
-    property_icon_path = TEXTURE_PATH / f"{property_val}.png"
-    if property_icon_path.exists():
-        property_icon = image_to_base64(property_icon_path)
-
-    profession_icon = ""
-    profession_icon_path = TEXTURE_PATH / f"{profession}.png"
-    if profession_icon_path.exists():
-        profession_icon = image_to_base64(profession_icon_path)
+    property_icon = attr_icon_b64(property_val)
+    profession_icon = attr_icon_b64(profession)
 
     # 5. 渲染图片
     context = {
@@ -338,7 +401,10 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         "level": target.level,
         "evolve_phase": target.evolvePhase,
         "potential": target.potentialLevel,
+        "evolve_icon": evolve_b64(target.evolvePhase),
+        "potential_icon": potential_b64(target.potentialLevel),
         "skills": skills_list,
+        "talents": talents,
         "weapon": weapon_info,
         "body_equip": body_equip_info,
         "equip_slots": equip_slots,

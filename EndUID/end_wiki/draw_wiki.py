@@ -15,6 +15,7 @@ from ..utils.render_utils import (
     get_image_b64_with_cache,
 )
 from ..utils.alias_map import resolve_alias_entry
+from ..utils.resources import attr_icon_b64 as _get_texture_icon
 from ..utils.path import (
     WIKI_IMG_CACHE, CHAR_CACHE_PATH, AVATAR_CACHE_PATH, SKILL_CACHE_PATH,
 )
@@ -45,17 +46,6 @@ def _stat_value_only(text: str) -> str:
 
 
 end_templates.filters["stat_num"] = _stat_value_only
-
-
-# 共用 end_char/texture2d/ 下的 icon（详见 end_wiki/constants.py ATTR_ID_MAP / PROF_ID_MAP）：
-#   属性：灼热 / 电磁 / 寒冷 / 自然 / 物理
-#   职业：近卫 / 术师 / 突击 / 先锋 / 重装 / 辅助
-# 新属性/职业上线时补对应 {name}.png 即可，找不到静默返回 ""
-def _get_texture_icon(name: str) -> str:
-    if not name:
-        return ""
-    path = TEXTURE_PATH / f"{name}.png"
-    return image_to_base64(path) if path.exists() else ""
 
 
 # 角色按元素着色，未知元素回退 Endfield 黄

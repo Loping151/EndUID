@@ -620,10 +620,12 @@ async def get_guide(
             item_id = _find_guide_id(gm, original_name)
 
     if item_id is None:
+        await bot.send(f"📭 {char_name} 暂无攻略")
         return
 
     tabs = await _get_guide_data(item_id)
     if not tabs:
+        await bot.send(f"📭 {char_name} 暂无攻略")
         return
 
     wiki_url = GUIDE_WIKI_URL.format(item_id=item_id)

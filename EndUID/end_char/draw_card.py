@@ -19,23 +19,14 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
-from ..end_config import PREFIX
+from ..utils.tips import TIP_NOT_BOUND, TIP_NO_LOCAL_CARD
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
+from ..utils.resources import attr_icon_b64 as _get_texture_icon
+from ..utils.resources import potential_b64, evolve_b64
 from .draw_char_card import end_templates
 
 # 资源路径
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
-
-
-# texture2d/ 中已有的 icon（来源 end_wiki/constants.py ATTR_ID_MAP / PROF_ID_MAP）：
-#   属性：灼热 / 电磁 / 寒冷 / 自然 / 物理
-#   职业：近卫 / 术师 / 突击 / 先锋 / 重装 / 辅助
-# 新属性/职业上线时补对应 {name}.png 即可，找不到静默返回 ""
-def _get_texture_icon(name: str) -> str:
-    if not name:
-        return ""
-    path = TEXTURE_PATH / f"{name}.png"
-    return image_to_base64(path) if path.exists() else ""
 
 
 def _format_awaken_time(ts: str) -> str:
@@ -62,7 +53,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
 
     uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
     if not uid:
-        return f"未绑定终末地账号，请先使用「{PREFIX}登录」"
+        return TIP_NOT_BOUND
     user_pref = await get_hide_uid_pref(uid, target_user_id, ev.bot_id)
 
     from . import refresh_card_data
@@ -77,7 +68,7 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         data_res = json.loads(raw)
     except Exception as e:
         logger.warning(f"[ENDUID·角色卡片] 本地卡片数据读取失败: {e}")
-        return f"❌ 本地卡片数据读取失败，请先发送「{PREFIX}刷新」"
+        return TIP_NO_LOCAL_CARD
 
     if data_res.get("code") != 0:
         msg = data_res.get("message", "未知错误")
@@ -91,19 +82,26 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
 
     base = detail.base
 
+    from ..utils.util import record_group_and_profile
+    await record_group_and_profile(ev, uid)
+
     achieve_count = detail.achieve.count if detail.achieve else 0
 
     ether_total = 0
     trchest_total = 0
     piece_total = 0
-    domain_level = 0
     for d in detail.domain:
-        if d.level > domain_level:
-            domain_level = d.level
         for c in d.collections:
             ether_total += c.puzzleCount
             trchest_total += c.trchestCount
             piece_total += c.pieceCount
+
+    # 总控中枢 = 飞船 type=0 房间等级（满级 5），不是据点(domain)等级
+    domain_level = 0
+    for room in detail.spaceShip.rooms:
+        if room.type == 0:
+            domain_level = room.level
+            break
 
     base_avatar_b64 = ""
     if base and base.avatarUrl:
@@ -137,6 +135,8 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
                 "rarity": c_data.rarity.value if c_data.rarity else "",
                 "level": char.level,
                 "potentialLevel": char.potentialLevel if hasattr(char, "potentialLevel") else 0,
+                "potential_icon": potential_b64(char.potentialLevel),
+                "evolve_icon": evolve_b64(char.evolvePhase),
                 "property": property_value,
                 "profession": profession_value,
                 "property_icon": _get_texture_icon(property_value),
