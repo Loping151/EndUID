@@ -1,10 +1,9 @@
 """HTTP 请求工具和常量"""
-import os
-import subprocess
 import time
 from enum import IntEnum
-from pathlib import Path
 from typing import Optional
+
+from .smsdk import get_device_id as get_device_id  # 设备 ID（dId），每次请求重新生成
 
 class RespCode(IntEnum):
     """森空岛 API 响应码"""
@@ -54,78 +53,6 @@ SKLAND_APP_OS = "32"
 SKLAND_APP_NID = "1"
 SKLAND_APP_CHANNEL = "OF"
 SKLAND_APP_MANUFACTURER = "Samsung"
-
-
-def get_device_id(
-    user_agent: Optional[str] = None,
-    accept_language: Optional[str] = None,
-    referer: Optional[str] = None,
-    platform: Optional[str] = None,
-) -> str:
-    """获取设备 ID（用于需要 dId 的接口）
-
-    与 arknights-plugin 行为一致：每次请求重新生成，不缓存、不落盘。
-    """
-    return _get_device_id_from_smsdk(
-        user_agent=user_agent,
-        accept_language=accept_language,
-        referer=referer,
-        platform=platform,
-    )
-
-
-def _find_smsdk_path() -> Optional[Path]:
-    current = Path(__file__).resolve()
-    local = current.parent / "sm.sdk.js"
-    if local.exists():
-        return local
-    for parent in current.parents:
-        candidate = parent / "arknights-plugin" / "utils" / "sm.sdk.js"
-        if candidate.exists():
-            return candidate
-    return None
-
-
-def _get_device_id_from_smsdk(
-    user_agent: Optional[str] = None,
-    accept_language: Optional[str] = None,
-    referer: Optional[str] = None,
-    platform: Optional[str] = None,
-) -> str:
-    sdk_path = _find_smsdk_path()
-    if not sdk_path:
-        raise RuntimeError("smsdk failed: sm.sdk.js not found")
-
-    runner_path = Path(__file__).resolve().parent / "smsdk_runner.js"
-    env = os.environ.copy()
-    if user_agent:
-        env["SMSDK_USER_AGENT"] = user_agent
-    if accept_language:
-        env["SMSDK_ACCEPT_LANGUAGE"] = accept_language
-    if referer:
-        env["SMSDK_REFERER"] = referer
-    if platform:
-        env["SMSDK_PLATFORM"] = platform
-
-    try:
-        result = subprocess.run(
-            ["node", str(runner_path), str(sdk_path)],
-            cwd=str(sdk_path.parent),
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError("smsdk failed: node not found, please install Node.js") from exc
-    if result.returncode != 0:
-        stderr = (result.stderr or "").strip()
-        raise RuntimeError(f"smsdk failed: code={result.returncode} stderr={stderr}")
-
-    output = (result.stdout or "").strip().splitlines()
-    device_id = output[-1].strip() if output else ""
-    if not device_id:
-        raise RuntimeError("smsdk failed: empty device id")
-    return device_id
 
 
 def get_base_header(
