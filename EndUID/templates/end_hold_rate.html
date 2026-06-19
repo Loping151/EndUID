@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>角色持有率</title>
+<style>
+    @import url('{{ font_css_url }}');
+    :root {
+        --c-bg: #0f1014;
+        --c-paper: #16181d;
+        --c-paper2: #1f2229;
+        --c-line: rgba(255,255,255,0.08);
+        --c-sub: #8b8b8b;
+        --c-ink: #ECEAE4;
+        --r6: #e6c074; --r6b: #d9ad4e;
+        --r5: #b98fd8; --r5b: #9f86c7;
+        --signal: #ffd000;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 720px; background: var(--c-bg); font-family: 'Noto Sans SC','Source Han Sans CN',sans-serif; color: var(--c-ink); }
+    .container { position: relative; padding: 28px 30px 34px; }
+    .bg-layer { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 0%, #1a1c22 0%, #0f1014 75%); }
+    .inner { position: relative; z-index: 10; }
+
+    .hd { display: flex; align-items: center; gap: 14px; }
+    .hd-logo { height: 40px; width: auto; flex: none; }
+    .hd-t { font-family: 'Oswald','Noto Sans SC',sans-serif; font-size: 30px; font-weight: 700; }
+    .hd-time { margin-left: auto; font-family: 'JetBrains Mono',monospace; font-size: 14px; color: var(--c-sub); }
+
+    .tabs { display: flex; gap: 10px; margin: 16px 0 14px; }
+    .tab { font-size: 16px; font-weight: 600; color: var(--c-sub); padding: 6px 22px; border-radius: 999px;
+        background: var(--c-paper); border: 1px solid var(--c-line); }
+    .tab.on { color: #ffd98a; background: rgba(255,208,0,0.14); border-color: rgba(255,208,0,0.42); }
+
+    /* 潜能表头: 7 等分, 与每行 .cgrid 对齐 */
+    .chead { display: flex; padding: 7px 16px; margin-bottom: 8px; background: var(--c-paper);
+        border-radius: 8px; border: 1px solid var(--c-line); }
+    .chead .lab { width: 86px; flex: none; font-size: 13px; font-weight: 700; color: var(--c-sub); }
+    .chh { flex: 1; text-align: center; font-size: 14px; font-weight: 700; }
+
+    .row { background: var(--c-paper); border: 1px solid var(--c-line); border-radius: 12px; padding: 12px 16px; margin-bottom: 9px; }
+    .rtop { display: flex; align-items: center; gap: 14px; }
+    .av { width: 60px; height: 60px; border-radius: 50%; flex: none; background: var(--c-paper2); border: 3px solid var(--c-line); object-fit: cover; }
+    .av.r6 { border-color: var(--r6b); box-shadow: 0 0 9px rgba(217,173,78,0.55); }
+    .av.r5 { border-color: var(--r5b); box-shadow: 0 0 9px rgba(159,134,199,0.5); }
+    .av .none { width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:22px; }
+    .rmid { flex: 1; min-width: 0; }
+    .r1 { display: flex; align-items: center; gap: 8px; }
+    .nm { font-size: 22px; font-weight: 700; }
+    .nm.r6 { color: var(--r6); } .nm.r5 { color: var(--r5); }
+    .rate { margin-left: auto; font-family: 'Oswald',sans-serif; font-size: 24px; font-weight: 700; }
+    .rate.r6 { color: var(--r6); } .rate.r5 { color: var(--r5); }
+    .bar-bg { height: 12px; border-radius: 999px; background: var(--c-paper2); overflow: hidden; margin: 9px 0 2px; }
+    .bar-fill { height: 100%; border-radius: 999px; }
+    .bar-fill.r6 { background: linear-gradient(90deg, var(--r6b), var(--r6)); box-shadow: 0 0 8px rgba(230,192,116,0.5); }
+    .bar-fill.r5 { background: linear-gradient(90deg, var(--r5b), var(--r5)); box-shadow: 0 0 8px rgba(185,143,216,0.5); }
+
+    /* 潜能分布: 左侧标签 + 7 等分数值, 列与表头对齐 */
+    .cgrid { display: flex; align-items: center; margin-top: 8px; }
+    .cgrid .lab { width: 86px; flex: none; font-size: 12px; color: var(--c-sub); }
+    .cv { flex: 1; min-width: 0; text-align: center; font-size: 15px; font-weight: 700; }
+    .cv.zero { color: #4a4a4a; font-weight: 400; }
+    .p0 { color: #9d988e; } .p1 { color: #74c79a; } .p2 { color: #5cc3d2; } .p3 { color: #6aa0e0; }
+    .p4 { color: #b98fd8; } .p5 { color: #e0795b; } .p6 { color: #e6c074; }
+
+    .foot { text-align: center; font-family: 'JetBrains Mono',monospace; font-size: 13px; color: var(--c-sub); margin-top: 22px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-layer"></div>
+    <div class="inner">
+        <div class="hd">
+            {% if logo %}<img class="hd-logo" src="{{ logo }}">{% endif %}
+            <span class="hd-t">角色持有率</span>
+            <span class="hd-time">{{ query_date }}</span>
+        </div>
+
+        <div class="tabs">
+            {% for t in tabs %}<span class="tab {{ 'on' if t.on else '' }}">{{ t.label }}</span>{% endfor %}
+        </div>
+
+        <div class="chead">
+            <span class="lab">潜能 ▶</span>
+            {% for c in pot_cols %}<span class="chh p{{ c }}">{{ c }}</span>{% endfor %}
+        </div>
+
+        {% for e in entries %}
+        <div class="row">
+            <div class="rtop">
+                {% if e.avatar %}<img class="av {{ e.cls }}" src="{{ e.avatar }}">{% else %}<div class="av {{ e.cls }}"><div class="none">?</div></div>{% endif %}
+                <div class="rmid">
+                    <div class="r1">
+                        <span class="nm {{ e.cls }}">{{ e.name }}</span>
+                        <span class="rate {{ e.cls }}">{{ '%.1f'|format(e.rate) }}%</span>
+                    </div>
+                    <div class="bar-bg"><div class="bar-fill {{ e.cls }}" style="width:{{ e.bar_width }}%;"></div></div>
+                </div>
+            </div>
+            <div class="cgrid">
+                <span class="lab">持有占比</span>
+                {% for p in e.potentials %}<span class="cv p{{ p.seq }} {{ 'zero' if not p.rate else '' }}">{% if p.rate %}{{ '%g'|format(p.rate) }}{% else %}·{% endif %}</span>{% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="foot">EndUID · 角色持有率 · 「持有率 UP / 全部 / 六 / 五」切换筛选</div>
+    </div>
+</div>
+</body>
+</html>

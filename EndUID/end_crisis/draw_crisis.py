@@ -1,5 +1,6 @@
 import io
 import json
+import asyncio
 from pathlib import Path
 from typing import List, Union
 from datetime import datetime
@@ -27,6 +28,9 @@ MAIN_HISTORY_LIMIT = 6
 HISTORY_LIMIT = 50
 
 LOGIN_TIP = TIP_NO_CRED
+
+# 持有引用避免后台上传任务被 GC
+_BG_TASKS: set = set()
 
 
 async def _bake_chars(chars) -> List[dict]:
@@ -88,7 +92,96 @@ async def fetch_crisis_contract(ev: Event, uid: str):
 
     cm.update_crisis_period(cc.status)
     await cm.record_group_and_profile(ev, uid)
+
+    # 仅查询自己时上传最佳纪录用于危机合约总排行统计
+    from ..utils.at_help import ruser_id
+    if ruser_id(ev) == ev.user_id:
+        task = asyncio.create_task(_upload_crisis(ev, uid, cred, user_record, cc))
+        _BG_TASKS.add(task)
+        task.add_done_callback(_BG_TASKS.discard)
+
     return cc, cred, user_record
+
+
+async def _upload_crisis(ev: Event, uid: str, cred, user_record, cc) -> None:
+    """后台上传当期最佳纪录(队伍/用时/指标)。"""
+    try:
+        from ..utils.api import endapi
+        from ..utils.api.model import CrisisRecordResponse
+        from ..utils.util import get_hide_uid_pref
+        from ..utils.at_help import ruser_id
+        from ..end_config.config_default import EndConfig
+
+        best = cc.history.bestRecord
+        if not best or not best.id or not best.isPass:
+            return
+        contract_id = cc.status.id
+        if not contract_id:
+            return
+
+        server_id = user_record.server_id if user_record and user_record.server_id else "1"
+        skland_user_id = user_record.skland_user_id if user_record and user_record.skland_user_id else None
+        res = await end_api.get_crisis_record(
+            cred, uid, contract_id, best.id,
+            server_id=server_id, user_id=skland_user_id, bot_id=ev.bot_id,
+        )
+        if not res or res.get("code") != 0:
+            return
+        rd = CrisisRecordResponse.model_validate(res).data.recordDetail
+
+        team = [{"char_id": c.charId, "potential": c.potentialLevel} for c in rd.chars]
+        # 仅上传该纪录已选指标; ids 缺失时上传空列表, 避免把全部可选指标算成"已使用"污染统计
+        # desc 经 _format_desc 处理(替换占位符/颜色标签), 避免存到后端是带 {占位符} 的乱码
+        from .draw_crisis_info import _format_desc
+        params_by_id = {i.id: i.descParams for i in rd.indicators}
+        sel_ids = set(rd.indicatorIds or [])
+        src = [ind for ind in rd.indicators if ind.id in sel_ids]
+        indicators = [{
+            "indicator_id": ind.id,
+            "name": ind.name,
+            "desc": _format_desc(ind.desc, ind.descParams, params_by_id),
+            "icon": ind.icon,
+            "score": ind.score,
+        } for ind in src]
+
+        try:
+            start_ts = int(best.ts)
+        except (TypeError, ValueError):
+            start_ts = 0
+        try:
+            pass_ts = int(rd.passTs)
+        except (TypeError, ValueError):
+            pass_ts = 0
+
+        # 玩家昵称/头像取本地已缓存的基础信息
+        name, avatar = "", ""
+        try:
+            base = json.loads((PLAYER_PATH / uid / "card_detail.json").read_text(encoding="utf-8"))
+            base = base.get("data", {}).get("detail", {}).get("base", {}) or {}
+            name = base.get("name", "") or ""
+            avatar = base.get("avatarUrl", "") or ""
+        except Exception:
+            pass
+
+        user_id = ruser_id(ev)
+        pref = await get_hide_uid_pref(uid, user_id, ev.bot_id)
+        if pref == "on":
+            hide_uid_flag = True
+        elif pref == "off":
+            hide_uid_flag = False
+        else:
+            hide_uid_flag = bool(EndConfig.get_config("HideUid").data)
+
+        ok = await endapi.upload_crisis(
+            uid, name, avatar, hide_uid_flag, user_id,
+            contract_id, start_ts, pass_ts, rd.indicatorCount, team, indicators,
+        )
+        logger.info(
+            f"[ENDUID·危机合约] 上传{'成功' if ok else '未执行(检查EndToken/网络)'}: "
+            f"指标{rd.indicatorCount} 用时{pass_ts}s uid={uid}"
+        )
+    except Exception as e:
+        logger.warning(f"[ENDUID·危机合约] 上传异常 uid={uid}: {e}")
 
 
 async def build_status_ctx(status) -> dict:

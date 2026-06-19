@@ -106,7 +106,7 @@
       {
         "name": "危机合约记录",
         "desc": "查看历史记录列表 / 第N条(0或最佳=最佳记录)详情",
-        "eg": "合约记录1",
+        "eg": "合约记录0",
         "need_ck": true,
         "need_sk": false,
         "need_admin": false
@@ -122,7 +122,31 @@
       {
         "name": "危机合约排行",
         "desc": "本群危机合约最佳记录排行(指标↓用时↑)",
-        "eg": "危机合约排行/合约排行2",
+        "eg": "危机合约排行2",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "危机合约总排行",
+        "desc": "服务器危机合约最佳记录排行(指标↓用时↑)",
+        "eg": "危机合约总排行2",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "合约指标使用率",
+        "desc": "服务器玩家选择各危机合约指标的占比",
+        "eg": "指标使用率/合约指标使用率",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "持有率",
+        "desc": "服务器五星六星角色持有率(UP/全部/六/五, 默认UP)",
+        "eg": "持有率/持有率 全部",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -162,7 +186,7 @@
       {
         "name": "别名列表",
         "desc": "查看角色别名",
-        "eg": "莱万汀别名",
+        "eg": "洛茜别名",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false
@@ -281,7 +305,7 @@
       {
         "name": "设置体力背景",
         "desc": "设置体力背景，空参数清除",
-        "eg": "设置体力背景 莱万汀",
+        "eg": "设置体力背景 洛茜",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false

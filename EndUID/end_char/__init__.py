@@ -1,5 +1,6 @@
 import re
 import json
+import asyncio
 from pathlib import Path
 
 import aiofiles
@@ -11,6 +12,7 @@ from gsuid_core.logger import logger
 from .draw_char_card import draw_char_card
 from .draw_card import draw_card
 from ..utils.api.requests import end_api
+from ..utils.api import endapi as end_api_upload
 from ..utils.api.model import CardDetailResponse
 from ..utils.alias_map import update_alias_map_from_chars
 from ..utils.database.models import EndBind, EndUser
@@ -20,13 +22,23 @@ from ..utils.tips import TIP_NOT_BOUND, TIP_NO_CRED
 from ..utils import CHAR_NAME_PATTERN
 from ..utils.path import PLAYER_PATH
 
+# 持有引用避免后台上传任务被 GC
+_BG_TASKS: set = set()
 
-async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
+
+def _spawn_bg(coro) -> None:
+    task = asyncio.create_task(coro)
+    _BG_TASKS.add(task)
+    task.add_done_callback(_BG_TASKS.discard)
+
+
+async def refresh_card_data(user_id: str, bot_id: str, do_upload: bool = False) -> tuple[bool, str]:
     """刷新卡片数据
 
     Args:
         user_id: 用户ID
         bot_id: 机器人ID
+        do_upload: 是否上传持有率统计(仅查询自己时为 True)
 
     Returns:
         (是否成功, 错误消息或空字符串)
@@ -72,10 +84,55 @@ async def refresh_card_data(user_id: str, bot_id: str) -> tuple[bool, str]:
         detail = CardDetailResponse.model_validate(res).data.detail
         if detail.chars:
             update_alias_map_from_chars(detail.chars)
+            if do_upload:
+                _spawn_bg(_upload_hold(uid, detail, user_id, bot_id))
     except Exception as e:
         logger.warning(f"[ENDUID·角色] 刷新后别名更新失败: {e}")
 
     return True, ""
+
+
+async def _resolve_hide_uid(uid: str, user_id: str, bot_id: str) -> bool:
+    """解析该 uid 是否隐藏: on→是, off→否, 空→跟随全局开关。"""
+    from ..end_config.config_default import EndConfig
+    pref = await get_hide_uid_pref(uid, user_id, bot_id)
+    if pref == "on":
+        return True
+    if pref == "off":
+        return False
+    return bool(EndConfig.get_config("HideUid").data)
+
+
+async def _upload_hold(uid: str, detail, user_id: str, bot_id: str) -> None:
+    try:
+        chars = []
+        for c in detail.chars or []:
+            cd = c.charData
+            if not cd or not cd.id:
+                continue
+            rarity = 0
+            if cd.rarity and cd.rarity.value:
+                m = re.search(r"(\d+)", str(cd.rarity.value))
+                if m:
+                    rarity = int(m.group(1))
+            chars.append({
+                "char_id": cd.id,
+                "name": cd.name,
+                "rarity": rarity,
+                "potential": c.potentialLevel,
+            })
+        if not chars:
+            return
+        name = detail.base.name if detail.base else ""
+        avatar = detail.base.avatarUrl if detail.base else ""
+        hide_uid_flag = await _resolve_hide_uid(uid, user_id, bot_id)
+        ok = await end_api_upload.upload_hold(uid, name, avatar, hide_uid_flag, user_id, chars)
+        logger.info(
+            f"[ENDUID·持有率] 上传{'成功' if ok else '未执行(检查EndToken/网络)'}: "
+            f"{len(chars)}个角色 uid={uid}"
+        )
+    except Exception as e:
+        logger.warning(f"[ENDUID·持有率] 上传异常 uid={uid}: {e}")
 
 sv_char_query = SV("End角色查询")
 sv_refresh = SV("End数据刷新")
@@ -130,7 +187,9 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
     at_sender = True if ev.group_id else False
     target_user_id = ruser_id(ev)
     target_uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
-    success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
+    # 仅在查询自己(未@他人)时上传, @查询他人不上传
+    do_upload = target_user_id == ev.user_id
+    success, error_msg = await refresh_card_data(target_user_id, ev.bot_id, do_upload=do_upload)
     if not success:
         return await bot.send(error_msg, at_sender=at_sender)
 

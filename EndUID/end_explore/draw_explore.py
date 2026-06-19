@@ -39,7 +39,9 @@ async def draw_explore(ev: Event) -> Union[bytes, str]:
     user_pref = await get_hide_uid_pref(uid, target_user_id, ev.bot_id)
 
     from ..end_char import refresh_card_data
-    success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
+    success, error_msg = await refresh_card_data(
+        target_user_id, ev.bot_id, do_upload=target_user_id == ev.user_id
+    )
     if not success:
         return error_msg
 

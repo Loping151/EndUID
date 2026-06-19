@@ -18,7 +18,7 @@ from ..utils.resources import res_b64, potential_b64  # noqa: F401  re-export
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
 
-# 当期危机合约周期（全服共用，落盘 data 内、重启有效）
+# 当期危机合约周期（服务器共用，落盘 data 内、重启有效）
 CRISIS_PERIOD_FILE = MAIN_PATH / "crisis_period.json"
 
 
@@ -29,6 +29,18 @@ def get_crisis_period() -> Optional[dict]:
     except Exception as e:
         logger.warning(f"[ENDUID·危机合约] 周期文件读取失败: {e}")
     return None
+
+
+def get_crisis_period_query() -> Optional[Tuple[str, int, str]]:
+    """当期排行/统计查询参数: (contract_id, cycle_start_ts, act_name); 无周期返回 None"""
+    period = get_crisis_period()
+    if not period or not period.get("contract_id"):
+        return None
+    try:
+        start = int(period.get("startAtTs") or 0)
+    except (TypeError, ValueError):
+        start = 0
+    return period["contract_id"], start, period.get("name") or ""
 
 
 def update_crisis_period(status) -> None:

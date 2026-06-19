@@ -377,7 +377,7 @@ async def do_login_notify(send, user_id: str, bot_id: str, result: dict):
     try:
         from ..end_char import refresh_card_data
 
-        card_ok, card_err = await refresh_card_data(user_id, bot_id)
+        card_ok, card_err = await refresh_card_data(user_id, bot_id, do_upload=True)
         if not card_ok and card_err:
             logger.warning(f"[ENDUID·绑定] 登录时自动刷新面板失败: {card_err}")
     except Exception as e:

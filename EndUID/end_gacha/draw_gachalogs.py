@@ -540,7 +540,7 @@ async def build_gacha_pools(
     if not card_path.exists():
         try:
             from ..end_char import refresh_card_data
-            await refresh_card_data(ev.user_id, ev.bot_id)
+            await refresh_card_data(ev.user_id, ev.bot_id, do_upload=True)
         except Exception as e:
             logger.debug(f"[ENDUID·抽卡] 自动刷新失败: {e}")
 
@@ -558,7 +558,7 @@ async def build_gacha_pools(
         )
         try:
             from ..end_char import refresh_card_data
-            ok_refresh, _err = await refresh_card_data(ev.user_id, ev.bot_id)
+            ok_refresh, _err = await refresh_card_data(ev.user_id, ev.bot_id, do_upload=True)
             if ok_refresh:
                 (
                     name, level, avatar_b64,

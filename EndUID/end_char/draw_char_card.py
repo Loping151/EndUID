@@ -114,7 +114,9 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         # 自动刷新一次
         logger.info(f"[ENDUID·角色面板] 未找到本地数据，自动刷新中...")
         from . import refresh_card_data
-        success, error_msg = await refresh_card_data(target_user_id, ev.bot_id)
+        success, error_msg = await refresh_card_data(
+            target_user_id, ev.bot_id, do_upload=target_user_id == ev.user_id
+        )
         if not success:
             return error_msg
 

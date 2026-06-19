@@ -36,6 +36,13 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         ],
     ),
 
+    "EndToken": GsStrConfig(
+        "终末全排行Token",
+        "终末全排行Token",
+        "",
+        secret=True,
+    ),
+
     # ==================== 登录配置 ====================
     "EndLoginUrl": GsStrConfig(
         "终末地登录url",
