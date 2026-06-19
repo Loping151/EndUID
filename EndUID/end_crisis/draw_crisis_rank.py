@@ -1,6 +1,7 @@
 import io
 import json
 import math
+from datetime import datetime
 from typing import List, Optional, Union
 
 from PIL import Image
@@ -123,9 +124,10 @@ async def draw_crisis_rank_img(ev: Event, page: int = 1) -> Union[bytes, str]:
     start = (page - 1) * PAGE_SIZE
     page_entries = entries[start:start + PAGE_SIZE]
 
-    rows = []
-    for i, e in enumerate(page_entries):
-        rank = start + i + 1
+    self_user = ev.user_id
+    self_idx = next((i for i, e in enumerate(entries) if e["user_id"] == self_user), None)
+
+    async def _make_row(e: dict, rank: int, is_self: bool) -> dict:
         user_rec = await EndUser.select_end_user(e["uid"], e["user_id"], ev.bot_id)
         # 头像优先按绑定者 user_id 取 QQ 头像（每人准确，避免共享账号资料串台），再回退库内存档
         avatar_url = ""
@@ -143,17 +145,33 @@ async def draw_crisis_rank_img(ev: Event, page: int = 1) -> Union[bytes, str]:
         nickname = _read_game_name(e["uid"]) \
             or (user_rec.nickname if user_rec and user_rec.nickname else "") \
             or (user_rec.platform_nickname if user_rec and user_rec.platform_nickname else "") \
-            or "终末地训练员"
-        rows.append({
+            or "管理员"
+        # UID 按各自的隐藏配置决定是否打码
+        pref = user_rec.hide_uid_self_value if user_rec and user_rec.hide_uid_self_value else ""
+        return {
             "rank": rank,
+            "is_self": is_self,
             "avatar_b64": avatar_b64,
             "nickname": nickname,
+            "uid": cm.hide_uid(e["uid"], user_pref=pref),
             "count": e["count"],
             "duration": cm.fmt_duration(str(e["passTs"])) or "--:--",
             "chars": await _bake_char_squares(e["chars"]),
-        })
+        }
+
+    rows = [
+        await _make_row(e, start + i + 1, e["user_id"] == self_user)
+        for i, e in enumerate(page_entries)
+    ]
+    # 自己不在当前页则把自己补到末尾（类似总排行的处理）
+    self_row = None
+    if self_idx is not None and not (start <= self_idx < start + len(page_entries)):
+        self_row = await _make_row(entries[self_idx], self_idx + 1, True)
 
     context = {
+        "group_id": group_id,
+        "query_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "self_row": self_row,
         "asset_grid_tile": cm.res_b64("grid_tile.png"),
         "asset_indicator": cm.crisis_b64("indicator.png"),
         "asset_clock": cm.crisis_b64("clock.png"),

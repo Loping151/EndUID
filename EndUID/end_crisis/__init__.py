@@ -37,7 +37,7 @@ async def _need_login(bot: Bot):
 
 # 排行/信息指令需排在主指令之前，避免「危机合约」前缀抢匹配
 @end_crisis_sv.on_command(
-    ("危机合约排行", "合约排行", "危机排行", "wjhyph", "hyph"),
+    ("危机合约排行", "合约排行", "危机排行", "wjhyph", "wjph", "hyph"),
     block=True,
 )
 async def crisis_rank_entry(bot: Bot, ev: Event):
@@ -46,7 +46,7 @@ async def crisis_rank_entry(bot: Bot, ev: Event):
 
 
 @end_crisis_sv.on_command(
-    ("危机合约信息", "合约信息", "危机信息", "wjhyxx", "hyxx"),
+    ("危机合约信息", "合约信息", "危机信息", "wjhyxx", "wjxx", "hyxx"),
     block=True,
 )
 async def crisis_info_entry(bot: Bot, ev: Event):

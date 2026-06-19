@@ -183,6 +183,7 @@ async def draw_crisis_img(ev: Event, uid: str, mode: str = "main") -> Union[byte
     ]
     if pin_best:
         history_ctx = [await _build_record_ctx(best, 0)] + history_ctx
+    history_ctx = history_ctx[:HISTORY_LIMIT]
 
     context = {
         "asset_grid_tile": cm.res_b64("grid_tile.png"),
