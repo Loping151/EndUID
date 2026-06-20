@@ -1,5 +1,3 @@
-from typing import Optional
-
 from gsuid_core.models import Event
 
 
@@ -17,17 +15,24 @@ def is_valid_at(ev: Event) -> bool:
     return ev.user_id != ruser_id(ev)
 
 
-async def get_at_avatar_b64(ev: Event) -> Optional[str]:
-    """@ 查询时返回被 @ 用户的 QQ 头像 base64（仅 onebot 平台），否则返回 None"""
-    if not is_valid_at(ev):
-        return None
-    if ev.bot_id != "onebot" or not ev.at:
-        return None
-    try:
-        from .path import AVATAR_CACHE_PATH
-        from .render_utils import get_image_b64_with_cache
+async def get_query_avatar_b64(ev: Event, fallback_url: str = "") -> str:
+    """各指令展示头像: 优先被查询者的平台头像(@他人则取被@者, 否则发送者), 回退游戏卡片头像。"""
+    from .path import AVATAR_CACHE_PATH
+    from .render_utils import get_image_b64_with_cache
+    from .util import get_sender_avatar
 
+    if is_valid_at(ev) and ev.bot_id == "onebot" and ev.at:
         url = f"http://q1.qlogo.cn/g?b=qq&nk={ev.at}&s=640"
-        return await get_image_b64_with_cache(url, AVATAR_CACHE_PATH)
-    except Exception:
-        return None
+    else:
+        url = get_sender_avatar(ev)
+
+    for u in (url, fallback_url):
+        if not u:
+            continue
+        try:
+            b64 = await get_image_b64_with_cache(u, AVATAR_CACHE_PATH)
+            if b64:
+                return b64
+        except Exception:
+            pass
+    return ""

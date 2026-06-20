@@ -1,3 +1,12 @@
+def get_sender_avatar(ev) -> str:
+    """取发送者平台头像url(适配器填的 sender.avatar; onebot 回退 QQ 头像)。"""
+    sender = ev.sender or {}
+    avatar = sender.get("avatar") or ""
+    if not avatar and ev.bot_id == "onebot" and str(ev.user_id).isdigit():
+        avatar = f"http://q1.qlogo.cn/g?b=qq&nk={ev.user_id}&s=640"
+    return avatar
+
+
 async def record_group_and_profile(ev, uid: str) -> None:
     """查询时把本人 uid 记入当前群(进群即入榜) + 从事件更新平台头像/昵称，供群排行使用。
     仅记录发送者本人（@ 他人查询时跳过）。
@@ -12,9 +21,7 @@ async def record_group_and_profile(ev, uid: str) -> None:
             await EndBind.add_group(ev.user_id, ev.bot_id, ev.group_id)
         sender = ev.sender or {}
         nickname = sender.get("nickname") or sender.get("card") or ""
-        avatar = sender.get("avatar") or ""
-        if not avatar and ev.bot_id == "onebot" and str(ev.user_id).isdigit():
-            avatar = f"http://q1.qlogo.cn/g?b=qq&nk={ev.user_id}&s=640"
+        avatar = get_sender_avatar(ev)
         kw = {}
         if nickname:
             kw["platform_nickname"] = nickname

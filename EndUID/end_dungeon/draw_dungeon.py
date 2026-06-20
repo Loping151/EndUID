@@ -170,7 +170,7 @@ async def _build_group_ctx(group: IndieHardGroup, diff: str) -> dict:
 async def draw_dungeon_img(
     ev: Event, uid: str, diff: str = "hard",
 ) -> Union[bytes, str]:
-    from ..utils.at_help import ruser_id, get_at_avatar_b64
+    from ..utils.at_help import ruser_id, get_query_avatar_b64
     target_user_id = ruser_id(ev)
 
     _, cred = await end_api.get_ck_result(uid, target_user_id, ev.bot_id)
@@ -233,7 +233,7 @@ async def draw_dungeon_img(
     base_level = 0
     base_world_level = 0
     base_create_time = ""
-    avatar_b64 = ""
+    base_avatar_url = ""
     try:
         from ..end_char.draw_card import _format_awaken_time
     except Exception:
@@ -255,16 +255,12 @@ async def draw_dungeon_img(
             base_level = base.get("level", 0) or 0
             base_world_level = base.get("worldLevel", 0) or 0
             base_create_time = _format_awaken_time(base.get("createTime", "")) or ""
-            if base.get("avatarUrl"):
-                avatar_b64 = await get_image_b64_with_cache(
-                    base["avatarUrl"], AVATAR_CACHE_PATH,
-                )
+            base_avatar_url = base.get("avatarUrl", "") or ""
     except Exception as e:
         logger.warning(f"[ENDUID·关卡] 基础信息读取失败: {e}")
 
-    at_avatar = await get_at_avatar_b64(ev)
-    if at_avatar:
-        avatar_b64 = at_avatar
+    # 头像: 优先平台头像(被查询者), 回退游戏卡片头像
+    avatar_b64 = await get_query_avatar_b64(ev, base_avatar_url)
 
     groups_ctx: List[dict] = []
     for g in groups_sorted:

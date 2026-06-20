@@ -153,15 +153,15 @@ async def _upload_crisis(ev: Event, uid: str, cred, user_record, cc) -> None:
         except (TypeError, ValueError):
             pass_ts = 0
 
-        # 玩家昵称/头像取本地已缓存的基础信息
-        name, avatar = "", ""
+        # 昵称取游戏内名称(本地缓存); 头像用发送者平台头像(ev), 用于总排行展示
+        from ..utils.util import get_sender_avatar
+        name = ""
         try:
             base = json.loads((PLAYER_PATH / uid / "card_detail.json").read_text(encoding="utf-8"))
-            base = base.get("data", {}).get("detail", {}).get("base", {}) or {}
-            name = base.get("name", "") or ""
-            avatar = base.get("avatarUrl", "") or ""
+            name = (base.get("data", {}).get("detail", {}).get("base", {}) or {}).get("name", "") or ""
         except Exception:
             pass
+        avatar = get_sender_avatar(ev)
 
         user_id = ruser_id(ev)
         pref = await get_hide_uid_pref(uid, user_id, ev.bot_id)

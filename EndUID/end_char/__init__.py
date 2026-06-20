@@ -124,9 +124,9 @@ async def _upload_hold(uid: str, detail, user_id: str, bot_id: str) -> None:
         if not chars:
             return
         name = detail.base.name if detail.base else ""
-        avatar = detail.base.avatarUrl if detail.base else ""
+        # 头像统一用发送者平台头像(由危机上传按 ev 写入), 持有上传不覆盖, 传空保留原值
         hide_uid_flag = await _resolve_hide_uid(uid, user_id, bot_id)
-        ok = await end_api_upload.upload_hold(uid, name, avatar, hide_uid_flag, user_id, chars)
+        ok = await end_api_upload.upload_hold(uid, name, "", hide_uid_flag, user_id, chars)
         logger.info(
             f"[ENDUID·持有率] 上传{'成功' if ok else '未执行(检查EndToken/网络)'}: "
             f"{len(chars)}个角色 uid={uid}"

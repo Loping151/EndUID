@@ -376,14 +376,8 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         )
 
     bg_url_b64 = image_to_base64(TEXTURE_PATH / "bg.png", quality=75)
-    user_avatar = ""
-    if base_info and base_info.avatarUrl:
-        user_avatar = await get_image_b64_with_cache(base_info.avatarUrl, AVATAR_CACHE_PATH)
-
-    from ..utils.at_help import get_at_avatar_b64
-    at_avatar = await get_at_avatar_b64(ev)
-    if at_avatar:
-        user_avatar = at_avatar
+    from ..utils.at_help import get_query_avatar_b64
+    user_avatar = await get_query_avatar_b64(ev, base_info.avatarUrl if base_info else "")
 
     # 加载属性和职业图标
     property_icon = attr_icon_b64(property_val)

@@ -88,7 +88,7 @@ def _format_recovery_time(
 
 
 async def draw_end_daily_img(ev: Event, uid: str):
-    from ..utils.at_help import ruser_id, get_at_avatar_b64
+    from ..utils.at_help import ruser_id, get_query_avatar_b64
     target_user_id = ruser_id(ev)
 
     _, cred = await end_api.get_ck_result(uid, target_user_id, ev.bot_id)
@@ -142,14 +142,8 @@ async def draw_end_daily_img(ev: Event, uid: str):
     bp_system = detail.bpSystem
     daily_mission = detail.dailyMission
 
-    # 头像
-    avatar_url = ""
-    if base.avatarUrl:
-        avatar_url = await get_image_b64_with_cache(base.avatarUrl, AVATAR_CACHE_PATH)
-
-    at_avatar = await get_at_avatar_b64(ev)
-    if at_avatar:
-        avatar_url = at_avatar
+    # 头像: 优先平台头像, 回退游戏卡片头像
+    avatar_url = await get_query_avatar_b64(ev, base.avatarUrl if base else "")
 
     # 角色立绘
     pile_url = ""

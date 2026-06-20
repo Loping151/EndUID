@@ -40,7 +40,7 @@ def fmt_money(val: int) -> str:
 
 
 async def draw_build(ev: Event) -> Union[bytes, str]:
-    from ..utils.at_help import ruser_id, get_at_avatar_b64
+    from ..utils.at_help import ruser_id, get_query_avatar_b64
     target_user_id = ruser_id(ev)
 
     uid = await EndBind.get_bound_uid(target_user_id, ev.bot_id)
@@ -124,15 +124,7 @@ async def draw_build(ev: Event) -> Union[bytes, str]:
                         room_avatar_b64[cid] = b64
     char_avatar_b64.update(room_avatar_b64)
 
-    base_avatar_b64 = ""
-    if base and base.avatarUrl:
-        base_avatar_b64 = await get_image_b64_with_cache(
-            base.avatarUrl, AVATAR_CACHE_PATH
-        )
-
-    at_avatar = await get_at_avatar_b64(ev)
-    if at_avatar:
-        base_avatar_b64 = at_avatar
+    base_avatar_b64 = await get_query_avatar_b64(ev, base.avatarUrl if base else "")
 
     domains: List[Dict] = []
     for d in detail.domain:

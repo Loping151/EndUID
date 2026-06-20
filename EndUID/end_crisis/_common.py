@@ -148,7 +148,7 @@ async def load_player_base(ev: Event, uid: str, user_pref: str) -> dict:
     base_level = 0
     base_world_level = 0
     base_create_time = ""
-    avatar_b64 = ""
+    base_avatar_url = ""
     try:
         from ..end_char.draw_card import _format_awaken_time
     except Exception:
@@ -169,18 +169,13 @@ async def load_player_base(ev: Event, uid: str, user_pref: str) -> dict:
             base_level = base.get("level", 0) or 0
             base_world_level = base.get("worldLevel", 0) or 0
             base_create_time = _format_awaken_time(base.get("createTime", "")) or ""
-            if base.get("avatarUrl"):
-                avatar_b64 = await get_image_b64_with_cache(base["avatarUrl"], AVATAR_CACHE_PATH)
+            base_avatar_url = base.get("avatarUrl", "") or ""
     except Exception as e:
         logger.warning(f"[ENDUID·危机合约] 基础信息读取失败: {e}")
 
-    try:
-        from ..utils.at_help import get_at_avatar_b64
-        at_avatar = await get_at_avatar_b64(ev)
-        if at_avatar:
-            avatar_b64 = at_avatar
-    except Exception:
-        pass
+    # 头像: 优先平台头像(被查询者), 回退游戏卡片头像
+    from ..utils.at_help import get_query_avatar_b64
+    avatar_b64 = await get_query_avatar_b64(ev, base_avatar_url)
 
     return {
         "avatar_url": avatar_b64,
