@@ -2,7 +2,6 @@ from gsuid_core.sv import SV
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 from gsuid_core.logger import logger
-from gsuid_core.segment import MessageSegment
 
 from ..utils import CHAR_NAME_PATTERN
 from ..utils.alias_map import (
@@ -27,17 +26,16 @@ async def _send_char_wiki(bot: Bot, wiki: CharWiki):
     result = await draw_char_wiki(wiki)
     await bot.send(result)
 
-    # 每个技能合成一个节点: 文字 + GIF 同节点(合并转发)
-    nodes: list = []
+    # Build skill GIF message
+    gif_msgs: list[str] = []
     for skill in wiki.skills:
         if skill.gif_url:
             label = skill.skill_type or "技能"
-            nodes.append(
-                MessageSegment.node([f"{label}  {skill.name}", skill.gif_url])
-            )
+            gif_msgs.append(f"{label}  {skill.name}")
+            gif_msgs.append(skill.gif_url)
 
-    if nodes:
-        await bot.send(nodes)
+    if gif_msgs:
+        await bot.send(gif_msgs)
 
 
 @sv_wiki.on_regex(
