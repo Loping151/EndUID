@@ -17,6 +17,9 @@ from .draw_crisis_info import LEVEL_COLOR
 
 
 async def draw_indicator_stat_img(ev: Event) -> Union[bytes, str]:
+    if not endapi.has_token():
+        return "❌ 未开启总排行"
+
     pq = cm.get_crisis_period_query()
     if pq is None:
         return f"❌ 暂无当期危机合约周期，先用「{PREFIX}危机合约」查询后再试"

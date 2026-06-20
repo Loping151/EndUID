@@ -21,14 +21,23 @@ def _get_token() -> str:
     return EndConfig.get_config("EndToken").data or ""
 
 
+def has_token() -> bool:
+    return bool(_get_token())
+
+
 def _auth_headers() -> Dict[str, str]:
-    return {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {_get_token()}",
-    }
+    # token 为空时不要拼出 "Bearer "(非法头, httpx 会抛 Illegal header value)
+    headers = {"Content-Type": "application/json"}
+    token = _get_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 async def _post(url: str, payload: dict, need_auth: bool = True) -> Optional[dict]:
+    if need_auth and not _get_token():
+        logger.info("[终末·全排行] 未配置 EndToken, 跳过请求")
+        return None
     headers = _auth_headers() if need_auth else {"Content-Type": "application/json"}
     try:
         async with httpx.AsyncClient() as client:
@@ -42,6 +51,9 @@ async def _post(url: str, payload: dict, need_auth: bool = True) -> Optional[dic
 
 
 async def _get(url: str, need_auth: bool = False) -> Optional[dict]:
+    if need_auth and not _get_token():
+        logger.info("[终末·全排行] 未配置 EndToken, 跳过请求")
+        return None
     headers = _auth_headers() if need_auth else {}
     try:
         async with httpx.AsyncClient() as client:
@@ -62,9 +74,6 @@ async def upload_hold(
     chars: List[Dict[str, Any]],
 ) -> bool:
     """上传持有角色列表(角色id/名称/星级/潜能)。"""
-    if not _get_token():
-        logger.info("[终末·全排行] 未配置 EndToken, 跳过持有上传")
-        return False
     if not chars:
         return False
     payload = {
@@ -93,9 +102,6 @@ async def upload_crisis(
     indicators: List[Dict[str, Any]],
 ) -> bool:
     """上传危机合约最佳纪录(队伍/用时/指标)。"""
-    if not _get_token():
-        logger.info("[终末·全排行] 未配置 EndToken, 跳过危机合约上传")
-        return False
     if not contract_id:
         return False
     payload = {
