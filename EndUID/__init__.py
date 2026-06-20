@@ -22,6 +22,28 @@ Plugins(
 
 logger.info("[ENDUID·插件] 插件加载中...")
 
+
+def _migrate_alias_map():
+    """迁移: 删除 data/map.json 里旧的错误键「弥弗」(正确名为 弭弗), 合并模板后自动补回正确条目。"""
+    import json
+    from .utils.path import MAP_PATH
+
+    try:
+        if not MAP_PATH.exists():
+            return
+        data = json.loads(MAP_PATH.read_text(encoding="utf-8") or "{}")
+        if isinstance(data, dict) and "弥弗" in data:
+            del data["弥弗"]
+            MAP_PATH.write_text(
+                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            logger.info("[ENDUID·插件] 迁移: 已删除 map.json 旧键「弥弗」")
+    except Exception as e:
+        logger.warning(f"[ENDUID·插件] 迁移 map.json 失败: {e}")
+
+
+_migrate_alias_map()
+
 # ===== 活跃度批量写入缓冲 =====
 _activity_buffer: dict[str, tuple[str, str, str]] = {}
 _FLUSH_INTERVAL = 60
