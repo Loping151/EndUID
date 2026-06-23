@@ -22,8 +22,8 @@ LOGO_PATH = Path(__file__).parents[1] / "end_daily" / "texture2d" / "logo.png"
 
 # 仅统计五星六星
 RANK_RARITY = (5, 6)
-# 潜能等级 0~6
-POT_MAX = 6
+# 潜能等级 0~5
+POT_MAX = 5
 
 # 筛选页签 (顺序即展示顺序)
 TABS = [("UP", "UP"), ("6", "六星"), ("5", "五星"), ("ALL", "全部")]
