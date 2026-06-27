@@ -56,6 +56,13 @@ def _read_one(p: Path) -> Any:
         return json.load(f)
 
 
+def _gzip_dump(path: Path, obj: Any) -> None:
+    data = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+    with open(path, "wb") as raw:
+        with gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=6, filename="", mtime=0) as f:
+            f.write(data)
+
+
 def read_player_json_sync(path: PathLike) -> Any:
     p = resolve_player_path(path)
     if p is None:
@@ -81,8 +88,7 @@ def write_player_json_sync(path: PathLike, obj: Any) -> None:
         gp = p.with_name(p.name + ".gz")
         tmp = gp.with_name(gp.name + uniq)
         try:
-            with gzip.open(tmp, "wt", encoding="utf-8", compresslevel=6) as f:
-                json.dump(obj, f, ensure_ascii=False)
+            _gzip_dump(tmp, obj)
             tmp.replace(gp)
         finally:
             tmp.unlink(missing_ok=True)
