@@ -119,7 +119,7 @@ async def draw_hold_rate_img(ev: Event) -> Union[bytes, str]:
 
     context = {
         "entries": entries,
-        "tabs": [{"k": k, "label": label, "on": k == flt} for k, label in TABS],
+        "title": FILTER_LABELS.get(flt, flt) + "角色持有率",
         "pot_cols": list(range(POT_MAX + 1)),
         "logo": logo_b64,
         "query_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
