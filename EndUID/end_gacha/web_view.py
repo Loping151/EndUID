@@ -9,7 +9,6 @@ from typing import Optional, Tuple
 
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse
 
-from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.web_app import app
 
@@ -17,6 +16,7 @@ from ..end_config import PREFIX
 from ..end_config.config_default import EndConfig
 from ..utils.cache import TimedCache
 from ..utils.path import MAIN_PATH, PLAYER_PATH
+from ..utils.player_store import player_json_exists
 from ..utils.util import hide_uid
 from ..end_bind.web_login import get_url
 from .draw_gachalogs import build_gacha_pools
@@ -47,7 +47,7 @@ async def make_gacha_web_url(
     if not _is_feature_enabled():
         return None, feature_disabled_msg()
 
-    if not (PLAYER_PATH / uid / "gacha_logs.json").exists():
+    if not player_json_exists(PLAYER_PATH / uid / "gacha_logs.json"):
         return None, f"还没有抽卡记录噢！请先使用「{PREFIX}导入抽卡记录」导入"
 
     payload, err = await build_gacha_pools(uid, ev, user_pref, web=True)

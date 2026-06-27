@@ -10,6 +10,12 @@ from gsuid_core.logger import logger
 
 from ..utils.api.requests import end_api
 from ..utils.path import PLAYER_PATH
+from ..utils.player_store import (
+    read_player_json,
+    write_player_json,
+    resolve_player_path,
+    remove_player_json,
+)
 from ..end_config.config_default import EndConfig
 
 
@@ -41,12 +47,8 @@ CHAR_POOL_TYPE_MAP = {
 async def load_gachalogs(uid: str) -> Optional[dict]:
     """读取已保存的抽卡记录"""
     path = PLAYER_PATH / uid / "gacha_logs.json"
-    if not path.exists():
-        return None
     try:
-        async with aiofiles.open(path, "r", encoding="utf-8") as f:
-            raw = await f.read()
-        return json.loads(raw)
+        return await read_player_json(path)
     except Exception as e:
         logger.error(f"[ENDUID·抽卡] 读取抽卡记录失败: {e}")
         return None
@@ -54,12 +56,9 @@ async def load_gachalogs(uid: str) -> Optional[dict]:
 
 async def save_gachalogs(uid: str, gacha_data: dict):
     """保存抽卡记录"""
-    player_dir = PLAYER_PATH / uid
-    player_dir.mkdir(parents=True, exist_ok=True)
-    path = player_dir / "gacha_logs.json"
+    path = PLAYER_PATH / uid / "gacha_logs.json"
     try:
-        async with aiofiles.open(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(gacha_data, ensure_ascii=False, indent=2))
+        await write_player_json(path, gacha_data)
         logger.info(f"[ENDUID·抽卡] 保存抽卡记录成功: uid={uid}")
     except Exception as e:
         logger.error(f"[ENDUID·抽卡] 保存抽卡记录失败: {e}")
@@ -390,14 +389,15 @@ async def export_gachalogs(uid: str) -> Optional[dict]:
 
 async def delete_gachalogs(uid: str) -> bool:
     """删除抽卡记录（备份后删除）"""
-    path = PLAYER_PATH / uid / "gacha_logs.json"
-    if not path.exists():
+    base = PLAYER_PATH / uid / "gacha_logs.json"
+    path = resolve_player_path(base)
+    if path is None:
         return False
 
     try:
-        backup_path = path.with_suffix(".json.bak")
+        backup_path = path.with_name(path.name + ".bak")
         shutil.copy2(str(path), str(backup_path))
-        path.unlink()
+        remove_player_json(base)
         logger.info(f"[ENDUID·抽卡] 已删除抽卡记录: uid={uid}（已备份）")
         return True
     except Exception as e:

@@ -1,11 +1,9 @@
 import io
 import re
 import base64
-import json
 from pathlib import Path
 from typing import Optional, Union
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -32,6 +30,7 @@ from ..utils.path import (
     EQUIP_CACHE_PATH,
     PLAYER_PATH,
 )
+from ..utils.player_store import read_player_json, player_json_exists
 
 # 资源路径
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
@@ -110,7 +109,7 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
     logger.info(f"[ENDUID·角色面板] 正在查询角色: {real_name} (ID: {char_id})")
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
-    if not save_path.exists():
+    if not player_json_exists(save_path):
         # 自动刷新一次
         logger.info(f"[ENDUID·角色面板] 未找到本地数据，自动刷新中...")
         from . import refresh_card_data
@@ -120,14 +119,10 @@ async def draw_char_card(ev: Event, char_name: str) -> Union[bytes, str]:
         if not success:
             return error_msg
 
-    try:
-        async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
-            raw = await f.read()
-        data_res = json.loads(raw)
-    except Exception as e:
-        logger.warning(f"[ENDUID·角色面板] 本地卡片数据读取失败: {e}")
+    data_res = await read_player_json(save_path)
+    if data_res is None:
         return TIP_NO_LOCAL_CARD
-         
+
     if data_res.get("code") != 0:
         msg = data_res.get("message", "未知错误")
         return f"❌ 查询失败: {msg}"

@@ -4,7 +4,6 @@ from urllib.parse import urlparse, parse_qs
 from gsuid_core.sv import SV
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
-from gsuid_core.logger import logger
 from gsuid_core.segment import MessageSegment
 
 from ..end_config import PREFIX
@@ -12,6 +11,8 @@ from ..utils.tips import TIP_NOT_BOUND
 from ..end_config.config_default import EndConfig
 from ..utils.database.models import EndBind, EndUser
 from ..utils.api.requests import end_api
+from ..utils.path import PLAYER_PATH
+from ..utils.player_store import compress_all
 from ..utils.util import hide_uid
 from .get_gachalogs import (
     get_new_gachalog,
@@ -31,6 +32,13 @@ sv_gacha_record = SV("End抽卡记录")
 sv_gacha_export = SV("End导出抽卡记录")
 sv_gacha_delete = SV("End删除抽卡记录")
 sv_gacha_web = SV("End抽卡网页")
+sv_end_compress = SV("End数据压缩", pm=0)
+
+
+def _fmt_size(n: int) -> str:
+    if n >= 1024 * 1024:
+        return f"{n / 1048576:.1f}MB"
+    return f"{n / 1024:.1f}KB"
 
 
 def _parse_gacha_token(text: str) -> tuple[str, str, str]:
@@ -256,6 +264,29 @@ async def send_gacha_web_link(bot: Bot, ev: Event):
         await bot.send("\n".join([title, url, expire]))
     else:
         await bot.send(MessageSegment.node([title, f" {url}", expire]))
+
+
+@sv_end_compress.on_fullmatch(("压缩数据",), block=True)
+async def end_compress_data(bot: Bot, ev: Event):
+    stats = await compress_all(PLAYER_PATH)
+
+    total_before = total_after = total_count = 0
+    for s in stats["per_name"].values():
+        total_count += s["count"]
+        total_before += s["before"]
+        total_after += s["after"]
+
+    lines = ["📦 数据压缩完成"]
+    if total_count:
+        ratio = total_after / total_before * 100 if total_before else 0
+        lines.append(f"压缩前 {_fmt_size(total_before)} → 压缩后 {_fmt_size(total_after)}")
+        lines.append(f"压缩率 {ratio:.1f}%（省 {100 - ratio:.1f}%）")
+    else:
+        lines.append("没有需要压缩的明文数据")
+    if stats["fail"]:
+        lines.append(f"失败 {stats['fail']} 个")
+
+    await bot.send("\n".join(lines))
 
 
 @sv_gacha_delete.on_command(("删除抽卡记录", "scckjl"), block=True)

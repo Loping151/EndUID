@@ -1,5 +1,4 @@
 import io
-import json
 import math
 from datetime import datetime
 from typing import List, Optional, Union
@@ -12,6 +11,7 @@ from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.render_utils import render_html, get_image_b64_with_cache
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
+from ..utils.player_store import read_player_json_sync, remove_player_json
 from ..utils.api.model import CrisisContractResponse
 from ..utils.database.models import EndBind, EndUser
 from ..end_config import PREFIX
@@ -23,12 +23,10 @@ PAGE_SIZE = 20
 
 def _read_game_name(uid: str) -> str:
     """从本地 card_detail.json 取游戏角色名"""
-    path = PLAYER_PATH / uid / "card_detail.json"
-    if not path.exists():
+    data = read_player_json_sync(PLAYER_PATH / uid / "card_detail.json")
+    if data is None:
         return ""
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
         return (data.get("data", {}).get("detail", {}).get("base", {}) or {}).get("name", "") or ""
     except Exception:
         return ""
@@ -36,12 +34,10 @@ def _read_game_name(uid: str) -> str:
 
 def _read_local_crisis(uid: str):
     """读本地 players/<uid>/crisis_contract.json，返回 crisisContract 或 None"""
-    path = PLAYER_PATH / uid / "crisis_contract.json"
-    if not path.exists():
+    data = read_player_json_sync(PLAYER_PATH / uid / "crisis_contract.json")
+    if data is None:
         return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
         return CrisisContractResponse.model_validate(data).data.crisisContract
     except Exception as e:
         logger.warning(f"[ENDUID·危机合约排行] 读取本地数据失败 {uid}: {e}")
@@ -88,7 +84,7 @@ async def draw_crisis_rank_img(ev: Event, page: int = 1) -> Union[bytes, str]:
             continue
         if cur_contract and cc.status.id != cur_contract:
             try:
-                (PLAYER_PATH / u / "crisis_contract.json").unlink()
+                remove_player_json(PLAYER_PATH / u / "crisis_contract.json")
             except Exception:
                 pass
             continue

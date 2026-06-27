@@ -1,10 +1,8 @@
 import io
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Union
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -22,6 +20,7 @@ from ..utils.render_utils import (
 from ..utils.util import hide_uid
 from ..utils.tips import TIP_NO_CRED
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
+from ..utils.player_store import read_player_json, write_player_json
 from ..utils.resources import attr_icon_b64, potential_b64, res_b64
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
@@ -200,11 +199,8 @@ async def draw_dungeon_img(
         return f"获取影拓丰碑详情失败: {res.get('message', '未知错误')}"
 
     try:
-        player_dir = PLAYER_PATH / uid
-        player_dir.mkdir(parents=True, exist_ok=True)
         from ..utils.util import scrub_urls
-        async with aiofiles.open(player_dir / "indie_hard.json", "w", encoding="utf-8") as f:
-            await f.write(json.dumps(scrub_urls(res), ensure_ascii=False))
+        await write_player_json(PLAYER_PATH / uid / "indie_hard.json", scrub_urls(res))
     except Exception as e:
         logger.warning(f"[ENDUID·关卡] 丰碑详情写入失败: {e}")
 
@@ -245,10 +241,8 @@ async def draw_dungeon_img(
             except Exception:
                 return ""
     try:
-        cache_path = PLAYER_PATH / uid / "card_detail.json"
-        if cache_path.exists():
-            with open(cache_path, "r", encoding="utf-8") as f:
-                cached = json.load(f)
+        cached = await read_player_json(PLAYER_PATH / uid / "card_detail.json")
+        if cached:
             base = cached.get("data", {}).get("detail", {}).get("base", {}) or {}
             base_name = base.get("name", "") or ""
             base_role_id = base.get("roleId", "") or ""

@@ -1,10 +1,8 @@
 import io
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Union
 
-import aiofiles
 from PIL import Image
 
 from gsuid_core.models import Event
@@ -21,6 +19,7 @@ from ..utils.render_utils import (
 )
 from ..utils.tips import TIP_NOT_BOUND, TIP_NO_LOCAL_CARD
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
+from ..utils.player_store import read_player_json
 from ..utils.resources import attr_icon_b64 as _get_texture_icon
 from ..utils.resources import potential_b64, evolve_b64
 from .draw_char_card import end_templates
@@ -64,12 +63,8 @@ async def draw_card(ev: Event) -> Union[bytes, str]:
         return error_msg
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
-    try:
-        async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
-            raw = await f.read()
-        data_res = json.loads(raw)
-    except Exception as e:
-        logger.warning(f"[ENDUID·角色卡片] 本地卡片数据读取失败: {e}")
+    data_res = await read_player_json(save_path)
+    if data_res is None:
         return TIP_NO_LOCAL_CARD
 
     if data_res.get("code") != 0:

@@ -1,9 +1,6 @@
 import re
-import json
 import asyncio
-from pathlib import Path
 
-import aiofiles
 from gsuid_core.sv import SV
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
@@ -21,6 +18,7 @@ from ..end_config import PREFIX
 from ..utils.tips import TIP_NOT_BOUND, TIP_NO_CRED
 from ..utils import CHAR_NAME_PATTERN
 from ..utils.path import PLAYER_PATH
+from ..utils.player_store import read_player_json, write_player_json
 
 # 持有引用避免后台上传任务被 GC
 _BG_TASKS: set = set()
@@ -71,11 +69,7 @@ async def refresh_card_data(user_id: str, bot_id: str, do_upload: bool = False) 
         return False, f"❌ 刷新失败: {message}"
 
     try:
-        player_dir = PLAYER_PATH / uid
-        player_dir.mkdir(parents=True, exist_ok=True)
-        save_path = player_dir / "card_detail.json"
-        async with aiofiles.open(save_path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(res, ensure_ascii=False))
+        await write_player_json(PLAYER_PATH / uid / "card_detail.json", res)
     except Exception as e:
         logger.warning(f"[ENDUID·角色] 卡片详情写入失败: {e}")
         return False, "❌ 刷新失败：保存卡片详情失败"
@@ -196,9 +190,8 @@ async def refresh_card_detail_handler(bot: Bot, ev: Event):
     role_name = ""
     try:
         card_path = PLAYER_PATH / target_uid / "card_detail.json"
-        async with aiofiles.open(card_path, "r", encoding="utf-8") as f:
-            raw = await f.read()
-        detail = CardDetailResponse.model_validate(json.loads(raw)).data.detail
+        raw = await read_player_json(card_path)
+        detail = CardDetailResponse.model_validate(raw).data.detail
         if detail.base and detail.base.name:
             role_name = detail.base.name
     except Exception as e:

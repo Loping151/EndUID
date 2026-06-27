@@ -1,12 +1,10 @@
 import io
 import time
 import random
-import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Tuple
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -30,6 +28,7 @@ from ..utils.alias_map import (
 from ..utils.util import hide_uid
 from ..utils.tips import TIP_NO_CRED
 from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
+from ..utils.player_store import write_player_json
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
@@ -119,11 +118,7 @@ async def draw_end_daily_img(ev: Event, uid: str):
         return f"获取卡片详情失败: {message}"
 
     try:
-        player_dir = PLAYER_PATH / uid
-        player_dir.mkdir(parents=True, exist_ok=True)
-        save_path = player_dir / "card_detail.json"
-        async with aiofiles.open(save_path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(res, ensure_ascii=False))
+        await write_player_json(PLAYER_PATH / uid / "card_detail.json", res)
     except Exception as e:
         logger.warning(f"[ENDUID·每日] 卡片详情写入失败: {e}")
 

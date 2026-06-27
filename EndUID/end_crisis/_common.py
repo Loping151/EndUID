@@ -14,6 +14,7 @@ from ..utils.render_utils import image_to_base64, get_image_b64_with_cache
 from ..utils.util import hide_uid
 from ..utils.colors import RARITY_COLORS
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH, MAIN_PATH
+from ..utils.player_store import read_player_json
 from ..utils.resources import res_b64, potential_b64  # noqa: F401  re-export
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
@@ -160,9 +161,8 @@ async def load_player_base(ev: Event, uid: str, user_pref: str) -> dict:
                 return ""
     try:
         cache_path = PLAYER_PATH / uid / "card_detail.json"
-        if cache_path.exists():
-            with open(cache_path, "r", encoding="utf-8") as f:
-                cached = json.load(f)
+        cached = await read_player_json(cache_path)
+        if cached:
             base = cached.get("data", {}).get("detail", {}).get("base", {}) or {}
             base_name = base.get("name", "") or ""
             base_role_id = base.get("roleId", "") or ""

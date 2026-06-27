@@ -1,11 +1,9 @@
 """抽卡记录渲染上下文构建"""
 import io
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -28,6 +26,7 @@ from ..utils.path import (
     EQUIP_CACHE_PATH,
     PLAYER_PATH,
 )
+from ..utils.player_store import read_player_json, player_json_exists
 from .get_gachalogs import load_gachalogs
 
 
@@ -373,13 +372,11 @@ async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
     ok = False
 
     card_path = PLAYER_PATH / uid / "card_detail.json"
-    if not card_path.exists():
-        return name, level, avatar_b64, char_map, weapon_map, ok
 
     try:
-        async with aiofiles.open(card_path, "r", encoding="utf-8") as f:
-            raw = await f.read()
-        card_res = json.loads(raw)
+        card_res = await read_player_json(card_path)
+        if card_res is None:
+            return name, level, avatar_b64, char_map, weapon_map, ok
         if card_res.get("code") == 0:
             detail = CardDetailResponse.model_validate(card_res).data.detail
             base = detail.base
@@ -537,7 +534,7 @@ async def build_gacha_pools(
     card_path = PLAYER_PATH / uid / "card_detail.json"
 
     # card_detail.json 不存在时先刷新一次
-    if not card_path.exists():
+    if not player_json_exists(card_path):
         try:
             from ..end_char import refresh_card_data
             await refresh_card_data(ev.user_id, ev.bot_id, do_upload=True)

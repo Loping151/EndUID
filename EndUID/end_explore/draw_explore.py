@@ -1,9 +1,7 @@
 import io
-import json
 from pathlib import Path
 from typing import Dict, List, Union
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -21,6 +19,7 @@ from ..utils.render_utils import (
 )
 from ..utils.tips import TIP_NOT_BOUND, TIP_NO_LOCAL_CARD
 from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
+from ..utils.player_store import read_player_json
 from ..end_char.draw_card import _format_awaken_time
 
 TEXTURE_PATH = Path(__file__).parent.parent / "end_char" / "texture2d"
@@ -46,12 +45,8 @@ async def draw_explore(ev: Event) -> Union[bytes, str]:
         return error_msg
 
     save_path = PLAYER_PATH / uid / "card_detail.json"
-    try:
-        async with aiofiles.open(save_path, "r", encoding="utf-8") as f:
-            raw = await f.read()
-        data_res = json.loads(raw)
-    except Exception as e:
-        logger.warning(f"[ENDUID·探索] 本地卡片数据读取失败: {e}")
+    data_res = await read_player_json(save_path)
+    if data_res is None:
         return TIP_NO_LOCAL_CARD
 
     if data_res.get("code") != 0:

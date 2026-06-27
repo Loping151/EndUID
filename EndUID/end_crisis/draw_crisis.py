@@ -1,11 +1,9 @@
 import io
-import json
 import asyncio
 from pathlib import Path
 from typing import List, Union
 from datetime import datetime
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -19,6 +17,7 @@ from ..utils.render_utils import render_html, get_image_b64_with_cache
 from ..end_config import PREFIX
 from ..utils.tips import TIP_NO_CRED
 from ..utils.path import PILE_CACHE_PATH, PLAYER_PATH
+from ..utils.player_store import read_player_json, write_player_json
 from . import _common as cm
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
@@ -77,10 +76,9 @@ async def fetch_crisis_contract(ev: Event, uid: str):
         return None, f"获取危机合约详情失败: {res.get('message', '未知错误')}", None
 
     try:
-        player_dir = PLAYER_PATH / uid
-        player_dir.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(player_dir / "crisis_contract.json", "w", encoding="utf-8") as f:
-            await f.write(json.dumps(cm.scrub_urls(res), ensure_ascii=False))
+        await write_player_json(
+            PLAYER_PATH / uid / "crisis_contract.json", cm.scrub_urls(res)
+        )
     except Exception as e:
         logger.warning(f"[ENDUID·危机合约] 详情写入失败: {e}")
 
@@ -157,7 +155,7 @@ async def _upload_crisis(ev: Event, uid: str, cred, user_record, cc) -> None:
         from ..utils.util import get_sender_avatar
         name = ""
         try:
-            base = json.loads((PLAYER_PATH / uid / "card_detail.json").read_text(encoding="utf-8"))
+            base = await read_player_json(PLAYER_PATH / uid / "card_detail.json") or {}
             name = (base.get("data", {}).get("detail", {}).get("base", {}) or {}).get("name", "") or ""
         except Exception:
             pass
