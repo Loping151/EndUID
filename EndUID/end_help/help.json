@@ -144,9 +144,9 @@
         "need_admin": false
       },
       {
-        "name": "持有率",
-        "desc": "服务器五星六星角色持有率(UP/全部/六/五, 默认UP)",
-        "eg": "持有率/持有率 全部",
+        "name": "(群)持有率",
+        "desc": "五星六星角色持有率(UP/全部/六/五, 默认UP); 加“群”为本群统计",
+        "eg": "持有率/群持有率/群持有率 全部",
         "need_ck": false,
         "need_sk": false,
         "need_admin": false

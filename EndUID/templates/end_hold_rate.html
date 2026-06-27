@@ -26,6 +26,7 @@
     .hd-logo { height: 40px; width: auto; flex: none; }
     .hd-t { font-family: 'Oswald','Noto Sans SC',sans-serif; font-size: 30px; font-weight: 700; }
     .hd-time { margin-left: auto; font-family: 'JetBrains Mono',monospace; font-size: 14px; color: var(--c-sub); }
+    .subt { font-size: 16px; font-weight: 600; color: #ffd98a; margin-top: 8px; letter-spacing: 0.02em; }
     .note { font-size: 12px; color: var(--c-sub); margin: 7px 0 16px; letter-spacing: 0.02em; }
 
     /* 列骨架: 头像 / 角色名 / 6 潜能列 / 持有率, 表头与数据行共用 */
@@ -73,6 +74,7 @@
             <span class="hd-t">{{ title }}</span>
             <span class="hd-time">{{ query_date }}</span>
         </div>
+        {% if subtitle %}<div class="subt">{{ subtitle }}</div>{% endif %}
         <div class="note">仅在本工具范围内统计，仅供参考，不代表全体玩家</div>
 
         <div class="chead">
