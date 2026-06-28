@@ -138,10 +138,8 @@
   .fs-pity { font-family: var(--num); font-weight:700; font-size: 19px; text-align:right; }
   .fs-pity.good { color: var(--good); } .fs-pity.mid { color: var(--accent-soft); } .fs-pity.bad { color: var(--bad); }
 
-  @media (max-width: 440px) {
-    .fs-card { grid-template-columns: 28px 26px 5.2em 1fr 24px 10px; }
-    .fs-name { display:none; }
-  }
+  body.hide-fs-name .fs-name { display:none; }
+  body.hide-fs-name .fs-card { grid-template-columns: 28px 26px 5.2em 1fr 24px 10px; }
 
   .wsum { font-family: var(--mono); font-size:11px; color: var(--sub); margin: -2px 0 14px; letter-spacing:.5px; }
   .banner-block { margin-bottom: 20px; }
@@ -161,13 +159,19 @@
   .tray-v { color: var(--text); line-height:1.7; }
   .tray-v .x { color: var(--sub); font-family: var(--mono); font-size:11px; }
   .tray-empty { color: var(--sub); }
-  .export-mode .belt > i { animation:none !important; }
+  .export-mode .belt > i { animation:none !important; background-image:none !important; }
+  .export-mode .belt > i.good { background-color:#38d27a !important; }
+  .export-mode .belt > i.mid { background-color:#ffd34d !important; }
+  .export-mode .belt > i.bad { background-color:#ff5b3d !important; }
   .export-mode .fs-tray { display:flex !important; }
   .export-mode .fs-caret { display:none !important; }
+  .export-mode .fs-card { grid-template-columns: 28px 5em 26px 5.2em 1fr 24px; }
+  body.export-mode.hide-fs-name .fs-card { grid-template-columns: 28px 26px 5.2em 1fr 24px; }
 
   .fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40; display:flex; align-items:center; gap:8px; padding: 12px 18px; background: var(--accent); color:#1a1402; border:none; border-radius: 30px; font-family: var(--sans); font-weight:700; font-size: 14px; cursor:pointer; box-shadow: 0 6px 22px rgba(0,0,0,0.45); }
   .fab svg { width:18px; height:18px; }
   .fab.exporting { opacity:.7; pointer-events:none; }
+  .fab.fab-mini { right:auto; left:16px; padding:9px 16px; font-size:12px; }
   .toast { position: fixed; left:50%; bottom: 90px; transform: translateX(-50%) translateY(12px); z-index: 50; background:#23262f; color:#fff; padding: 9px 16px; border-radius: 8px; font-size: 13px; opacity:0; pointer-events:none; transition: opacity .2s, transform .2s; }
   .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
 
@@ -187,12 +191,20 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
   <span>导出 PNG</span>
 </button>
+<button class="fab fab-mini" id="nameToggle" hidden>显示角色名</button>
 <div class="toast" id="toast"></div>
 
 <script>
 const $app = document.getElementById('app');
 const $fab = document.getElementById('exportBtn');
 const $toast = document.getElementById('toast');
+const $nameToggle = document.getElementById('nameToggle');
+const HIDE_NAME_KEY = 'end_gacha_hide_name';
+function applyHideName(on) {
+  document.body.classList.toggle('hide-fs-name', on);
+  $nameToggle.textContent = on ? '显示角色名' : '隐藏角色名';
+}
+applyHideName(localStorage.getItem(HIDE_NAME_KEY) !== '0');
 const DATA_URL = location.pathname.replace(/\/+$/, '') + '/data';
 const WD = ['日','一','二','三','四','五','六'];
 
@@ -450,6 +462,12 @@ async function exportPNG() {
     bindRowToggle();
     $fab.hidden = false;
     $fab.addEventListener('click', exportPNG);
+    $nameToggle.hidden = false;
+    $nameToggle.addEventListener('click', () => {
+      const on = !document.body.classList.contains('hide-fs-name');
+      localStorage.setItem(HIDE_NAME_KEY, on ? '1' : '0');
+      applyHideName(on);
+    });
   } catch (e) {
     console.error(e);
     $app.innerHTML = `<div class="error-card"><h2>加载失败</h2><p>${esc((e && e.message) || '网络异常')}</p></div>`;

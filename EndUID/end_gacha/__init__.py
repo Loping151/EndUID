@@ -181,7 +181,14 @@ async def import_gacha_record(bot: Bot, ev: Event):
 
     if not msg:
         return
-    await bot.send(msg if success else f"导入失败: {msg}")
+    if not success:
+        return await bot.send(f"导入失败: {msg}")
+
+    card = await draw_gacha_card(ev)
+    if isinstance(card, bytes):
+        await bot.send([msg, MessageSegment.image(card)])
+    else:
+        await bot.send(msg)
 
 
 @sv_gacha_record.on_fullmatch(
