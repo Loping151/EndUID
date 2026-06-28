@@ -94,7 +94,11 @@ async def end_gacha_index(token: str):
         return HTMLResponse(_NOT_FOUND_HTML)
     if not _TEMPLATE_PATH.exists():
         return HTMLResponse("<h1>page template missing</h1>", status_code=500)
-    return FileResponse(_TEMPLATE_PATH, media_type="text/html; charset=utf-8")
+    return FileResponse(
+        _TEMPLATE_PATH,
+        media_type="text/html; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/end/gacha/{token}/data")
@@ -104,4 +108,4 @@ async def end_gacha_data(token: str):
     payload = _token_cache.get(token)
     if not isinstance(payload, dict):
         return JSONResponse({"error": "expired"}, status_code=404)
-    return JSONResponse(payload)
+    return JSONResponse(payload, headers={"Cache-Control": "no-store"})

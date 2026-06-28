@@ -89,11 +89,16 @@
   .pool-section.active { display:block; }
   .pool-title { display:none; font-size: 18px; font-weight:700; margin: 4px 0 12px; }
   .pool-stats { display:grid; grid-template-columns: repeat(4, 1fr) auto; gap: 8px; margin-bottom: 16px; }
-  .metric { background: var(--panel); border:1px solid var(--line); padding: 11px 10px; }
-  .metric .v { font-family: var(--num); font-weight:700; font-size: 24px; line-height:1; }
-  .metric .l { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top:5px; letter-spacing:.5px; }
-  .metric.range { grid-column: 1 / -1; display:flex; align-items:center; }
-  .metric.range .l { margin-top:0; font-size: 11px; }
+  .metric { position:relative; background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), var(--panel); border:1px solid var(--line); border-top:2px solid rgba(255,255,255,.16); padding: 12px 12px 11px; clip-path: polygon(0 0, 100% 0, 100% 100%, 11px 100%, 0 calc(100% - 11px)); }
+  .metric:has(.v.gold) { border-top-color: var(--accent); }
+  .metric:has(.v.good) { border-top-color: var(--good); }
+  .metric:has(.v.bad) { border-top-color: var(--bad); }
+  .metric::after { content:""; position:absolute; right:8px; top:9px; width:5px; height:5px; border-top:1px solid rgba(255,255,255,.22); border-right:1px solid rgba(255,255,255,.22); }
+  .metric .v { font-family: var(--num); font-weight:700; font-size: 26px; line-height:1; letter-spacing:.5px; }
+  .metric .l { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top:7px; letter-spacing:1.5px; }
+  .metric.range { grid-column: 1 / -1; display:flex; align-items:center; clip-path:none; border-top:1px solid var(--line); padding:9px 12px; }
+  .metric.range::after { display:none; }
+  .metric.range .l { margin-top:0; font-size: 11px; letter-spacing:.5px; }
   .v.gold { color: var(--accent); }
   .v.good { color: var(--good); } .v.mid { color: var(--mid); } .v.bad { color: var(--bad); }
 
@@ -112,7 +117,7 @@
   .date-chip .wd { font-family: var(--mono); font-size: 11px; color: var(--sub); }
   .date-line { flex:1; height:1px; background: var(--line); }
 
-  .fs-card { display:grid; grid-template-columns: 28px 5em 26px 5.2em 1fr 24px 10px; align-items:center; gap: 7px; background: var(--panel); border:1px solid var(--line); border-left: 3px solid #ff7a4d; padding: 5px 11px; margin-bottom: 4px; }
+  .fs-card { display:grid; grid-template-columns: 28px 5em 32px 5.2em 1fr 24px 10px; align-items:center; gap: 7px; background: var(--panel); border:1px solid var(--line); border-left: 3px solid #ff7a4d; padding: 5px 11px; margin-bottom: 4px; }
   .fs-card.is-up { border-left-color: var(--accent); }
   .fs-icon { width:28px; height:28px; background: var(--panel-2); overflow:hidden; }
   .fs-icon img { width:100%; height:100%; object-fit: cover; }
@@ -121,7 +126,7 @@
   .fs-tagcell { display:flex; align-items:center; }
   .fs-rt { min-width:0; font-family: var(--mono); font-size: 10.5px; color: var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .fs-rt .bn { color: var(--accent-soft); }
-  .tag { font-family: var(--num); font-weight:700; font-size: 10px; letter-spacing:1px; padding: 0 5px; line-height: 1.6; flex-shrink:0; }
+  .tag { display:inline-flex; align-items:center; justify-content:center; font-family: var(--num); font-weight:700; font-size: 10px; letter-spacing:.5px; width:30px; height:17px; line-height:1; flex:none; }
   .tag.up { background: var(--accent); color:#1a1402; }
   .tag.wai { background:#c01e36; color:#fff; }
   .tag.std { background: rgba(255,255,255,0.08); color: var(--sub); }
@@ -139,12 +144,15 @@
   .fs-pity.good { color: var(--good); } .fs-pity.mid { color: var(--accent-soft); } .fs-pity.bad { color: var(--bad); }
 
   body.hide-fs-name .fs-name { display:none; }
-  body.hide-fs-name .fs-card { grid-template-columns: 28px 26px 5.2em 1fr 24px 10px; }
+  body.hide-fs-name .fs-card { grid-template-columns: 28px 32px 5.2em 1fr 24px 10px; }
+  .fs-card.nc { grid-template-columns: 28px 5em 32px 5.2em 1fr 24px; }
+  body.hide-fs-name .fs-card.nc { grid-template-columns: 28px 32px 5.2em 1fr 24px; }
 
   .wsum { font-family: var(--mono); font-size:11px; color: var(--sub); margin: -2px 0 14px; letter-spacing:.5px; }
   .banner-block { margin-bottom: 20px; }
-  .banner-head { display:flex; align-items:baseline; gap:10px; padding:7px 12px; background: var(--panel-2); border-left:3px solid var(--accent); margin-bottom:10px; }
-  .banner-head .bn { font-weight:700; font-size:14.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .banner-head { position:relative; display:flex; align-items:center; gap:9px; padding:9px 14px; background: linear-gradient(90deg, rgba(255,230,0,.12), transparent 55%), var(--panel-2); border-left:3px solid var(--accent); margin-bottom:12px; clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+  .banner-head::before { content:""; width:7px; height:7px; background:var(--accent); transform:rotate(45deg); flex:none; box-shadow:0 0 7px rgba(255,230,0,.55); }
+  .banner-head .bn { font-weight:700; font-size:16px; letter-spacing:.03em; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .banner-head .bm { font-family: var(--mono); font-size:11px; color: var(--sub); }
 
   .fs-card.expandable { cursor:pointer; }
@@ -163,10 +171,10 @@
   .export-mode .belt > i.good { background-color:#38d27a !important; }
   .export-mode .belt > i.mid { background-color:#ffd34d !important; }
   .export-mode .belt > i.bad { background-color:#ff5b3d !important; }
-  .export-mode .fs-tray { display:flex !important; }
+  .export-mode .fs-tray { display:none !important; }
   .export-mode .fs-caret { display:none !important; }
-  .export-mode .fs-card { grid-template-columns: 28px 5em 26px 5.2em 1fr 24px; }
-  body.export-mode.hide-fs-name .fs-card { grid-template-columns: 28px 26px 5.2em 1fr 24px; }
+  .export-mode .fs-card { grid-template-columns: 28px 5em 32px 5.2em 1fr 24px; }
+  body.export-mode.hide-fs-name .fs-card { grid-template-columns: 28px 32px 5.2em 1fr 24px; }
 
   .fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40; display:flex; align-items:center; gap:8px; padding: 12px 18px; background: var(--accent); color:#1a1402; border:none; border-radius: 30px; font-family: var(--sans); font-weight:700; font-size: 14px; cursor:pointer; box-shadow: 0 6px 22px rgba(0,0,0,0.45); }
   .fab svg { width:18px; height:18px; }
@@ -260,9 +268,9 @@ function renderHeader(base, pools, now) {
   ];
   return `
     <header class="header">
-      <div class="brand-line"><span class="dot"></span><span>ENDFIELD · GACHA ARCHIVE</span><span class="sep"></span><span class="stamp">v.终末地</span></div>
+      <div class="brand-line"><span class="dot"></span><span>ENDFIELD · HEADHUNTING ARCHIVE</span><span class="sep"></span><span class="stamp">v.终末地</span></div>
       <h1 class="title-zh">寻访档案</h1>
-      <div class="title-en">CONVENE RECORDS · ENDFIELD LEDGER</div>
+      <div class="title-en">HEADHUNTING RECORDS · ENDFIELD LEDGER</div>
       <div class="user-card">
         <div class="emblem"><div class="pic">${avatarHTML(base.avatar, base.name)}</div></div>
         <div class="user-meta">
@@ -373,9 +381,9 @@ function renderItem(item, pool, showBanner) {
 
   const five = item.five_items || [], four = item.four_items || [];
   const expandable = !isWeapon && (five.length + four.length > 0);
-  const caret = expandable
+  const caret = isWeapon ? '' : (expandable
     ? `<span class="fs-caret"><svg viewBox="0 0 10 10" width="10" height="10"><path d="M1 3 L5 7 L9 3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>`
-    : `<span class="fs-caret" style="visibility:hidden"></span>`;
+    : `<span class="fs-caret" style="visibility:hidden"></span>`);
   let tray = '';
   if (expandable) {
     const rows = [];
@@ -386,7 +394,7 @@ function renderItem(item, pool, showBanner) {
   const tip = esc(`${item.name}${item.banner ? ' · ' + item.banner : ''} · ${dayKey(item.gacha_ts)} ${fmtTime(item.gacha_ts)} · ${n}抽`);
   return `
     <div class="fs-pkg">
-      <div class="fs-card ${item.is_up?'is-up':''} ${expandable?'expandable':''}" title="${tip}">
+      <div class="fs-card ${item.is_up?'is-up':''} ${expandable?'expandable':''} ${isWeapon?'nc':''}" title="${tip}">
         <div class="fs-icon">${avatarHTML(item.avatar, item.name)}</div>
         <span class="fs-name">${esc(item.name)}</span>
         <span class="fs-tagcell">${tag}</span>

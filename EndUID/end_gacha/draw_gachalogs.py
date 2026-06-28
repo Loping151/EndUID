@@ -470,9 +470,9 @@ def _build_web_pools(pool_data: dict) -> list:
         for pn in weapon_keys:
             recs = pool_data[pn]
             st = _calc_pool_stats(pn, recs)
-            earliest = min((_gts_int(r.get("gachaTs")) for r in recs), default=0)
-            w.append((earliest, pn.replace("武器寻访-", ""), st))
-        w.sort(key=lambda x: x[0])
+            latest = max((_gts_int(r.get("gachaTs")) for r in recs), default=0)
+            w.append((latest, pn.replace("武器寻访-", ""), st))
+        w.sort(key=lambda x: x[0], reverse=True)
         banners = [
             {
                 "name": short,
