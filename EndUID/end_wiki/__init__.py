@@ -180,7 +180,8 @@ async def weapon_list_handler(bot: Bot, ev: Event):
 @sv_wiki.on_regex(
     rf"^(?P<name>{CHAR_NAME_PATTERN})(?:明信片|潜能明信片)$",
     block=True,
-    to_ai="""查询终末地某角色的明信片 / 潜能明信片图像。
+    to_ai="""查询终末地某角色的潜能明信片，以及塔卫二记事社内容
+（干员叙事 / 干员战斗演示 / 上线贺图 / 干员影像等图文）。
 
 当用户问「<角色>明信片 / <角色>潜能明信片」时调用。
 
@@ -205,7 +206,9 @@ async def postcard_handler(bot: Bot, ev: Event):
     char_wiki = await get_char_wiki(real_name)
     if not char_wiki and real_name != name:
         char_wiki = await get_char_wiki(name)
-    if not char_wiki or not char_wiki.postcards:
+    if not char_wiki or (
+        not char_wiki.postcards and not char_wiki.chronicles
+    ):
         return
 
     msgs: list = []
@@ -215,6 +218,15 @@ async def postcard_handler(bot: Bot, ev: Event):
             label += f"：{pc.description}"
         msgs.append(label)
         msgs.append(pc.image_url)
+
+    for tab in char_wiki.chronicles:
+        for i, img in enumerate(tab.images):
+            cap = img.caption.strip()
+            if i == 0:
+                msgs.append(f"{tab.title}：{cap}" if cap else tab.title)
+            elif cap:
+                msgs.append(cap)
+            msgs.append(img.image_url)
 
     await bot.send(msgs)
 

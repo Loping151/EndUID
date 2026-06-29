@@ -6,6 +6,44 @@
 <title>终末地 · 寻访档案</title>
 <link rel="stylesheet" href="https://fonts.loli.net/css2?family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- GSAP（异步多源；不隐藏内容，导出前强制收尾，保证 html2canvas 不受影响） -->
+<script>
+(function () {
+  var GSAP = [
+    'https://lib.baomitu.com/gsap/3.13.0/gsap.min.js',
+    'https://cdn.staticfile.org/gsap/3.13.0/gsap.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js'
+  ];
+  var ST = [
+    'https://lib.baomitu.com/gsap/3.13.0/ScrollTrigger.min.js',
+    'https://cdn.staticfile.org/gsap/3.13.0/ScrollTrigger.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js'
+  ];
+  var done = false;
+  function fin() { if (done) return; done = true; window.dispatchEvent(new Event('gsapready')); }
+  function chain(urls, test, cb) {
+    var i = 0, t;
+    (function go() {
+      if (test()) { cb(true); return; }
+      if (i >= urls.length) { cb(false); return; }
+      var s = document.createElement('script');
+      s.src = urls[i++];
+      s.onload = function () { test() ? cb(true) : go(); };
+      s.onerror = go;
+      document.head.appendChild(s);
+      clearTimeout(t); t = setTimeout(go, 2000);
+    })();
+  }
+  chain(GSAP, function () { return !!window.gsap; }, function (ok) {
+    if (!ok) { fin(); return; }
+    chain(ST, function () { return !!window.ScrollTrigger; }, function (okST) {
+      if (okST && window.gsap && gsap.registerPlugin) { try { gsap.registerPlugin(ScrollTrigger); } catch (e) {} }
+      fin();
+    });
+  });
+  setTimeout(fin, 9000);
+})();
+</script>
 <style>
   :root {
     --bg: #0c0e13;
@@ -208,9 +246,13 @@ const $fab = document.getElementById('exportBtn');
 const $toast = document.getElementById('toast');
 const $nameToggle = document.getElementById('nameToggle');
 const HIDE_NAME_KEY = 'end_gacha_hide_name';
+function nameNoun() {
+  const at = document.querySelector('.tab.active');
+  return (at && at.dataset.weapon === '1') ? '武器名' : '角色名';
+}
 function applyHideName(on) {
   document.body.classList.toggle('hide-fs-name', on);
-  $nameToggle.textContent = on ? '显示角色名' : '隐藏角色名';
+  $nameToggle.textContent = (on ? '显示' : '隐藏') + nameNoun();
 }
 applyHideName(localStorage.getItem(HIDE_NAME_KEY) !== '0');
 const DATA_URL = location.pathname.replace(/\/+$/, '') + '/data';
@@ -292,7 +334,7 @@ function renderTabs(pools) {
   const list = pools.length ? pools : [];
   return `
     <nav class="tab-strip"><div class="inner">
-      ${list.map((p,i) => `<button class="tab ${i===0?'active':''}" data-target="pool-${i}">${esc(p.pool_name)}${p.six_star_count?`<span class="badge">${esc(p.six_star_count)}</span>`:''}</button>`).join('')}
+      ${list.map((p,i) => `<button class="tab ${i===0?'active':''}" data-target="pool-${i}" data-weapon="${(p.banners || (p.pool_name && p.pool_name.indexOf('武器')>=0)) ? '1' : '0'}">${esc(p.pool_name)}${p.six_star_count?`<span class="badge">${esc(p.six_star_count)}</span>`:''}</button>`).join('')}
     </div></nav>
     <main id="poolsRoot">
       ${list.map((p,i) => renderPool(p, i, i===0)).join('')}
@@ -421,12 +463,23 @@ function bindTabs() {
       const id = btn.dataset.target;
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.pool-section').forEach(s => s.classList.toggle('active', s.id === id));
+      applyHideName(document.body.classList.contains('hide-fs-name'));
+      animatePool(document.getElementById(id));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 }
 
 async function exportPNG() {
+  if (/MicroMessenger|wxwork|\bQQ\/\d|Weibo|DingTalk|AlipayClient|aweme|BytedanceWebview|baiduboxapp|xhsdiscover|KsWebView|; wv\)/i.test(navigator.userAgent || '')) {
+    showToast('当前内置浏览器可能无法保存图片，请点右上角「···」选择「在浏览器打开」后再导出 PNG', 6000);
+    return;
+  }
+  if (window.gsap) {
+    if (window.ScrollTrigger) ScrollTrigger.getAll().forEach(function (st) { st.kill(); });
+    gsap.killTweensOf('#app, #app *');
+    gsap.set(gsap.utils.toArray('#app .header, #app .tab, #app .pool-section .pool-stats, #app .pool-section .date-head, #app .pool-section .fs-pkg, #app .pool-section .empty-pool, #app .pool-section .wsum, #app .pool-section .banner-head'), { clearProps: 'transform,opacity,visibility' });
+  }
   if (!window.html2canvas) { showToast('导出库未加载，请稍后再试'); return; }
   $fab.classList.add('exporting');
   $fab.querySelector('span').textContent = '生成中…';
@@ -457,6 +510,80 @@ async function exportPNG() {
   }
 }
 
+var __gachaST = [];
+var __items = [];
+var __entered = [];
+var __revealIdx = 0;
+var __pumping = false;
+var __pumpCall = null;
+function curGap() {
+  var g = 0.05;
+  var el = __items[__revealIdx];
+  if (el) {
+    var vh = window.innerHeight || document.documentElement.clientHeight || 1;
+    var t = el.getBoundingClientRect().top / vh;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    g = 0.02 + 0.13 * t * t;
+  }
+  return g;
+}
+function gachaItems(section) {
+  if (!section) return [];
+  return gsap.utils.toArray(section.querySelectorAll('.pool-stats, .date-head, .fs-pkg, .empty-pool, .wsum, .banner-head'));
+}
+function pumpReveal() {
+  if (__pumping) return;
+  // 已滚出视口顶部的条目: 直接显示, 让逐条动画追到视口顶部上方一点再继续
+  var skipTo = __revealIdx;
+  while (skipTo < __items.length && __items[skipTo].getBoundingClientRect().bottom < -80) skipTo++;
+  if (skipTo > __revealIdx) {
+    gsap.set(__items.slice(__revealIdx, skipTo), { autoAlpha: 1, clearProps: 'transform,opacity,visibility' });
+    __revealIdx = skipTo;
+  }
+  if (__revealIdx >= __items.length || !__entered[__revealIdx]) return;
+  __pumping = true;
+  var el = __items[__revealIdx++];
+  gsap.to(el, { autoAlpha: 1, y: 0, duration: 0.5, ease: 'power2.out', clearProps: 'transform,opacity,visibility' });
+  __pumpCall = gsap.delayedCall(curGap(), function () { __pumping = false; pumpReveal(); });
+}
+function animatePool(section) {
+  if (!window.gsap || !section) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var items = gachaItems(section);
+  if (!items.length) return;
+  __gachaST.forEach(function (st) { st.kill(); });
+  __gachaST = [];
+  if (__pumpCall) { __pumpCall.kill(); __pumpCall = null; }
+  __items = items; __entered = []; __revealIdx = 0; __pumping = false;
+  if (window.ScrollTrigger) {
+    gsap.set(items, { autoAlpha: 0, y: 24 });
+    __gachaST = ScrollTrigger.batch(items, {
+      start: 'top bottom-=30',
+      once: true,
+      onEnter: function (batch) {
+        for (var b = 0; b < batch.length; b++) {
+          var i = items.indexOf(batch[b]);
+          if (i >= 0) __entered[i] = true;
+        }
+        pumpReveal();
+      }
+    });
+    ScrollTrigger.refresh();
+  } else {
+    gsap.from(items, { autoAlpha: 0, y: 18, stagger: 0.05, duration: 0.5, ease: 'power2.out', clearProps: 'transform,opacity,visibility' });
+  }
+}
+function playGachaIntro() {
+  if (!window.gsap) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var header = document.querySelector('.header');
+  var tabs = gsap.utils.toArray('.tab-strip .tab');
+  var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  if (header) tl.from(header, { autoAlpha: 0, y: 18, duration: 0.55, clearProps: 'transform,opacity,visibility' });
+  if (tabs.length) tl.from(tabs, { autoAlpha: 0, y: 10, stagger: 0.03, duration: 0.4, clearProps: 'transform,opacity,visibility' }, '-=0.3');
+  animatePool(document.querySelector('.pool-section.active'));
+}
+
 (async function boot() {
   try {
     const r = await fetch(DATA_URL, { headers: { 'Accept': 'application/json' } });
@@ -468,6 +595,9 @@ async function exportPNG() {
     $app.innerHTML = renderHeader(data.base || {}, data.pools || [], data.now) + renderTabs(data.pools || []);
     bindTabs();
     bindRowToggle();
+    applyHideName(document.body.classList.contains('hide-fs-name'));
+    if (window.gsap) playGachaIntro();
+    else window.addEventListener('gsapready', playGachaIntro, { once: true });
     $fab.hidden = false;
     $fab.addEventListener('click', exportPNG);
     $nameToggle.hidden = false;

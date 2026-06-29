@@ -1,6 +1,7 @@
 """Wiki data fetching — backed by Skland Wiki catalog API."""
 import json
 import time
+import random
 
 import aiofiles
 
@@ -290,3 +291,56 @@ async def get_weapon_wiki(
         logger.warning(f"[ENDUID·百科] Cache save failed {weapon_name}: {e}")
 
     return wiki
+
+
+LAUNCH_ART_TAB = "干员上线贺图"
+
+
+def _bg_from_wiki(wiki: CharWiki) -> str:
+    """上线贺图优先, 无则明信片; 都没有返回空串。"""
+    for tab in wiki.chronicles:
+        if tab.title == LAUNCH_ART_TAB and tab.images:
+            return random.choice(tab.images).image_url
+    if wiki.postcards:
+        return random.choice(wiki.postcards).image_url
+    return ""
+
+
+async def pick_random_background(max_attempts: int = 3) -> str:
+    """随机角色的上线贺图(优先)或明信片图作背景。
+
+    先从已落盘的角色缓存里选(零 API, 不校验过期, 图链长期有效);
+    磁盘凑不出时才随机在线拉取, 连续失败 max_attempts 次返回空串。
+    """
+    cached_files = list(WIKI_CHAR_CACHE.glob("*.json"))
+    random.shuffle(cached_files)
+    for path in cached_files:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            url = _bg_from_wiki(CharWiki.model_validate(data))
+        except Exception:
+            continue
+        if url:
+            return url
+
+    id_map = await _ensure_id_map()
+    names = [
+        meta.get("name", "")
+        for meta in id_map.get("items", {}).values()
+        if meta.get("sub_type") == "干员" and meta.get("name")
+    ]
+    random.shuffle(names)
+
+    attempts = 0
+    for name in names:
+        if attempts >= max_attempts:
+            break
+        wiki = await get_char_wiki(name)
+        if not wiki:
+            attempts += 1
+            continue
+        url = _bg_from_wiki(wiki)
+        if url:
+            return url
+        attempts += 1
+    return ""

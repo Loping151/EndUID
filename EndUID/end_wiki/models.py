@@ -98,6 +98,16 @@ class Postcard(BaseModel):
     description: str = ""
 
 
+class ChronicleImage(BaseModel):
+    image_url: str
+    caption: str = ""
+
+
+class ChronicleTab(BaseModel):
+    title: str
+    images: list[ChronicleImage] = []
+
+
 class CharWiki(BaseModel):
     name: str
     rarity: int
@@ -116,6 +126,7 @@ class CharWiki(BaseModel):
     base_skills: list[BaseSkill]
     potentials: list[Potential]
     postcards: list[Postcard] = []
+    chronicles: list[ChronicleTab] = []
     birthday: str = ""
     fetch_time: float = 0
     wiki_item_id: int = 0

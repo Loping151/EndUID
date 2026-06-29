@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import time
+import base64
 import asyncio
 import secrets
+from io import BytesIO
 from pathlib import Path
 
 from async_timeout import timeout
@@ -21,9 +23,11 @@ from gsuid_core.web_app import app
 from gsuid_core.utils.cookie_manager.qrlogin import get_qrcode_base64
 
 from ..end_config import EndConfig
+from ..end_wiki.fetch import pick_random_background
+from ..utils.image import pic_download_from_url
 from ..utils.api.requests import end_api
 from ..utils.cache import TimedCache
-from ..utils.path import MAIN_PATH, TEMP_PATH
+from ..utils.path import MAIN_PATH, TEMP_PATH, WIKI_IMG_CACHE
 
 GAME_TITLE = "「终末地」"
 LOGIN_FLOW = "end_phone"
@@ -39,6 +43,26 @@ _templates = Environment(loader=FileSystemLoader(str(TEMP_PATH)), autoescape=Tru
 
 def get_token() -> str:
     return secrets.token_urlsafe(16)
+
+
+async def build_login_bg() -> str:
+    """选一张角色上线贺图/明信片, 下载后转成内联 base64 data URI; 失败返回空串。"""
+    url = await pick_random_background()
+    if not url:
+        return ""
+    try:
+        img = await pic_download_from_url(WIKI_IMG_CACHE, url)
+        img = img.convert("RGB")
+        if img.width > 1280:
+            img = img.resize((1280, round(img.height * 1280 / img.width)))
+        buf = BytesIO()
+        img.save(buf, format="WEBP", quality=70)
+        return "data:image/webp;base64," + base64.b64encode(
+            buf.getvalue()
+        ).decode("utf-8")
+    except Exception as e:
+        logger.warning(f"[ENDUID·网页登录] 背景图处理失败: {e}")
+        return ""
 
 
 def evict_user_login(user_id: str) -> int:
@@ -98,6 +122,8 @@ async def phone_web_login_entry(bot: Bot, ev: Event):
     evict_user_login(ev.user_id)
     user_token = get_token()
 
+    bg = await build_login_bg()
+
     cache.set(
         user_token,
         {
@@ -107,6 +133,7 @@ async def phone_web_login_entry(bot: Bot, ev: Event):
             "bot_id": ev.bot_id,
             "bot_self_id": ev.bot_self_id,
             "group_id": ev.group_id,
+            "bg": bg,
         },
     )
 
@@ -197,8 +224,11 @@ async def end_login_index(auth: str):
     if not isinstance(state, dict) or state.get("flow") != LOGIN_FLOW:
         template = _templates.get_template("end_login.html")
         return HTMLResponse(
-            template.render(server_url=url, auth="", userId="", expired=True)
+            template.render(
+                server_url=url, auth="", userId="", expired=True, bg_url=""
+            )
         )
+
     template = _templates.get_template("end_login.html")
     return HTMLResponse(
         template.render(
@@ -206,6 +236,7 @@ async def end_login_index(auth: str):
             auth=auth,
             userId=state.get("user_id", ""),
             expired=False,
+            bg_url=state.get("bg", ""),
         )
     )
 

@@ -33,7 +33,7 @@ git clone https://github.com/Loping151/EndUID
 
 登录方式：
 
-可以认为仅支持森空岛扫码登录。因为我不管，都给我去下载森空岛。
+支持森空岛扫码登录。链接登陆需自行配置网络。
 
 催更/反馈/Bug/建议：群号 885617919（注意入群问题的答案仓库是 [XutheringWavesUID](https://github.com/Loping151/XutheringWavesUID)），共用一个，不想再建群了。Issue亦会看。如果森空岛出了新的可查询内容，并且你希望通过EndUID查看，请告诉我。
 
@@ -47,4 +47,4 @@ git clone https://github.com/Loping151/EndUID
 ## 致谢
 - [arknights-plugin](https://github.com/gxy12345/arknights-plugin)
 - [endfield-gacha](https://github.com/bhaoo/endfield-gacha) — Endfield 抽卡记录 API 参考
-- Potentially 合作的攻略组。？
+- Potentially 攻略组

@@ -4,6 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>终末地 · 登录</title>
+  <!-- GSAP -->
+  <script>
+    (function () {
+      var d = document.documentElement;
+      d.classList.add('gsap-anim');
+      var srcs = [
+        'https://lib.baomitu.com/gsap/3.13.0/gsap.min.js',
+        'https://cdn.staticfile.org/gsap/3.13.0/gsap.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js'
+      ];
+      var done = false, i = 0, timer;
+      function reveal() { if (done) return; done = true; clearTimeout(timer); d.classList.remove('gsap-anim'); }
+      function ready() { if (done) return; done = true; clearTimeout(timer); window.dispatchEvent(new Event('gsapready')); }
+      function next() {
+        if (done) return;
+        if (i >= srcs.length) { reveal(); return; }
+        var s = document.createElement('script');
+        s.src = srcs[i++];
+        s.onload = function () { window.gsap ? ready() : next(); };
+        s.onerror = next;
+        document.head.appendChild(s);
+        clearTimeout(timer);
+        timer = setTimeout(next, 2000);
+      }
+      next();
+      setTimeout(reveal, 8000);
+    })();
+  </script>
   <style>
     :root {
       --c-bg: #0f1014;
@@ -23,8 +51,18 @@
       display: flex; align-items: center; justify-content: center;
       padding: 18px;
     }
+    .bg {
+      position: fixed; inset: 0; z-index: -1;
+      background-size: cover; background-position: center;
+      will-change: transform;
+    }
+    .bg::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(15,16,20,0.5), rgba(15,16,20,0.8));
+    }
     .card {
       position: relative;
+      --bar: 1;
       width: 100%; max-width: 340px;
       background: var(--c-surface);
       border: 1px solid var(--c-line);
@@ -34,6 +72,7 @@
     .card::before {
       content: ""; position: absolute; top: 0; left: 0;
       width: 4px; height: 100%; background: var(--c-accent);
+      transform-origin: top; transform: scaleY(var(--bar));
     }
     .eyebrow {
       font-family: 'JetBrains Mono', monospace; font-size: 11px;
@@ -71,9 +110,23 @@
     .expired { text-align: center; padding: 8px 0 4px; }
     .expired h2 { color: var(--c-accent); font-size: 18px; margin-bottom: 8px; }
     .expired p { color: var(--c-sub); font-size: 13px; line-height: 1.7; }
+
+    .gsap-anim .card { visibility: hidden; }
+
+    #ehToast {
+      position: fixed; left: 50%; top: 20px;
+      z-index: 3000; max-width: 86%; padding: 11px 18px;
+      border-radius: 8px; font-size: 14px; font-weight: 600;
+      line-height: 1.4; text-align: center;
+      color: #0f1014; background: var(--c-accent);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+      opacity: 0; visibility: hidden; pointer-events: none;
+    }
+    #ehToast.is-error { color: #fff; background: #c0392b; }
   </style>
 </head>
 <body>
+  {% if bg_url %}<div class="bg" style="background-image:url('{{ bg_url }}')"></div>{% endif %}
   <div class="card">
     <div class="eyebrow">// <b>ENDFIELD</b> 终末地登录</div>
     <h1>欢迎登录</h1>
@@ -171,6 +224,65 @@
         refresh();
       });
     }
+  </script>
+
+  <script>
+    // GSAP 动效层
+    function ehInit() {
+      if (!window.gsap) return;
+      var card = document.querySelector('.card');
+      if (!card) return;
+      var REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      var toast = document.createElement('div');
+      toast.id = 'ehToast';
+      document.body.appendChild(toast);
+      gsap.set(toast, { xPercent: -50 });
+      var toastTl;
+      function ehToast(msg) {
+        var s = String(msg == null ? '' : msg);
+        var isErr = /失败|出错|错误|不存在|超时|稍后|异常/.test(s);
+        toast.textContent = s;
+        toast.className = isErr ? 'is-error' : '';
+        if (toastTl) toastTl.kill();
+        gsap.killTweensOf(toast);
+        toastTl = gsap.timeline()
+          .fromTo(toast, { autoAlpha: 0, y: REDUCE ? 0 : -14 },
+            { autoAlpha: 1, y: 0, duration: REDUCE ? 0.2 : 0.4, ease: 'back.out(1.7)' })
+          .to(toast, { autoAlpha: 0, y: REDUCE ? 0 : -10, duration: 0.4, ease: 'power2.in' }, '+=2.6');
+        if (isErr) shake();
+      }
+      window.alert = function (m) { ehToast(m); };
+
+      var shaking = false;
+      function shake() {
+        if (REDUCE || shaking) return;
+        shaking = true;
+        gsap.to(card, {
+          keyframes: [{ x: -8 }, { x: 7 }, { x: -6 }, { x: 4 }, { x: 0 }],
+          duration: 0.45, ease: 'power1.inOut',
+          onComplete: function () { shaking = false; }
+        });
+      }
+
+      gsap.matchMedia().add({
+        full: '(prefers-reduced-motion: no-preference)',
+        reduce: '(prefers-reduced-motion: reduce)'
+      }, function (ctx) {
+        if (ctx.conditions.reduce) { gsap.set(card, { autoAlpha: 1 }); return; }
+        var bg = document.querySelector('.bg');
+        var bgTw = bg && gsap.fromTo(bg, { scale: 1 },
+          { scale: 1.13, duration: 16, ease: 'sine.inOut', repeat: -1, yoyo: true });
+        var bits = gsap.utils.toArray('.card .eyebrow, .card h1, .card .field, .card .uid-note, .card #loginBtn, .card .tip, .card .expired');
+        var tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+        tl.from(card, { autoAlpha: 0, y: 26, scale: 0.97, duration: 0.7 })
+          .from(card, { '--bar': 0, duration: 0.55, ease: 'power2.out' }, '-=0.4')
+          .from(bits, { autoAlpha: 0, y: 14, stagger: 0.07, duration: 0.5 }, '-=0.35');
+        return function () { tl.kill(); if (bgTw) bgTw.kill(); };
+      });
+    }
+    if (window.gsap) ehInit();
+    else window.addEventListener('gsapready', ehInit, { once: true });
   </script>
 </body>
 </html>

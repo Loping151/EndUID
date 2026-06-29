@@ -12,6 +12,8 @@ from .constants import (
 from .models import (
     BaseSkill,
     CharWiki,
+    ChronicleImage,
+    ChronicleTab,
     MaterialEntry,
     Postcard,
     Potential,
@@ -339,6 +341,56 @@ def _parse_postcards(
     return postcards
 
 
+def _collect_images(doc: dict, block_id: str) -> list[ChronicleImage]:
+    """Collect images (with caption) from a block, recursing into tables."""
+    block = doc.get("blockMap", {}).get(block_id, {})
+    kind = block.get("kind")
+    images: list[ChronicleImage] = []
+    if kind == "image":
+        img = block.get("image", {})
+        url = img.get("url", "")
+        if url:
+            images.append(
+                ChronicleImage(
+                    image_url=url, caption=img.get("description", "")
+                )
+            )
+    elif kind == "table":
+        table = block.get("table", {})
+        cell_map = table.get("cellMap", {})
+        for row_id in table.get("rowIds", []):
+            for col_id in table.get("columnIds", []):
+                cell = cell_map.get(f"{row_id}_{col_id}", {})
+                for child_id in cell.get("childIds", []):
+                    images.extend(_collect_images(doc, child_id))
+    return images
+
+
+def _parse_chronicles(
+    widget: dict, document_map: dict
+) -> list[ChronicleTab]:
+    """Parse 塔卫二记事社 widget into ChronicleTab list (auto over tabList)."""
+    tabs: list[ChronicleTab] = []
+    tab_data_map = widget.get("tabDataMap", {})
+
+    for tab in widget.get("tabList", []):
+        tab_id = tab.get("tabId", "")
+        title = tab.get("title", "")
+        content_doc_id = tab_data_map.get(tab_id, {}).get("content", "")
+        if not content_doc_id or content_doc_id not in document_map:
+            continue
+
+        doc = document_map[content_doc_id]
+        images: list[ChronicleImage] = []
+        for block_id in doc.get("blockIds", []):
+            images.extend(_collect_images(doc, block_id))
+
+        if images:
+            tabs.append(ChronicleTab(title=title, images=images))
+
+    return tabs
+
+
 def _resolve_tag_value(
     catalog: dict | None,
     tag_value: str,
@@ -433,6 +485,12 @@ def parse_skland_char_wiki(
         )
         postcards = _parse_postcards(postcard_widget, document_map)
 
+        # Chronicles (塔卫二记事社)
+        _, chronicle_widget = _find_widget(
+            chapter_group, widget_common_map, "塔卫二记事社"
+        )
+        chronicles = _parse_chronicles(chronicle_widget, document_map)
+
         # Illustration
         illustration_url = extra_info.get("illustration", "")
 
@@ -454,6 +512,7 @@ def parse_skland_char_wiki(
             base_skills=base_skills,
             potentials=potentials,
             postcards=postcards,
+            chronicles=chronicles,
             birthday=birthday,
             wiki_item_id=int(item.get("itemId", 0)),
             illustration_url=illustration_url,
