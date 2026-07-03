@@ -13,7 +13,7 @@ from gsuid_core.subscribe import gs_subscribe
 
 from .ann_card import ann_list_card, ann_detail_card
 from ..utils.api.requests import end_api
-from ..utils.database.models import EndSubscribe
+from ..utils.database.models import EndSubscribe, EndGroupActivity, EndUserActivity, ANN_PUSH_GUARD
 from ..end_config import EndConfig
 from ..utils.path import ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH, BAKE_PATH
 from .utils.ann_config import get_ann_new_ids, set_ann_new_ids
@@ -157,6 +157,23 @@ async def check_end_ann_state():
 
     logger.info(f"「终末地公告」 更新公告id: {new_ann_need_send}")
 
+    active_days = EndConfig.get_config("AnnActiveGroupDays").data
+    if active_days:
+        try:
+            active_gids = await EndGroupActivity.get_active_group_ids(active_days)
+            active_uids = await EndUserActivity.get_active_user_ids(active_days)
+            kept = [
+                s for s in datas
+                if (s.group_id and s.group_id in active_gids)
+                or (not s.group_id and s.user_id in active_uids)
+            ]
+            skipped = len(datas) - len(kept)
+            if skipped:
+                logger.info(f"「终末地公告」 跳过 {skipped} 个不活跃订阅")
+            datas = kept
+        except Exception as e:
+            logger.warning(f"「终末地公告」 活跃过滤失败, 不过滤: {e}")
+
     # 推送成功（或被 is_check_time 跳过）才加入已处理集合，避免推送失败永久丢消息
     processed_ids: list = list(ids)
     for ann_id in new_ann_need_send:
@@ -172,7 +189,11 @@ async def check_end_ann_state():
 
         try:
             for subscribe in datas:
-                await subscribe.send(img)
+                token = ANN_PUSH_GUARD.set(True)
+                try:
+                    await subscribe.send(img)
+                finally:
+                    ANN_PUSH_GUARD.reset(token)
                 await asyncio.sleep(random.uniform(1, 3))
             processed_ids.append(ann_id)
         except Exception as e:

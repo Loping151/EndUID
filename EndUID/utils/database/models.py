@@ -1,6 +1,7 @@
 """EndUID 数据库模型"""
 import time
-from typing import List, Optional, Type
+from typing import List, Optional, Set, Type
+from contextvars import ContextVar
 
 from sqlmodel import Field, select, col
 from datetime import datetime
@@ -683,6 +684,90 @@ class EndUserActivity(BaseBotIDModel, table=True):
         )
         session.add(new_record)
         return True
+
+    @classmethod
+    @with_session
+    async def get_active_user_ids(
+        cls: Type["EndUserActivity"],
+        session: AsyncSession,
+        active_days: int,
+    ) -> Set[str]:
+        """一次性取出所有活跃用户的 user_id 集合"""
+        threshold_time = int(time.time()) - active_days * 24 * 60 * 60
+        sql = select(cls.user_id).where(
+            and_(
+                cls.last_active_time.is_not(None),
+                cls.last_active_time >= threshold_time,
+            )
+        )
+        result = await session.execute(sql)
+        return {uid for uid in result.scalars().all() if uid}
+
+
+# 公告推送期间置位, 群活跃 hook 据此跳过推送自身
+ANN_PUSH_GUARD: ContextVar[bool] = ContextVar("end_ann_push_guard", default=False)
+
+
+class EndGroupActivity(BaseBotIDModel, table=True):
+    """群活跃度记录表: 群最后有人使用本插件的时间"""
+
+    __tablename__ = "EndGroupActivity"
+    __table_args__ = {"extend_existing": True}
+
+    group_id: str = Field(default="", title="群组ID")
+    bot_self_id: str = Field(default="", title="Bot Self ID")
+    last_active_time: Optional[int] = Field(default=None, title="最后活跃时间（秒）")
+
+    @classmethod
+    @with_session
+    async def update_group_activity(
+        cls: Type["EndGroupActivity"],
+        session: AsyncSession,
+        group_id: str,
+        bot_id: str,
+        bot_self_id: str,
+    ) -> bool:
+        current_time = int(time.time())
+        sql = select(cls).where(
+            and_(
+                cls.group_id == group_id,
+                cls.bot_id == bot_id,
+                cls.bot_self_id == bot_self_id,
+            )
+        )
+        result = await session.execute(sql)
+        existing = result.scalars().first()
+        if existing:
+            existing.last_active_time = current_time
+            session.add(existing)
+        else:
+            session.add(
+                cls(
+                    group_id=group_id,
+                    bot_id=bot_id,
+                    bot_self_id=bot_self_id,
+                    last_active_time=current_time,
+                )
+            )
+        return True
+
+    @classmethod
+    @with_session
+    async def get_active_group_ids(
+        cls: Type["EndGroupActivity"],
+        session: AsyncSession,
+        active_days: int,
+    ) -> Set[str]:
+        """一次性取出所有活跃群的 group_id 集合"""
+        threshold_time = int(time.time()) - active_days * 24 * 60 * 60
+        sql = select(cls.group_id).where(
+            and_(
+                cls.last_active_time.is_not(None),
+                cls.last_active_time >= threshold_time,
+            )
+        )
+        result = await session.execute(sql)
+        return {gid for gid in result.scalars().all() if gid}
 
 
 class EndSignRecord(BaseModel, table=True):

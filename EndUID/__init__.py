@@ -9,8 +9,14 @@ from .utils.bot_send_hook import (
     install_bot_hooks,
     register_target_send_hook,
     register_user_activity_hook,
+    register_group_activity_hook,
 )
-from .utils.database.models import EndSubscribe, EndUserActivity
+from .utils.database.models import (
+    EndSubscribe,
+    EndUserActivity,
+    EndGroupActivity,
+    ANN_PUSH_GUARD,
+)
 from .utils.plugin_checker import is_from_end_plugin
 
 
@@ -46,19 +52,28 @@ _migrate_alias_map()
 
 # ===== 活跃度批量写入缓冲 =====
 _activity_buffer: dict[str, tuple[str, str, str]] = {}
+_group_activity_buffer: dict[str, tuple[str, str, str]] = {}
 _FLUSH_INTERVAL = 60
 
 
 async def _flush_activity_buffer():
-    if not _activity_buffer:
-        return
-    pending = dict(_activity_buffer)
-    _activity_buffer.clear()
-    for key, (user_id, bot_id, bot_self_id) in pending.items():
-        try:
-            await EndUserActivity.update_user_activity(user_id, bot_id, bot_self_id)
-        except Exception as e:
-            logger.warning(f"[ENDUID·插件] 批量活跃度写入失败: {e}")
+    if _activity_buffer:
+        pending = dict(_activity_buffer)
+        _activity_buffer.clear()
+        for key, (user_id, bot_id, bot_self_id) in pending.items():
+            try:
+                await EndUserActivity.update_user_activity(user_id, bot_id, bot_self_id)
+            except Exception as e:
+                logger.warning(f"[ENDUID·插件] 批量活跃度写入失败: {e}")
+
+    if _group_activity_buffer:
+        group_pending = dict(_group_activity_buffer)
+        _group_activity_buffer.clear()
+        for key, (group_id, bot_id, bot_self_id) in group_pending.items():
+            try:
+                await EndGroupActivity.update_group_activity(group_id, bot_id, bot_self_id)
+            except Exception as e:
+                logger.warning(f"[ENDUID·插件] 批量群活跃度写入失败: {e}")
 
 
 _shutdown_event = asyncio.Event()
@@ -112,6 +127,8 @@ async def end_bot_check_hook(group_id: str, bot_id: str, bot_self_id: str):
 
 async def end_user_activity_hook(user_id: str, bot_id: str, bot_self_id: str):
     """用户活跃度 Hook - 写入缓冲区，定时批量刷写"""
+    if ANN_PUSH_GUARD.get():
+        return
     if not is_from_end_plugin():
         return
     if not user_id:
@@ -119,8 +136,19 @@ async def end_user_activity_hook(user_id: str, bot_id: str, bot_self_id: str):
     _activity_buffer[f"{user_id}:{bot_id}:{bot_self_id}"] = (user_id, bot_id, bot_self_id)
 
 
+async def end_group_activity_hook(group_id: str, bot_id: str, bot_self_id: str):
+    if ANN_PUSH_GUARD.get():
+        return
+    if not is_from_end_plugin():
+        return
+    if not group_id:
+        return
+    _group_activity_buffer[f"{group_id}:{bot_id}:{bot_self_id}"] = (group_id, bot_id, bot_self_id)
+
+
 # 注册 Hook
 register_target_send_hook(end_bot_check_hook)
 register_user_activity_hook(end_user_activity_hook)
+register_group_activity_hook(end_group_activity_hook)
 
 logger.success("[ENDUID·插件] Hook 已注册")

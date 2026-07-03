@@ -131,6 +131,12 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         15,
         max_value=60,
     ),
+    "AnnActiveGroupDays": GsIntConfig(
+        "公告推送活跃群认定天数",
+        "群在此天数内有人使用本插件才推送公告，0 表示不过滤",
+        42,
+        max_value=10000,
+    ),
 
     # ==================== 抽卡配置 ====================
     "GachaToolUrl": GsStrConfig(

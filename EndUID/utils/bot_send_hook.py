@@ -18,6 +18,7 @@ class PluginHookManager:
         self.plugin_name = plugin_name
         self.target_send_hooks: list[Callable] = []
         self.user_activity_hooks: list[Callable] = []
+        self.group_activity_hooks: list[Callable] = []
 
     def register_target_send_hook(self, func: Callable):
         """注册 target_send 方法 hook"""
@@ -50,6 +51,22 @@ class PluginHookManager:
                 f"[ENDUID·BotHook] 注册 user_activity hook: {func.__name__}"
             )
         self.user_activity_hooks.append(func)
+
+    def register_group_activity_hook(self, func: Callable):
+        """注册群活跃度 hook"""
+        existing = [h for h in self.group_activity_hooks if h.__name__ == func.__name__]
+        if existing:
+            self.group_activity_hooks[:] = [
+                h for h in self.group_activity_hooks if h.__name__ != func.__name__
+            ]
+            logger.debug(
+                f"[ENDUID·BotHook] 更新 group_activity hook: {func.__name__}"
+            )
+        else:
+            logger.debug(
+                f"[ENDUID·BotHook] 注册 group_activity hook: {func.__name__}"
+            )
+        self.group_activity_hooks.append(func)
 
 
 def get_or_create_hook_manager(plugin_name: str) -> PluginHookManager:
@@ -84,6 +101,11 @@ def register_user_activity_hook(func: Callable):
     _end_manager.register_user_activity_hook(func)
 
 
+def register_group_activity_hook(func: Callable):
+    """注册群活跃度 hook"""
+    _end_manager.register_group_activity_hook(func)
+
+
 async def _call_all_target_send_hooks(
     target_type: str,
     target_id: Optional[str],
@@ -115,6 +137,26 @@ async def _call_all_target_send_hooks(
             except Exception as e:
                 logger.warning(
                     f"[ENDUID·BotHook] target_send hook {hook.__name__} 执行失败: {e}"
+                )
+
+
+async def _call_all_group_activity_hooks(
+    group_id: Optional[str], bot_id: str, bot_self_id: str
+):
+    """调用所有插件的群活跃度 hooks"""
+    if not group_id:
+        return
+
+    for plugin_name, manager in _plugin_hook_managers.items():
+        if not manager.group_activity_hooks:
+            continue
+
+        for hook in manager.group_activity_hooks:
+            try:
+                await hook(group_id, bot_id, bot_self_id)
+            except Exception as e:
+                logger.warning(
+                    f"[ENDUID·BotHook] group_activity hook {hook.__name__} 执行失败: {e}"
                 )
 
 
@@ -183,6 +225,7 @@ def install_bot_hooks():
                 await _call_all_target_send_hooks(
                     target_type, group_id, bot_id, bot_self_id
                 )
+                await _call_all_group_activity_hooks(group_id, bot_id, bot_self_id)
 
         return await original_send(self, *args, **kwargs)
 
