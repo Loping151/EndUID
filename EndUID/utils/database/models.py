@@ -18,9 +18,12 @@ from gsuid_core.utils.database.base_models import (
     BaseBotIDModel,
     with_session,
 )
+from gsuid_core.server import on_core_start
 from gsuid_core.utils.database.startup import exec_list
 from gsuid_core.utils.database.models import Subscribe
 from gsuid_core.webconsole.mount_app import site, GsAdminModel, PageSchema
+
+from .auto_migrate import auto_add_missing_columns
 
 exec_list.extend(
     [
@@ -871,3 +874,8 @@ class EndUserActivityAdmin(GsAdminModel):
         icon="fa fa-clock-o",
     )
     model = EndUserActivity
+
+
+@on_core_start
+async def _end_auto_migrate():
+    await auto_add_missing_columns(__name__, log_prefix="[ENDUID·补列]")

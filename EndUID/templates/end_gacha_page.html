@@ -92,12 +92,12 @@
 
   .header { position: relative; padding: 18px 18px 20px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 14px; }
   .header::before { content:""; position:absolute; top:0; left:0; width:4px; height:100%; background: var(--accent); }
-  .brand-line { display:flex; align-items:center; gap:8px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px; color: var(--sub); text-transform: uppercase; }
+  .brand-line { display:flex; align-items:center; gap:8px; font-family: var(--mono); font-size: clamp(7px, 2.5vw, 10.5px); letter-spacing: clamp(0.5px, 0.4vw, 2px); color: var(--sub); text-transform: uppercase; white-space: nowrap; overflow: hidden; }
   .brand-line .dot { width:6px; height:6px; background: var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent); }
   .brand-line .sep { flex:1; height:1px; background: var(--line); }
   .brand-line .stamp { color: var(--accent-soft); }
   .title-zh { font-size: 26px; font-weight: 700; margin: 10px 0 2px; letter-spacing: 1px; }
-  .title-en { font-family: var(--mono); font-size: 10.5px; letter-spacing: 3px; color: var(--sub); text-transform: uppercase; }
+  .title-en { font-family: var(--mono); font-size: clamp(6.5px, 2.3vw, 10.5px); letter-spacing: clamp(1px, 0.7vw, 3px); color: var(--sub); text-transform: uppercase; white-space: nowrap; overflow: hidden; }
   .user-card { display:flex; align-items:center; gap:16px; margin-top: 18px; }
   .emblem { position: relative; width: 70px; height: 70px; flex-shrink:0; }
   .emblem .pic { width:100%; height:100%; background:#0c0e13; border:1px solid rgba(255,255,255,0.16); overflow:hidden; }
@@ -112,7 +112,7 @@
   .stat-cell { display:flex; flex-direction:column; }
   .stat-cell .num { font-family: var(--num); font-weight:700; font-size: 22px; line-height:1; }
   .stat-cell .lbl { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top: 4px; letter-spacing:.5px; }
-  .timestamp-line { display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:16px; padding-top:12px; border-top:1px solid var(--line); font-family: var(--mono); font-size: 10.5px; color: var(--sub); }
+  .timestamp-line { display:flex; justify-content:space-between; flex-wrap:nowrap; column-gap: clamp(6px, 2vw, 12px); margin-top:16px; padding-top:12px; border-top:1px solid var(--line); font-family: var(--mono); font-size: clamp(6px, 2.2vw, 10.5px); color: var(--sub); letter-spacing: .02em; white-space: nowrap; }
   .timestamp-line .pulse { display:inline-block; width:6px; height:6px; border-radius:50%; background: var(--good); margin-right:5px; }
 
   .tab-strip { position: sticky; top: 0; z-index: 20; background: rgba(12,14,19,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin: 0 -14px 14px; padding: 8px 14px; }
