@@ -129,6 +129,8 @@ async def draw_crisis_rank_img(ev: Event, page: int = 1) -> Union[bytes, str]:
         avatar_url = ""
         if ev.bot_id == "onebot" and str(e["user_id"]).isdigit():
             avatar_url = f"http://q1.qlogo.cn/g?b=qq&nk={e['user_id']}&s=640"
+        elif ev.bot_id == "qqgroup" and e["user_id"]:
+            avatar_url = f"https://q.qlogo.cn/qqapp/{ev.bot_self_id}/{e['user_id']}/100"
         if not avatar_url and user_rec and user_rec.platform_avatar:
             avatar_url = user_rec.platform_avatar
         avatar_b64 = ""
