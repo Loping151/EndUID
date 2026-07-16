@@ -24,6 +24,7 @@ WIKI_IMG_CACHE = WIKI_CACHE_PATH / "img"
 WIKI_GUIDE_CACHE = WIKI_CACHE_PATH / "guide"
 WIKI_BP_RENDER_CACHE = WIKI_CACHE_PATH / "blueprint_render"
 BAKE_PATH = CACHE_BASE / "bake"
+CULTIVATE_CACHE_PATH = CACHE_BASE / "cultivate"
 
 PLAYER_PATH = MAIN_PATH / "players"
 
@@ -50,6 +51,7 @@ def init_dir():
         WIKI_GUIDE_CACHE,
         WIKI_BP_RENDER_CACHE,
         BAKE_PATH,
+        CULTIVATE_CACHE_PATH,
         PLAYER_PATH,
     ]:
         p.mkdir(parents=True, exist_ok=True)

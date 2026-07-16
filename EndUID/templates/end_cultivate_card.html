@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>养成计算器</title>
+<style>
+    @import url('{{ font_css_url }}');
+    :root { --c-bg: #111110; --c-accent: #f2e200; --c-accent-2: #ffd85c; --c-line: rgba(255,255,255,0.10); --c-sub: #9a9a9a; --c-card: rgba(20,19,12,0.92); --c-green: #7fdc5a; --c-red: #ff5d5d; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1000px; background-color: var(--c-bg); font-family: 'Source Han Sans CN', sans-serif; color: #fff; }
+    .container { position: relative; width: 100%; overflow: hidden;
+                 background-color: var(--c-bg); background-size: cover;
+                 background-position: top center; background-repeat: no-repeat; }
+    .ui-layer { position: relative; z-index: 10; padding: 26px 32px 0; display: flex; flex-direction: column; gap: 18px; }
+
+    /* 通用玩家信息头 */
+    .header { display: flex; align-items: center; gap: 20px; padding: 14px 22px; background: rgba(12,12,8,0.86); border: 1px solid var(--c-line); border-left: 4px solid var(--c-accent); }
+    .avatar { width: 84px; height: 84px; background: #1a1a10; border: 1px solid var(--c-accent); flex-shrink: 0; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar .placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #665; font-size: 32px; }
+    .user-details { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .name-row { display: flex; align-items: baseline; gap: 14px; }
+    .user-name { font-size: 38px; font-weight: 700; line-height: 1; letter-spacing: 1px; }
+    .user-uid { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--c-sub); background: rgba(255,255,255,0.05); padding: 3px 10px; }
+    .info-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tag { font-family: 'Oswald', sans-serif; font-size: 15px; color: #f0f0f0; background: rgba(0,0,0,0.55); padding: 4px 12px; border: 1px solid rgba(255,255,255,0.14); display: inline-flex; align-items: center; gap: 7px; letter-spacing: 1px; }
+    .tag strong { color: var(--c-accent-2); font-size: 18px; font-weight: 700; }
+    .h-right { text-align: right; }
+    .h-title { font-size: 26px; font-weight: 800; letter-spacing: 0.05em; }
+    .h-sub { font-size: 14px; color: var(--c-sub); margin-top: 4px; }
+
+    .note { font-size: 15px; color: var(--c-sub); margin: -6px 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+
+    /* 干员简报卡（官方 operatorBg） */
+    .brief { position: relative; min-height: 176px; display: flex; align-items: center; overflow: hidden; border: 1px solid var(--c-line); }
+    .brief .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
+    .brief .inner { position: relative; z-index: 1; display: flex; align-items: center; gap: 20px; padding: 16px 20px; width: 100%; }
+    .c-avatar { width: 120px; height: 120px; background: #101010; border: 1px solid rgba(255,255,255,0.18); flex-shrink: 0; overflow: hidden; }
+    .c-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .c-info { flex: 1; }
+    .c-name-row { display: flex; align-items: center; gap: 12px; }
+    .c-name { font-size: 32px; font-weight: 700; }
+    .rarity-row { display: flex; gap: 1px; }
+    .rarity-star { width: 22px; height: 22px; }
+    .c-icons { display: flex; align-items: center; gap: 6px; }
+    .c-icons img { width: 30px; height: 30px; object-fit: contain; }
+    .c-range { margin-top: 8px; display: flex; align-items: center; gap: 24px; font-size: 18px; color: var(--c-sub); }
+    .c-range b { color: #fff; font-weight: 700; font-family: 'Oswald', 'Source Han Sans CN', sans-serif; }
+    .c-range .arrow { color: var(--c-accent); font-weight: 700; }
+    .c-plans { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px 22px; font-size: 15px; color: #ccc; }
+    .c-plans .p { display: flex; align-items: center; gap: 7px; }
+    .c-plans .p .t { color: var(--c-sub); font-size: 13px; }
+    .c-plans .p .arrow { color: var(--c-accent); }
+    .c-plans .p .done { color: var(--c-accent-2); }
+
+    /* 危机合约式分节标题 */
+    .section-title { font-size: 28px; font-weight: 800; border-left: 6px solid var(--c-accent); padding-left: 14px; letter-spacing: 0.05em; display: flex; align-items: baseline; gap: 12px; margin-top: 4px; }
+    .section-title .en { font-family: 'Oswald', sans-serif; font-size: 15px; color: var(--c-sub); font-weight: 600; letter-spacing: 0.12em; }
+
+    .card { background: var(--c-card); border: 1px solid var(--c-line); padding: 6px 20px 12px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 14px; color: var(--c-sub); font-weight: 500; text-align: right; padding: 10px 6px 4px; letter-spacing: 0.08em; }
+    th.res { text-align: left; }
+    td { padding: 8px 6px; font-size: 18px; text-align: right; font-family: 'Oswald', 'Source Han Sans CN', sans-serif; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.06); }
+    tr:first-child td { border-top: none; }
+    td.res { text-align: left; font-family: 'Source Han Sans CN', sans-serif; font-weight: 400; }
+    .res-cell { display: flex; align-items: center; gap: 12px; }
+    .ic { width: 46px; height: 46px; background: rgba(255,255,255,0.05); border: 1px solid var(--c-line); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .ic img { width: 92%; height: 92%; object-fit: contain; }
+    .ic .ph { font-size: 17px; color: #887; }
+    .left-pos { color: var(--c-green); } .left-neg { color: var(--c-red); }
+
+    .d-group { margin-top: 12px; }
+    .d-group:first-child { margin-top: 8px; }
+    .d-title { font-size: 16px; font-weight: 700; color: var(--c-accent-2); padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.10); margin-bottom: 8px; letter-spacing: 0.05em; }
+    .chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 28px; }
+    .chip { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #ddd; }
+    .chip .ic { width: 34px; height: 34px; }
+    .chip .n { flex: 1; }
+    .chip .c { font-family: 'Oswald', sans-serif; font-weight: 600; }
+
+    /* 官方底栏（收窄） */
+    .bottom { position: relative; margin-top: 6px; height: 72px; }
+    .bottom img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .bottom .txt { position: relative; z-index: 1; height: 100%; display: flex; align-items: center;
+                   justify-content: space-between; padding: 0 40px; font-size: 14px; color: #8a8a8a; }
+</style>
+</head>
+<body>
+<div class="container" style="background-image: url('{{ main_bg }}');">
+    <div class="ui-layer">
+
+        <div class="header">
+            <div class="avatar">{% if avatar_url %}<img src="{{ avatar_url }}">{% else %}<div class="placeholder">?</div>{% endif %}</div>
+            <div class="user-details">
+                <div class="name-row">
+                    <div class="user-name">{{ user_name }}</div>
+                    {% if uid %}<div class="user-uid">UID {{ uid }}</div>{% endif %}
+                </div>
+                <div class="info-tags">
+                    {% if user_level %}<div class="tag">LEVEL <strong>{{ user_level }}</strong></div>{% endif %}
+                    {% if world_level %}<div class="tag">WORLD <strong>{{ world_level }}</strong></div>{% endif %}
+                </div>
+            </div>
+            <div class="h-right">
+                <div class="h-title">养成计算器</div>
+                <div class="h-sub">明日方舟：终末地</div>
+            </div>
+        </div>
+
+        <div class="note">{{ sync_text }}</div>
+
+        <div class="brief">
+            <img class="bg" src="{{ operator_bg }}" />
+            <div class="inner">
+                <div class="c-avatar">
+                    {% if char_avatar %}<img src="{{ char_avatar }}" />{% endif %}
+                </div>
+                <div class="c-info">
+                    <div class="c-name-row">
+                        <div class="c-name">{{ name }}</div>
+                        {% if star %}
+                        <div class="rarity-row">
+                            {% for _ in range(star) %}
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="rarity-star"><g fill-rule="evenodd" clip-path="url(#rank_svg__{{ loop.index }}_a)" clip-rule="evenodd"><path fill="#FFE600" d="m5.845 17.424 6.369-3.667L9.605 9.25.87 14.28zm17.249.69-6.37-3.678-2.608 4.519 8.736 5.043zM20.417 0 15.2 2.686v7.07h5.217z" opacity="0.6"></path><path fill="#FFCC00" d="m8.298 16.03 3.765-2.174-2.609-4.518-1.957 1.13s2.051 4.325.8 5.562m12.343.668-3.765-2.174-2.61 4.518 1.959 1.13s2.72-3.939 4.416-3.474m-.224-9.202S15.49 7.266 15.2 5.41v4.348h5.217z" opacity="0.7"></path><path fill="#FFDD00" d="m13.922 9.77-.136-6.147L9.42 6.145l.008 6.622c.29 2.125-1.28 3.35-1.28 3.35l4.519-2.61c1.53-1.238 1.256-3.737 1.256-3.737m3.887 3.639 5.391 2.957v-5.044l-5.74-3.304c-2.141-.655-2.26-2.783-2.26-2.783v5.217c.15 2.103 2.609 2.957 2.609 2.957m-5.4 1.547-5.257 3.191 4.368 2.522 5.731-3.318c1.695-1.314 3.54-.567 3.54-.567l-4.518-2.608c-1.839-.707-3.865.78-3.865.78"></path></g><defs><clipPath id="rank_svg__{{ loop.index }}_a"><path fill="#fff" d="M0 0h24v24H0z"></path></clipPath></defs></svg>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="c-icons">
+                            {% if attr_icon %}<img src="{{ attr_icon }}" />{% endif %}
+                            {% if prof_icon %}<img src="{{ prof_icon }}" />{% endif %}
+                        </div>
+                    </div>
+                    <div class="c-range">
+                        <span>等级 <b>Lv.{{ cur_level }}</b> <span class="arrow">→</span> <b>Lv.{{ max_level }}</b></span>
+                        <span>突破 <b>{{ break_done }}/{{ break_total }}</b></span>
+                        <span>天赋待激活 <b>{{ talent_remain }}/{{ talent_total }}</b></span>
+                    </div>
+                    {% if skill_plans %}
+                    <div class="c-plans">
+                        {% for p in skill_plans %}
+                        <div class="p"><span class="t">技能</span>{{ p.name }}
+                            {% if p.done %}<span class="done">已满</span>
+                            {% else %}<span>{{ p.from_label }}</span><span class="arrow">→</span><span>专精3</span>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">资源总览<span class="en">RESOURCES</span></div>
+        <div class="card">
+            <table>
+                <tr>
+                    <th class="res">资源</th>
+                    <th>需要</th>
+                    {% if synced %}<th>仓库</th><th>差值</th>{% endif %}
+                </tr>
+                {% for row in summary %}
+                <tr>
+                    <td class="res">
+                        <div class="res-cell">
+                            <div class="ic">
+                                {% if row.icon %}<img src="{{ row.icon }}" />{% else %}<div class="ph">{{ row.name[0] }}</div>{% endif %}
+                            </div>
+                            <span>{{ row.name }}</span>
+                        </div>
+                    </td>
+                    <td>{{ "{:,}".format(row.count) }}</td>
+                    {% if synced %}
+                    <td>{{ "{:,}".format(row.inventory) }}</td>
+                    <td class="{% if row.left >= 0 %}left-pos{% else %}left-neg{% endif %}">
+                        {{ "{:+,}".format(row.left) }}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="section-title">消耗明细<span class="en">DETAILS</span></div>
+        <div class="card">
+            {% for section in sections %}
+            <div class="d-group">
+                <div class="d-title">{{ section.title }}</div>
+                <div class="chips">
+                    {% for row in section['items'] %}
+                    <div class="chip">
+                        <div class="ic">
+                            {% if row.icon %}<img src="{{ row.icon }}" />{% else %}<div class="ph">{{ row.name[0] }}</div>{% endif %}
+                        </div>
+                        <span class="n">{{ row.name }}</span>
+                        <span class="c">×{{ "{:,}".format(row.count) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="bottom">
+            <img src="{{ bottom_bg }}" />
+            <div class="txt">
+                <span>数据来源：森空岛养成计算器 · 计算结果仅供参考</span>
+                <span>EndUID</span>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

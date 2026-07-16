@@ -58,6 +58,12 @@ INDIE_HARD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/indie-hard"
 CRISIS_CONTRACT_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/crisis-contract"
 CRISIS_CONTRACT_RECORD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/crisis-contract/record"
 
+# 养成计算器（web 端接口）
+CALC_SEARCH_CHARS_URL = f"{MAIN_URL}web/{API_VERSION}/game/endfield/search-chars"
+CALC_MATERIAL_LIST_URL = f"{MAIN_URL}web/{API_VERSION}/game/endfield/calculate/material-list"
+CALC_RULES_URL = f"{MAIN_URL}web/{API_VERSION}/game/endfield/calculate/rules"
+CALC_USER_GAME_DATA_URL = f"{MAIN_URL}web/{API_VERSION}/game/endfield/calculate/user-game-data"
+
 
 # 公告相关
 SKLAND_ANN_LIST_URL = "https://zonai.skland.com/web/v1/home/index"

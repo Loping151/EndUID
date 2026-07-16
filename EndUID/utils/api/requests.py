@@ -348,7 +348,7 @@ class EndApi:
 
                         if resp.status == 401:
                             logger.warning(f"[ENDUID·API] 请求返回 401，凭证失效")
-                            return {"code": RespCode.CRED_INVALID, "message": "HTTP 401 Unauthorized"}
+                            return {"code": RespCode.CRED_INVALID, "message": "登录过期，请重新登录"}
 
                         if resp.status != 200:
                             logger.error(f"[ENDUID·API] 请求失败: {resp.status}")
@@ -380,7 +380,7 @@ class EndApi:
 
                         if resp.status == 401:
                             logger.warning(f"[ENDUID·API] 请求返回 401，凭证失效")
-                            return {"code": RespCode.CRED_INVALID, "message": "HTTP 401 Unauthorized"}
+                            return {"code": RespCode.CRED_INVALID, "message": "登录过期，请重新登录"}
 
                         if resp.status != 200:
                             logger.error(f"[ENDUID·API] 请求失败: {resp.status}")
@@ -493,6 +493,41 @@ class EndApi:
         """获取终末地枚举数据（道具、角色等）"""
         return await self.request(
             url=ENDFIELD_ENUMS_URL,
+            method="GET",
+            cred=cred,
+        )
+
+    # ===================== 养成计算器 =====================
+
+    async def get_calc_search_chars(self, cred: str) -> Optional[dict]:
+        """获取养成计算器干员列表"""
+        return await self.request(
+            url=CALC_SEARCH_CHARS_URL,
+            method="GET",
+            cred=cred,
+        )
+
+    async def get_calc_material_list(self, cred: str) -> Optional[dict]:
+        """获取养成计算器材料表（含经验材料与显示优先级）"""
+        return await self.request(
+            url=CALC_MATERIAL_LIST_URL,
+            method="GET",
+            cred=cred,
+        )
+
+    async def get_calc_rules(self, cred: str, char_id: str) -> Optional[dict]:
+        """获取指定干员的养成规则（等级/突破/技能/天赋消耗）"""
+        return await self.request(
+            url=CALC_RULES_URL,
+            method="GET",
+            cred=cred,
+            params={"charIds": char_id},
+        )
+
+    async def get_calc_user_game_data(self, cred: str) -> Optional[dict]:
+        """获取该凭证绑定角色的练度与仓库（仅限用户本人凭证）"""
+        return await self.request(
+            url=CALC_USER_GAME_DATA_URL,
             method="GET",
             cred=cred,
         )

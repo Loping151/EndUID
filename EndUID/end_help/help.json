@@ -198,6 +198,14 @@
         "need_ck": false,
         "need_sk": false,
         "need_admin": true
+      },
+      {
+        "name": "养成计算",
+        "desc": "终末地干员养成材料计算",
+        "eg": "养成洛茜",
+        "need_ck": false,
+        "need_sk": false,
+        "need_admin": false
       }
     ]
   },
