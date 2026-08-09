@@ -21,12 +21,18 @@ async def _is_qq_default_avatar_url(url: str) -> bool:
         return False
 
 
+def is_at_self(ev: Event) -> bool:
+    if ev.at == ev.bot_self_id:
+        return True
+    return ev.bot_id == "qq_official" and ev.at in (ev.bot_id, ev.real_bot_id)
+
+
 def ruser_id(ev: Event) -> str:
     """若开启 AtCheck 且消息中 @ 了他人，则以被 @ 用户作为查询对象，否则返回发送者"""
     from ..end_config.config_default import EndConfig
 
     at_check = EndConfig.get_config("AtCheck").data
-    if at_check and ev.at and ev.at != ev.bot_self_id:
+    if at_check and ev.at and not is_at_self(ev):
         return ev.at
     return ev.user_id
 
