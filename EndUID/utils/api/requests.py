@@ -787,6 +787,74 @@ class EndApi:
             accept_encoding="gzip, deflate",
         )
 
+    async def get_war_echoes(
+        self,
+        cred: str,
+        uid: str,
+        server_id: str = "1",
+        user_id: Optional[str] = None,
+        season_id: Optional[str] = None,
+        qq_user_id: Optional[str] = None,
+        bot_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """获取战争回响详情（赛季 + 周次 + 关卡三难度 + 荣誉）
+
+        Args:
+            cred: 森空岛 Cred
+            uid: 游戏 UID (roleId)
+            server_id: 服务器 ID
+            user_id: 森空岛用户 ID（不传时从 EndUser/user_info 回填）
+            season_id: 赛季 ID，留空返回当前赛季
+            qq_user_id / bot_id: 用于补 skland_user_id
+        """
+        resolved_user_id = user_id
+        resolved_server_id = server_id
+
+        if qq_user_id and bot_id:
+            stored = await EndUser.select_end_user(uid, qq_user_id, bot_id)
+            if stored:
+                if not resolved_user_id and stored.skland_user_id:
+                    resolved_user_id = stored.skland_user_id
+                if stored.server_id:
+                    resolved_server_id = stored.server_id
+
+        if not resolved_user_id:
+            user_info = await self.get_user_info(cred)
+            if user_info and user_info.get("code") == 0:
+                skland_user_id = (
+                    user_info.get("data", {}).get("user", {}).get("id")
+                )
+                if skland_user_id:
+                    resolved_user_id = str(skland_user_id)
+                    if qq_user_id and bot_id:
+                        await EndUser.update_data_by_uid(
+                            uid, bot_id, skland_user_id=resolved_user_id,
+                        )
+
+        if not resolved_user_id:
+            logger.error("[ENDUID·API] 获取 Skland 用户 ID 失败，无法请求 war-echoes")
+            return None
+
+        params = {
+            "roleId": uid,
+            "serverId": resolved_server_id,
+            "userId": resolved_user_id,
+        }
+        if season_id:
+            params["seasonId"] = season_id
+
+        return await self.request(
+            url=WAR_ECHOES_URL,
+            method="GET",
+            cred=cred,
+            uid=None,
+            game_id=None,
+            params=params,
+            use_device_id=True,
+            extra_headers=get_endfield_web_headers(),
+            accept_encoding="gzip, deflate",
+        )
+
     # ===================== OAuth 相关方法（扫码登录）=====================
 
     async def get_scan_id(self) -> Optional[str]:

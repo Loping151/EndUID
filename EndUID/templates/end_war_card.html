@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>战争回响</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #2c2d2d;
+        --c-panel: rgba(24, 25, 25, 0.72);
+        --c-accent: #23b1da;
+        --c-red: #ff3b24;
+        --c-time: #d7e127;
+        --c-line: rgba(255,255,255,0.10);
+        --c-sub: rgba(255,255,255,0.58);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        width: 1170px;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: #fff;
+    }
+    .container { position: relative; width: 100%; padding-bottom: 40px; overflow: hidden; }
+
+    .bg-stack { position: absolute; inset: 0; z-index: 0;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.05), transparent 55%),
+            repeating-linear-gradient(135deg, rgba(255,255,255,0.018) 0, rgba(255,255,255,0.018) 1px, transparent 1px, transparent 5px),
+            #2c2d2d; }
+    .page-bg { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none;
+        display: block; width: 100%; height: auto; }
+
+    .ui-layer {
+        position: relative; z-index: 10;
+        display: flex; flex-direction: column;
+    }
+
+    /* ===== HEADER（叠入主视觉，沿用页面的灰/红/青配色） ===== */
+    .header {
+        position: absolute; z-index: 20;
+        left: 48px; right: 48px; top: 14px;
+        display: flex; align-items: center; gap: 24px;
+        padding: 16px 22px;
+        background: linear-gradient(90deg, rgba(42,43,43,0.92) 0%, rgba(31,32,32,0.82) 70%, rgba(31,32,32,0.58) 100%);
+        border: 1px solid rgba(255,255,255,0.16);
+        border-left: 4px solid var(--c-accent);
+        box-shadow: inset 0 -2px 0 rgba(255,59,36,0.36), 0 8px 24px rgba(0,0,0,0.16);
+        backdrop-filter: blur(8px);
+    }
+    .avatar {
+        width: 88px; height: 88px;
+        background: rgba(16,20,26,0.76);
+        border: 1px solid rgba(35,177,218,0.75);
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar .placeholder {
+        width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        color: #55606c; font-size: 38px;
+    }
+    .user-details { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .name-row { display: flex; align-items: baseline; gap: 16px; }
+    .user-name { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: 1px; }
+    .user-uid {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 17px; color: rgba(255,255,255,0.66);
+        background: rgba(255,255,255,0.05);
+        padding: 4px 12px;
+    }
+    .info-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+    .tag {
+        font-family: 'Oswald', sans-serif;
+        font-size: 17px; color: #f0f0f0;
+        background: rgba(0,0,0,0.38);
+        padding: 4px 13px;
+        border: 1px solid rgba(255,255,255,0.14);
+        display: inline-flex; align-items: center; gap: 8px;
+        letter-spacing: 1px;
+    }
+    .tag strong { color: #55c9e7; font-size: 21px; font-weight: 700; }
+    .tag.cn { font-family: 'Source Han Sans CN', sans-serif; }
+
+    /* ===== HERO (赛季 KV，透明图垫浅灰底，底部渐隐叠到页面灰底上) ===== */
+    .hero {
+        position: relative; width: 100%; height: 880px;
+    }
+    .hero-top-extension {
+        position: absolute; left: 0; right: 0; top: 0; z-index: 0;
+        height: 80px;
+        background-color: #dcdcdc;
+        background-position: top center;
+        background-repeat: no-repeat;
+        background-size: 100% auto;
+        transform: scaleY(-1);
+    }
+    .hero-art {
+        position: absolute; left: 0; right: 0; top: 80px; z-index: 1;
+        height: 800px;
+        /* KV 本身是透明图：火焰线上方垫浅灰白，火焰线下方透出页面灰底。 */
+        background: linear-gradient(
+            180deg,
+            #dcdcdc 0%,
+            #dcdcdc 75%,
+            transparent 75%,
+            transparent 100%
+        );
+        overflow: hidden;
+    }
+    .hero-art .kv {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; object-position: top center;
+        filter: saturate(1.12) contrast(1.025);
+    }
+    .hero-bottom {
+        position: absolute; left: 240px; right: 48px; bottom: 295px; z-index: 3;
+        display: flex; flex-direction: column; gap: 14px;
+        align-items: flex-start;
+    }
+    .hero-title-chip {
+        display: inline-flex; align-items: center;
+        padding: 7px 21px;
+        background: var(--c-accent);
+        color: #0c2129;
+        font-size: 26px; font-weight: 800; letter-spacing: 0.12em;
+    }
+    .hero-season-info { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+    .hero-name {
+        display: inline-block;
+        font-family: 'Source Han Serif CN', serif;
+        font-size: 76px; font-weight: 800; letter-spacing: 0.05em; line-height: 1.05;
+        background: rgba(0,0,0,0.55);
+        padding: 9px 25px;
+    }
+    .hero-period {
+        display: inline-block;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 24px; color: rgba(255,255,255,0.9); letter-spacing: 0.05em;
+        background: rgba(0,0,0,0.35);
+        padding: 5px 16px;
+    }
+
+    .content {
+        position: relative; z-index: 4;
+        margin-top: -90px;
+        padding: 0 48px;
+        display: flex; flex-direction: column; gap: 24px;
+    }
+
+    /* ===== 个人数据 ===== */
+    .pd-label {
+        font-size: 32px; font-weight: 700; color: rgba(255,255,255,0.76);
+        letter-spacing: 0.06em;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.42);
+    }
+    .pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .pd-grid + .week-card { margin-top: 24px; }
+    .pd-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 28px 58px;
+        background: rgba(30,31,31,0.78);
+        border: 1px solid rgba(255,255,255,0.13);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        border-radius: 12px;
+        height: 192px;
+    }
+    .pd-item .pd-name { font-size: 34px; font-weight: 700; color: #e8e8e8; letter-spacing: 0.05em; white-space: nowrap; }
+    .pd-rating-img { height: 96px; width: auto; object-fit: contain; }
+    .honor-list { display: flex; align-items: center; gap: 14px; }
+    .honor-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .honor-item img { width: 66px; height: 66px; object-fit: contain; }
+    .honor-count { font-family: 'Oswald', sans-serif; font-size: 31px; font-weight: 600; line-height: 1; color: #fff; }
+
+    /* ===== 轮换 ===== */
+    .week-card { display: flex; flex-direction: column; gap: 24px; }
+    .week-card + .week-card { margin-top: 24px; }
+    .week-tab {
+        position: relative;
+        align-self: flex-start;
+        padding: 6px 18px 8px 4px;
+    }
+    .week-tab .wm {
+        position: absolute; left: -10px; top: -42px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 98px; font-weight: 700;
+        color: rgba(255,255,255,0.09);
+        line-height: 1; letter-spacing: 0.02em;
+        pointer-events: none;
+    }
+    .week-tab .week-name {
+        position: relative;
+        font-size: 38px; font-weight: 800; letter-spacing: 0.05em;
+        padding-bottom: 6px;
+        border-bottom: 4px solid #e23b3b;
+    }
+    .week-head {
+        display: flex; align-items: center; gap: 16px;
+        min-height: 130px;
+        padding: 22px 36px;
+        background: var(--c-panel);
+        border: 1px solid var(--c-line);
+        border-radius: 12px;
+    }
+    .week-period-block { display: flex; flex-direction: column; gap: 8px; }
+    .week-period-label { font-size: 27px; color: #e8e8e8; letter-spacing: 0.04em; }
+    .week-period { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--c-sub); }
+    .week-rating-block { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+    .week-rating-label { font-size: 27px; color: #e8e8e8; letter-spacing: 0.04em; }
+    .week-rating { height: 78px; width: auto; object-fit: contain; }
+
+    /* ===== 关卡行（一行一关，同 skland） ===== */
+    .stage-list { display: flex; flex-direction: column; gap: 24px; }
+    .stage-row {
+        position: relative;
+        width: 1074px;
+        height: 324px;
+        overflow: hidden;
+        background: transparent;
+        border-radius: 12px;
+    }
+    .stage-row .stage-bg {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: fill; opacity: 1; pointer-events: none;
+    }
+    .stage-row .cruel-bg {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; opacity: 0.12; pointer-events: none;
+    }
+    .stage-row > * { position: relative; z-index: 1; }
+
+    .stage-top {
+        position: absolute; left: 0; right: 0; top: 0;
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        height: 108px;
+        padding: 0 28px 0 36px;
+    }
+    .stage-name {
+        font-size: 40px; font-weight: 700; color: #f2f2f2; letter-spacing: 1px;
+        line-height: 1.25; min-width: 0;
+    }
+    .stage-diff {
+        margin-left: 4px;
+        font-size: inherit; font-weight: inherit; letter-spacing: inherit;
+        color: rgba(255,255,255,0.58);
+    }
+    .stage-diff.normal { color: #72d2eb; }
+    .stage-diff.hard { color: #ff9a4d; }
+    .stage-diff.cruel { color: #ff765e; }
+    .stage-stars-img { width: 186px; height: 66px; object-fit: contain; flex-shrink: 0; }
+
+    .stage-bottom {
+        position: absolute; left: 0; right: 0; top: 108px; bottom: 0;
+    }
+    .stage-time-block {
+        position: absolute; left: 40px; top: 52px;
+        display: flex; flex-direction: column; gap: 5px;
+    }
+    .stage-time {
+        display: inline-flex; align-items: center; gap: 9px;
+        font-family: 'Oswald', 'JetBrains Mono', monospace;
+        font-size: 40px; font-weight: 700; color: var(--c-time);
+        text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+        white-space: nowrap; line-height: 1;
+    }
+    .stage-time .clock {
+        position: relative;
+        width: 36px; height: 36px;
+        border: 3px solid currentColor;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .stage-time .clock::before,
+    .stage-time .clock::after {
+        content: "";
+        position: absolute;
+        left: 50%; top: 50%;
+        width: 3px;
+        background: currentColor;
+        border-radius: 2px;
+        transform-origin: 50% 100%;
+    }
+    .stage-time .clock::before {
+        height: 8px;
+        transform: translate(-50%, -100%);
+    }
+    .stage-time .clock::after {
+        height: 7px;
+        transform: translate(-50%, -100%) rotate(90deg);
+    }
+    .stage-time.none { color: rgba(255,255,255,0.25); }
+    .stage-date {
+        position: absolute; left: 0; top: 112px; white-space: nowrap;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px; color: rgba(255,255,255,0.48); letter-spacing: 0.03em;
+    }
+
+    .squad-row { position: absolute; left: 426px; top: 36px; display: flex; gap: 12px; }
+    .char-cell { position: relative; width: 144px; flex-shrink: 0; }
+    .char-img-wrap {
+        position: relative;
+        width: 100%; aspect-ratio: 1 / 1;
+        background: rgba(0,0,0,0.4);
+        overflow: hidden;
+    }
+    .char-img { width: 100%; height: 100%; object-fit: cover; }
+    .prop-corner {
+        position: absolute; left: 3px; top: 3px;
+        width: 42px; height: 42px;
+        display: flex; align-items: center; justify-content: center;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.85));
+    }
+    .prop-corner img { width: 100%; height: 100%; object-fit: contain; }
+    .level-corner {
+        position: absolute; left: 2px; bottom: 1px;
+        padding: 2px 7px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 30px; font-weight: 500; color: #fff;
+        line-height: 1.2;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.95);
+    }
+    .potential-corner {
+        position: absolute; right: 3px; bottom: 3px;
+        width: 40px; height: 40px;
+        display: flex; align-items: center; justify-content: center;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9));
+    }
+    .potential-corner img { width: 100%; height: 100%; object-fit: contain; }
+    .char-bottom { height: 5px; background: var(--rarity-color, #888); }
+
+    .footer-note {
+        font-size: 16px; color: rgba(255,255,255,0.4); letter-spacing: 0.04em;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+
+    <div class="bg-stack"></div>
+    {% if asset_page_bg %}<img class="page-bg" src="{{ asset_page_bg }}">{% endif %}
+
+    <div class="ui-layer">
+
+        <!-- ======== HEADER ======== -->
+        <div class="header">
+            <div class="avatar">
+                {% if avatar_url %}
+                <img src="{{ avatar_url }}">
+                {% else %}
+                <div class="placeholder">?</div>
+                {% endif %}
+            </div>
+            <div class="user-details">
+                <div class="name-row">
+                    <div class="user-name">{{ user_name }}</div>
+                    {% if uid %}<div class="user-uid">UID {{ uid }}</div>{% endif %}
+                </div>
+                <div class="info-tags">
+                    <div class="tag">LEVEL <strong>{{ user_level }}</strong></div>
+                    <div class="tag">WORLD <strong>{{ world_level }}</strong></div>
+                    {% if create_time %}
+                    <div class="tag cn">苏醒日 <strong>{{ create_time }}</strong></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== HERO ======== -->
+        <div class="hero">
+            <div class="hero-top-extension"{% if season.kv_b64 %} style="background-image: url('{{ season.kv_b64 }}');"{% endif %}></div>
+            <div class="hero-art">
+                {% if season.kv_b64 %}<img class="kv" src="{{ season.kv_b64 }}">{% endif %}
+            </div>
+            <div class="hero-bottom">
+                <span class="hero-title-chip">战争回响</span>
+                <div class="hero-season-info">
+                    <div class="hero-name">{{ season.name }}</div>
+                    {% if season.startDate %}
+                    <div class="hero-period">{{ season.startDate }}{% if season.endDate %}–{{ season.endDate }}{% endif %}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+        <!-- ======== 个人数据 ======== -->
+        <div class="pd-label">// 个人数据</div>
+        <div class="pd-grid">
+            <div class="pd-item">
+                <div class="pd-name">赛季评级</div>
+                <img class="pd-rating-img" src="{{ season.rating_img }}">
+            </div>
+            <div class="pd-item">
+                <div class="pd-name">荣勋</div>
+                <div class="honor-list">
+                    {% for h in honors %}
+                    <div class="honor-item">
+                        <img src="{{ h.icon }}">
+                        <span class="honor-count">{{ h.count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== 轮换 ======== -->
+        {% for w in season.weeks %}
+        <div class="week-card">
+            <div class="week-tab">
+                <span class="wm">{{ w.no }}</span>
+                <span class="week-name">{{ w.name }}</span>
+            </div>
+            <div class="week-head">
+                <div class="week-period-block">
+                    <span class="week-period-label">轮换周期：</span>
+                    {% if w.startDate %}<span class="week-period">{{ w.startDate }}{% if w.endDate %}–{{ w.endDate }}{% endif %}</span>{% endif %}
+                </div>
+                <div class="week-rating-block">
+                    <span class="week-rating-label">本轮评级</span>
+                    <img class="week-rating" src="{{ w.rating_img }}">
+                </div>
+            </div>
+            <div class="stage-list">
+                {% for s in w.stages %}
+                <div class="stage-row">
+                    {% if s.isPass %}
+                    <img class="stage-bg" src="{{ asset_stage_bg }}">
+                    {% else %}
+                    <img class="stage-bg" src="{{ asset_stage_bg_empty }}">
+                    {% endif %}
+                    {% if s.diff_cls == 'cruel' and s.isPass and asset_cruel_bg %}
+                    <img class="cruel-bg" src="{{ asset_cruel_bg }}">
+                    {% endif %}
+                    <div class="stage-top">
+                        <span class="stage-name">{{ s.name }}<span class="stage-diff {{ s.diff_cls }}">·{{ s.diff_label }}</span></span>
+                        <img class="stage-stars-img" src="{{ s.star_img }}">
+                    </div>
+                    <div class="stage-bottom">
+                        <div class="stage-time-block">
+                            {% if s.passDuration %}
+                            <span class="stage-time"><span class="clock"></span>{{ s.passDuration }}</span>
+                            {% else %}
+                            <span class="stage-time none"><span class="clock"></span>--:--</span>
+                            {% endif %}
+                            {% if s.passDate %}<span class="stage-date">{{ s.passDate }}</span>{% endif %}
+                        </div>
+                        {% if s.bestChars %}
+                        <div class="squad-row">
+                            {% for c in s.bestChars %}
+                            <div class="char-cell">
+                                <div class="char-img-wrap">
+                                    {% if c.avatar_b64 %}<img class="char-img" src="{{ c.avatar_b64 }}">{% endif %}
+                                    {% if c.property_icon_b64 %}
+                                    <div class="prop-corner"><img src="{{ c.property_icon_b64 }}"></div>
+                                    {% endif %}
+                                    <div class="level-corner">{{ c.level }}</div>
+                                    {% if c.potentialIcon %}
+                                    <div class="potential-corner"><img src="{{ c.potentialIcon }}"></div>
+                                    {% endif %}
+                                </div>
+                                <div class="char-bottom" style="--rarity-color: {{ c.rarity_color }};"></div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="footer-note">EndUID · 战争回响{% if total_seasons > 1 %} · 「战争回响N」查看往期赛季 · 共{{ total_seasons }}个赛季{% endif %}</div>
+
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

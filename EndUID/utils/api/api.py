@@ -58,6 +58,9 @@ INDIE_HARD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/indie-hard"
 CRISIS_CONTRACT_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/crisis-contract"
 CRISIS_CONTRACT_RECORD_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/crisis-contract/record"
 
+# 战争回响（赛季制常驻挑战）
+WAR_ECHOES_URL = f"{MAIN_URL}api/{API_VERSION}/game/endfield/card/war-echoes"
+
 # 养成计算器（web 端接口）
 CALC_SEARCH_CHARS_URL = f"{MAIN_URL}web/{API_VERSION}/game/endfield/search-chars"
 CALC_MATERIAL_LIST_URL = f"{MAIN_URL}web/{API_VERSION}/game/endfield/calculate/material-list"

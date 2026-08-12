@@ -22,6 +22,11 @@ TEXTURE_PATH = Path(__file__).parent / "texture2d"
 # 当期危机合约周期（服务器共用，落盘 data 内、重启有效）
 CRISIS_PERIOD_FILE = MAIN_PATH / "crisis_period.json"
 
+# 接口在挑战未开放时可能不返回当期数据。对用户统一作为正常状态提示，
+# 不展示成请求错误；内部日志仍保留用于排查真实接口异常。
+CRISIS_UNAVAILABLE_TIP = "当前挑战可能尚未开放"
+CRISIS_CACHE_TIP = "当前挑战可能尚未开放，已展示缓存数据"
+
 
 def get_crisis_period() -> Optional[dict]:
     try:

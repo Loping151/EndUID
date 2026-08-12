@@ -43,6 +43,15 @@ async def _need_login(bot: Bot):
     return await bot.send(TIP_NOT_BOUND)
 
 
+async def _send_draw_result(bot: Bot, result):
+    """缓存回退结果先发状态提示，再发送渲染图。"""
+    if isinstance(result, tuple):
+        tip, image = result
+        await bot.send(tip)
+        return await bot.send(image)
+    return await bot.send(result)
+
+
 @sv_crisis_total.on_command(
     ("危机合约总排行", "危机合约总排名", "危机总排行", "危机总排名", "合约总排行", "合约总排名",
      "wjhyzph", "wjzph", "hyzph"),
@@ -88,7 +97,7 @@ async def crisis_info_entry(bot: Bot, ev: Event):
     uid = await _bound_uid(ev)
     if not uid:
         return await _need_login(bot)
-    return await bot.send(await draw_crisis_info_img(ev, uid))
+    return await _send_draw_result(bot, await draw_crisis_info_img(ev, uid))
 
 
 @sv_crisis.on_command(
@@ -111,17 +120,21 @@ async def crisis_entry(bot: Bot, ev: Event):
     t = (ev.text or "").strip()
 
     if t in _INFO_WORDS:
-        return await bot.send(await draw_crisis_info_img(ev, uid))
+        return await _send_draw_result(bot, await draw_crisis_info_img(ev, uid))
 
     for p in _HISTORY_PREFIXES:
         if t.startswith(p):
             idx = _record_index(t[len(p):])
             if idx is not None:
                 return await bot.send(await draw_crisis_detail_img(ev, uid, idx))
-            return await bot.send(await draw_crisis_img(ev, uid, mode="history"))
+            return await _send_draw_result(
+                bot, await draw_crisis_img(ev, uid, mode="history")
+            )
 
     idx = _record_index(t)
     if t and idx is not None:
         return await bot.send(await draw_crisis_detail_img(ev, uid, idx))
 
-    return await bot.send(await draw_crisis_img(ev, uid, mode="main"))
+    return await _send_draw_result(
+        bot, await draw_crisis_img(ev, uid, mode="main")
+    )

@@ -1,6 +1,6 @@
 import io
 import re
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from PIL import Image
 
@@ -12,18 +12,14 @@ from ..utils.api.requests import end_api
 from ..utils.api.model import CrisisContractResponse, CrisisIndicator
 from ..utils.render_utils import render_html, get_image_b64_with_cache
 from ..utils.tips import TIP_NO_CRED
-from ..utils.path import PILE_CACHE_PATH
+from ..utils.path import PLAYER_PATH, PILE_CACHE_PATH
+from ..utils.player_store import write_player_json
 from . import _common as cm
-from .draw_crisis import end_templates
+from .draw_crisis import end_templates, load_cached_crisis_contract
 
 LOGIN_TIP = TIP_NO_CRED
 
 LEVEL_COLOR = {1: "#FF7A02", 2: "#FF5404", 3: "#FF1F05"}
-
-# 指标/关卡/敌人为服务器共用静态数据；进程内仅保留最近一次成功响应，
-# 不落盘、无 TTL，作为请求方取数失败时的兜底。
-_INFO_CACHE: Optional[dict] = None
-
 
 # ===================== buff 文本格式化 =====================
 
@@ -89,11 +85,10 @@ def _format_desc(desc: str, params: dict, params_by_id: dict) -> str:
     return out
 
 
-# ===================== 数据获取（内存兜底缓存） =====================
+# ===================== 数据获取（落盘缓存） =====================
 
 async def _fetch_fresh(ev: Event, uid: str) -> Optional[dict]:
-    """请求当前用户自己的数据；成功则刷新内存缓存"""
-    global _INFO_CACHE
+    """请求当前用户自己的有效合约数据。"""
     cred, user_record = await cm.resolve_cred(ev, uid)
     if not cred:
         return None
@@ -103,33 +98,53 @@ async def _fetch_fresh(ev: Event, uid: str) -> Optional[dict]:
         cred, uid, server_id=server_id, user_id=skland_user_id, bot_id=ev.bot_id,
     )
     if res and res.get("code") == 0:
-        _INFO_CACHE = res
-        await cm.record_group_and_profile(ev, uid)
-        return res
+        try:
+            cc = CrisisContractResponse.model_validate(res).data.crisisContract
+        except Exception as e:
+            logger.error(f"[ENDUID·危机合约] 信息解析失败: {e}")
+            return None
+        if cc.status.id:
+            try:
+                await write_player_json(
+                    PLAYER_PATH / uid / "crisis_contract.json",
+                    cm.scrub_urls(res),
+                )
+            except Exception as e:
+                logger.warning(f"[ENDUID·危机合约] 信息缓存写入失败: {e}")
+            await cm.record_group_and_profile(ev, uid)
+            return res
     return None
 
 
-async def draw_crisis_info_img(ev: Event, uid: str) -> Union[bytes, str]:
+async def draw_crisis_info_img(
+    ev: Event, uid: str,
+) -> Union[bytes, str, Tuple[str, bytes]]:
     # 优先请求请求方本人数据；命中即为本人数据，挑战奖励状态仅对本人展示
     res = await _fetch_fresh(ev, uid)
     is_own = res is not None
+    used_cache = False
+    cc = None
     if res is None:
-        res = _INFO_CACHE
-
-    if res is None:
-        # 本人取数失败且无兜底缓存
         cred, _ = await cm.resolve_cred(ev, uid)
         if not cred:
             return LOGIN_TIP
-        return "获取危机合约信息失败"
+        cc = await load_cached_crisis_contract(uid)
+        if cc is None:
+            return cm.CRISIS_UNAVAILABLE_TIP
+        is_own = True
+        used_cache = True
 
-    try:
-        cc = CrisisContractResponse.model_validate(res).data.crisisContract
-    except Exception as e:
-        logger.error(f"[ENDUID·危机合约] 信息解析失败: {e}")
-        return "❌ 解析危机合约信息失败"
+    if cc is None:
+        try:
+            cc = CrisisContractResponse.model_validate(res).data.crisisContract
+        except Exception as e:
+            logger.error(f"[ENDUID·危机合约] 信息解析失败: {e}")
+            return cm.CRISIS_UNAVAILABLE_TIP
 
-    if is_own:
+    if not cc.status.id:
+        return cm.CRISIS_UNAVAILABLE_TIP
+
+    if is_own and not used_cache:
         cm.update_crisis_period(cc.status)
 
     indicators = cc.indicators or []
@@ -202,5 +217,8 @@ async def draw_crisis_info_img(ev: Event, uid: str) -> Union[bytes, str]:
 
     img_bytes = await render_html(end_templates, "end_crisis_info.html", context)
     if img_bytes:
-        return await convert_img(Image.open(io.BytesIO(img_bytes)))
+        image = await convert_img(Image.open(io.BytesIO(img_bytes)))
+        if used_cache:
+            return cm.CRISIS_CACHE_TIP, image
+        return image
     return "❌ HTML 渲染失败，请检查渲染环境"

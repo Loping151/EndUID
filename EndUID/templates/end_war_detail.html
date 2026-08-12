@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>战争回响 · 信息</title>
+<style>
+    @import url('{{ font_css_url }}');
+
+    :root {
+        --c-bg: #2c2d2d;
+        --c-panel: rgba(27, 28, 28, 0.82);
+        --c-panel-2: rgba(16, 17, 17, 0.56);
+        --c-accent: #23b1da;
+        --c-cruel: #ff5438;
+        --c-hard: #ff9a4d;
+        --c-normal: #72d2eb;
+        --c-time: #d7e127;
+        --c-line: rgba(255,255,255,0.11);
+        --c-sub: rgba(255,255,255,0.58);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        width: 1280px;
+        background-color: var(--c-bg);
+        font-family: 'Source Han Sans CN', sans-serif;
+        color: #fff;
+    }
+    .container { position: relative; width: 100%; padding-bottom: 44px; overflow: hidden; }
+    .bg-stack {
+        position: absolute; inset: 0; z-index: 0;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.055), transparent 55%),
+            repeating-linear-gradient(135deg, rgba(255,255,255,0.018) 0, rgba(255,255,255,0.018) 1px, transparent 1px, transparent 5px),
+            #2c2d2d;
+    }
+    .page-bg {
+        position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none;
+        display: block; width: 100%; height: auto;
+    }
+    .ui-layer {
+        position: relative; z-index: 10;
+        padding: 34px 44px 0;
+        display: flex; flex-direction: column; gap: 24px;
+    }
+
+    /* 与「合约信息」一致：信息页只保留页面标题，不重复玩家资料。 */
+    .page-head {
+        display: flex; align-items: baseline; gap: 20px;
+        padding: 18px 26px;
+        background: linear-gradient(90deg, rgba(37,38,38,0.92), rgba(23,24,24,0.74));
+        border: 1px solid var(--c-line);
+        border-left: 4px solid var(--c-accent);
+        box-shadow: inset 0 -2px 0 rgba(255,84,56,0.26);
+    }
+    .page-head .title { font-size: 40px; font-weight: 800; letter-spacing: 0.05em; }
+    .page-head .season { font-size: 22px; color: var(--c-sub); }
+    .page-head .period {
+        margin-left: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 17px; color: var(--c-sub); letter-spacing: 0.04em;
+    }
+
+    .week-bar {
+        display: flex; align-items: center; gap: 14px;
+        padding: 13px 20px;
+        background: var(--c-panel);
+        border: 1px solid var(--c-line);
+    }
+    .week-bar .label {
+        font-size: 16px; font-weight: 800; letter-spacing: 0.1em;
+        color: #09242d; background: var(--c-accent); padding: 3px 10px;
+    }
+    .week-bar .name { font-size: 26px; font-weight: 800; letter-spacing: 0.05em; }
+    .week-bar .count {
+        margin-left: auto; font-family: 'JetBrains Mono', monospace;
+        font-size: 16px; color: var(--c-sub);
+    }
+
+    .stage-block {
+        background: var(--c-panel);
+        border: 1px solid var(--c-line);
+        overflow: hidden;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+    }
+    .stage-head {
+        display: flex; align-items: center; gap: 18px;
+        min-height: 78px; padding: 16px 24px;
+        background: rgba(55,56,56,0.88);
+        border-bottom: 1px solid var(--c-line);
+    }
+    .stage-order {
+        font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 700;
+        color: rgba(255,255,255,0.42); letter-spacing: 0.08em;
+    }
+    .stage-name {
+        font-family: 'Source Han Serif CN', serif;
+        font-size: 37px; font-weight: 800; letter-spacing: 0.05em; line-height: 1.1;
+    }
+    .stage-diff {
+        margin-left: 5px;
+        font-family: inherit;
+        font-size: inherit; font-weight: inherit; letter-spacing: inherit;
+        color: var(--c-sub);
+    }
+    .stage-diff.normal { color: var(--c-normal); }
+    .stage-diff.hard { color: var(--c-hard); }
+    .stage-diff.cruel { color: #ff765e; }
+    .difficulty {
+        margin-left: auto; display: flex; align-items: center; gap: 12px;
+        padding-left: 18px; border-left: 1px solid var(--c-line);
+    }
+    .recommend-lv {
+        font-family: 'Oswald', sans-serif; font-size: 18px;
+        color: var(--c-sub); white-space: nowrap;
+    }
+
+    .stage-body { padding: 22px 24px 24px; display: flex; flex-direction: column; gap: 20px; }
+    .challenge-target {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 13px 16px;
+        color: #edf39a; background: rgba(215,225,39,0.07);
+        border: 1px solid rgba(215,225,39,0.18);
+        font-size: 18px; line-height: 1.55;
+    }
+    .challenge-target .label {
+        flex-shrink: 0; font-size: 15px; font-weight: 800;
+        color: #172008; background: var(--c-time); padding: 2px 9px;
+    }
+    .info-title, .enemy-title {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 20px; font-weight: 800; color: #f0f0f0; letter-spacing: 0.06em;
+    }
+    .info-title::before, .enemy-title::before {
+        content: ""; width: 5px; height: 20px; background: var(--c-accent);
+    }
+    .enemy-title::before { background: var(--c-cruel); }
+    .feature-list {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px;
+    }
+    .feature-item {
+        position: relative; min-height: 48px;
+        display: flex; align-items: center;
+        padding: 10px 14px 10px 32px;
+        background: var(--c-panel-2); border: 1px solid rgba(255,255,255,0.07);
+        font-size: 17px; color: #dce9ed; line-height: 1.55;
+    }
+    .feature-item::before {
+        content: ""; position: absolute; left: 14px; top: 20px;
+        width: 8px; height: 8px; background: var(--c-accent);
+        transform: rotate(45deg);
+    }
+    .stage-desc {
+        font-size: 17px; color: var(--c-sub); line-height: 1.7;
+        padding: 13px 16px; background: rgba(0,0,0,0.18);
+        border-left: 3px solid rgba(255,255,255,0.16);
+    }
+
+    .enemy-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .enemy-cell {
+        display: flex; align-items: center; gap: 16px;
+        min-height: 116px; padding: 12px 18px;
+        background: var(--c-panel-2); border: 1px solid var(--c-line);
+    }
+    .enemy-icon {
+        width: 88px; height: 88px; flex-shrink: 0;
+        background: radial-gradient(circle at 50% 40%, #454646, #202121);
+        border: 1px solid rgba(255,255,255,0.08);
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .enemy-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .enemy-icon .empty { color: rgba(255,255,255,0.18); font-size: 30px; }
+    .enemy-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .enemy-name-row { display: flex; align-items: baseline; gap: 12px; }
+    .enemy-name { font-size: 22px; font-weight: 800; color: #f2f2f2; letter-spacing: 0.03em; }
+    .enemy-lv { font-family: 'Oswald', sans-serif; font-size: 17px; color: var(--c-time); }
+    .enemy-ability { font-size: 15px; color: #e0b9b2; line-height: 1.5; }
+    .enemy-desc { font-size: 15px; color: var(--c-sub); line-height: 1.5; }
+
+    .footer-note {
+        font-size: 16px; color: rgba(255,255,255,0.40); letter-spacing: 0.04em;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="bg-stack"></div>
+    {% if asset_page_bg %}<img class="page-bg" src="{{ asset_page_bg }}">{% endif %}
+
+    <div class="ui-layer">
+        <div class="page-head">
+            <span class="title">战争回响 · 关卡信息</span>
+            <span class="season">{{ season_name }}</span>
+            {% if week_start %}
+            <span class="period">{{ week_start }}{% if week_end %}–{{ week_end }}{% endif %}</span>
+            {% endif %}
+        </div>
+
+        <div class="week-bar">
+            <span class="label">轮换信息</span>
+            <span class="name">{{ week_name }}</span>
+            <span class="count">第 {{ week_no }} / {{ week_total }} 期</span>
+        </div>
+
+        {% for s in stages %}
+        <div class="stage-block">
+            <div class="stage-head">
+                <span class="stage-order">STAGE {{ '%02d'|format(loop.index) }}</span>
+                <span class="stage-name">{{ s.name }}<span class="stage-diff {{ s.diff_cls }}">·{{ s.diff_label }}</span></span>
+                <div class="difficulty">
+                    {% if s.recommendLevel %}<span class="recommend-lv">推荐等级 LV.{{ s.recommendLevel }}</span>{% endif %}
+                </div>
+            </div>
+
+            <div class="stage-body">
+                {% if s.challengeTarget %}
+                <div class="challenge-target">
+                    <span class="label">挑战目标</span>
+                    <span>{{ s.challengeTarget }}</span>
+                </div>
+                {% endif %}
+
+                {% if s.features or s.desc %}
+                <div class="info-title">关卡机制</div>
+                {% if s.features %}
+                <div class="feature-list">
+                    {% for f in s.features %}<div class="feature-item">{{ f }}</div>{% endfor %}
+                </div>
+                {% endif %}
+                {% if s.desc %}<div class="stage-desc">{{ s.desc }}</div>{% endif %}
+                {% endif %}
+
+                {% if s.enemies %}
+                <div class="enemy-title">敌方情报 · {{ s.enemies|length }}</div>
+                <div class="enemy-grid">
+                    {% for e in s.enemies %}
+                    <div class="enemy-cell">
+                        <div class="enemy-icon">
+                            {% if e.icon_b64 %}<img src="{{ e.icon_b64 }}">{% else %}<span class="empty">?</span>{% endif %}
+                        </div>
+                        <div class="enemy-text">
+                            <div class="enemy-name-row">
+                                <span class="enemy-name">{{ e.name }}</span>
+                                {% if e.level %}<span class="enemy-lv">LV.{{ e.level }}</span>{% endif %}
+                            </div>
+                            {% if e.ability %}<div class="enemy-ability">{{ e.ability }}</div>{% endif %}
+                            {% if e.desc %}<div class="enemy-desc">{{ e.desc }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="footer-note">EndUID · 战争回响信息 · 「回响信息N」第 N 轮换 · 「回响信息S N」第 S 赛季第 N 轮换{% if week_total > 1 %} · 本赛季共 {{ week_total }} 期{% endif %}</div>
+    </div>
+</div>
+</body>
+</html>

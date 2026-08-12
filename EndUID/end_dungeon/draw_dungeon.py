@@ -1,30 +1,33 @@
 import io
-from datetime import datetime
+from typing import List, Union
 from pathlib import Path
-from typing import List, Optional, Union
+from datetime import datetime
 
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
-from gsuid_core.models import Event
 from gsuid_core.logger import logger
+from gsuid_core.models import Event
 from gsuid_core.utils.image.convert import convert_img
 
+from ..utils.path import PLAYER_PATH, PILE_CACHE_PATH, AVATAR_CACHE_PATH
+from ..utils.tips import TIP_NO_CRED
+from ..utils.util import hide_uid
+from ..utils.colors import RARITY_COLORS as _RARITY_COLORS
+from ..utils.api.model import IndieHardGroup, IndieHardResponse
+from ..utils.resources import res_b64, attr_icon_b64, potential_b64
 from ..utils.api.requests import end_api
-from ..utils.api.model import IndieHardResponse, IndieHardGroup
-from ..utils.database.models import EndUser
+from ..utils.player_store import read_player_json, write_player_json
 from ..utils.render_utils import (
     render_html,
     get_image_b64_with_cache,
 )
-from ..utils.util import hide_uid
-from ..utils.tips import TIP_NO_CRED
-from ..utils.path import AVATAR_CACHE_PATH, PILE_CACHE_PATH, PLAYER_PATH
-from ..utils.player_store import read_player_json, write_player_json
-from ..utils.resources import attr_icon_b64, potential_b64, res_b64
+from ..utils.database.models import EndUser
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
+
+PAGE_GROUPS = 6  # 每页最多丰碑期次（大组）数
 
 PROPERTY_ICON = {
     "char_property_physical": "物理",
@@ -33,8 +36,6 @@ PROPERTY_ICON = {
     "char_property_cryst":    "寒冷",
     "char_property_natural":  "自然",
 }
-
-from ..utils.colors import RARITY_COLORS as _RARITY_COLORS
 
 RARITY_COLOR = {f"rarity_{k}": v for k, v in _RARITY_COLORS.items()}
 RARITY_COLOR.setdefault("rarity_2", "#888888")
@@ -167,7 +168,7 @@ async def _build_group_ctx(group: IndieHardGroup, diff: str) -> dict:
 
 
 async def draw_dungeon_img(
-    ev: Event, uid: str, diff: str = "hard",
+    ev: Event, uid: str, diff: str = "hard", page: int = 1,
 ) -> Union[bytes, str]:
     from ..utils.at_help import ruser_id, get_query_avatar_b64
     target_user_id = ruser_id(ev)
@@ -236,7 +237,8 @@ async def draw_dungeon_img(
         def _format_awaken_time(ts: str) -> str:
             try:
                 n = int(ts)
-                if n <= 0: return ""
+                if n <= 0:
+                    return ""
                 return datetime.fromtimestamp(n).strftime("%Y-%m-%d")
             except Exception:
                 return ""
@@ -256,8 +258,34 @@ async def draw_dungeon_img(
     # 头像: 优先平台头像(被查询者), 回退游戏卡片头像
     avatar_b64 = await get_query_avatar_b64(ev, base_avatar_url)
 
-    groups_ctx: List[dict] = []
+    # 全量汇总只读原始数据；图片和角色资源仅烘焙当前页，避免历史期数增多后
+    # 翻一页仍下载、处理全部封面/勋章/队伍。
+    total_pass = 0
+    total_all = 0
+    medals_total = 0
+    medals_obtained = 0
+    medals_plated = 0
     for g in groups_sorted:
+        for pair in g.dungeonGroups:
+            d = pair.hardDungeon if diff == "hard" else pair.normalDungeon
+            if not d.id:
+                continue
+            total_all += 1
+            if d.isPass:
+                total_pass += 1
+        if g.achieve:
+            medals_total += 1
+            if g.achieve.level > 0:
+                medals_obtained += 1
+            if g.achieve.isPlated:
+                medals_plated += 1
+
+    total_pages = max(1, (len(groups_sorted) + PAGE_GROUPS - 1) // PAGE_GROUPS)
+    page = min(max(page, 1), total_pages)
+    page_source = groups_sorted[(page - 1) * PAGE_GROUPS: page * PAGE_GROUPS]
+
+    page_groups: List[dict] = []
+    for g in page_source:
         gctx = await _build_group_ctx(g, diff)
         if g.pic:
             try:
@@ -269,14 +297,7 @@ async def draw_dungeon_img(
                 gctx["pic_b64"] = ""
         else:
             gctx["pic_b64"] = ""
-        groups_ctx.append(gctx)
-
-    total_pass = sum(g["pass_count"] for g in groups_ctx)
-    total_all = sum(g["total_count"] for g in groups_ctx)
-    cur_group: Optional[dict] = next((g for g in groups_ctx if g["isInActivity"]), None)
-    medals_total = sum(1 for g in groups_ctx if g["medal"])
-    medals_obtained = sum(1 for g in groups_ctx if g["medal"].get("obtained"))
-    medals_plated = sum(1 for g in groups_ctx if g["medal"].get("isPlated"))
+        page_groups.append(gctx)
 
     context = {
         "asset_grid_tile": res_b64("grid_tile.png"),
@@ -291,10 +312,11 @@ async def draw_dungeon_img(
         "user_level": base_level,
         "world_level": base_world_level,
         "create_time": base_create_time,
-        "groups": groups_ctx,
-        "current": cur_group,
+        "groups": page_groups,
+        "page": page,
+        "total_pages": total_pages,
         "summary": {
-            "total_groups": len(groups_ctx),
+            "total_groups": len(groups_sorted),
             "total_pass": total_pass,
             "total_all": total_all,
             "percent": (total_pass / total_all * 100) if total_all else 0,

@@ -89,8 +89,24 @@
       },
       {
         "name": "丰碑",
-        "desc": "查看影拓丰碑通关进度",
-        "eg": "丰碑 苦难/普通",
+        "desc": "查看影拓丰碑通关进度，末尾数字翻页",
+        "eg": "丰碑2 / 丰碑 普通2",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "战争回响",
+        "desc": "查看战争回响赛季进度，末尾数字选往期赛季",
+        "eg": "战争回响",
+        "need_ck": true,
+        "need_sk": false,
+        "need_admin": false
+      },
+      {
+        "name": "战争回响信息",
+        "desc": "查看第N轮换各关最高难度的机制与敌方情报",
+        "eg": "回响信息3 / 回响信息2 3",
         "need_ck": true,
         "need_sk": false,
         "need_admin": false

@@ -1,7 +1,7 @@
 import io
 import asyncio
 from pathlib import Path
-from typing import List, Union
+from typing import List, Tuple, Union
 from datetime import datetime
 
 from PIL import Image
@@ -59,7 +59,7 @@ async def _build_record_ctx(rec: CrisisRecord, index: int) -> dict:
 
 
 async def fetch_crisis_contract(ev: Event, uid: str):
-    """返回 (crisisContract, cred, user_record) 或 (None, 错误文案, None)"""
+    """返回 (crisisContract, cred, user_record) 或 (None, 提示文案, user_record)。"""
     cred, user_record = await cm.resolve_cred(ev, uid)
     if not cred:
         return None, LOGIN_TIP, None
@@ -71,9 +71,22 @@ async def fetch_crisis_contract(ev: Event, uid: str):
         cred, uid, server_id=server_id, user_id=skland_user_id, bot_id=ev.bot_id,
     )
     if not res:
-        return None, "获取危机合约详情失败", None
+        return None, cm.CRISIS_UNAVAILABLE_TIP, user_record
     if res.get("code") != 0:
-        return None, f"获取危机合约详情失败: {res.get('message', '未知错误')}", None
+        logger.info(
+            "[ENDUID·危机合约] 暂无当期数据: "
+            f"{res.get('message', '未知原因')}"
+        )
+        return None, cm.CRISIS_UNAVAILABLE_TIP, user_record
+
+    try:
+        cc = CrisisContractResponse.model_validate(res).data.crisisContract
+    except Exception as e:
+        logger.error(f"[ENDUID·危机合约] 详情解析失败: {e}")
+        return None, cm.CRISIS_UNAVAILABLE_TIP, user_record
+
+    if not cc.status.id:
+        return None, cm.CRISIS_UNAVAILABLE_TIP, user_record
 
     try:
         await write_player_json(
@@ -81,12 +94,6 @@ async def fetch_crisis_contract(ev: Event, uid: str):
         )
     except Exception as e:
         logger.warning(f"[ENDUID·危机合约] 详情写入失败: {e}")
-
-    try:
-        cc = CrisisContractResponse.model_validate(res).data.crisisContract
-    except Exception as e:
-        logger.error(f"[ENDUID·危机合约] 详情解析失败: {e}")
-        return None, "❌ 解析危机合约详情失败", None
 
     cm.update_crisis_period(cc.status)
     await cm.record_group_and_profile(ev, uid)
@@ -99,6 +106,22 @@ async def fetch_crisis_contract(ev: Event, uid: str):
         task.add_done_callback(_BG_TASKS.discard)
 
     return cc, cred, user_record
+
+
+async def load_cached_crisis_contract(uid: str):
+    """读取该角色最近一次有效合约数据；缓存损坏或为空时返回 None。"""
+    cached = await read_player_json(PLAYER_PATH / uid / "crisis_contract.json")
+    if (
+        not isinstance(cached, dict)
+        or cached.get("code") != 0
+    ):
+        return None
+    try:
+        cc = CrisisContractResponse.model_validate(cached).data.crisisContract
+    except Exception as e:
+        logger.warning(f"[ENDUID·危机合约] 缓存解析失败: {e}")
+        return None
+    return cc if cc.status.id else None
 
 
 async def _upload_crisis(ev: Event, uid: str, cred, user_record, cc) -> None:
@@ -243,14 +266,22 @@ async def build_status_ctx(status) -> dict:
     }
 
 
-async def draw_crisis_img(ev: Event, uid: str, mode: str = "main") -> Union[bytes, str]:
+async def draw_crisis_img(
+    ev: Event, uid: str, mode: str = "main",
+) -> Union[bytes, str, Tuple[str, bytes]]:
     cc, err, user_record = await fetch_crisis_contract(ev, uid)
+    used_cache = False
     if cc is None:
-        return err
+        if err != cm.CRISIS_UNAVAILABLE_TIP:
+            return err
+        cc = await load_cached_crisis_contract(uid)
+        if cc is None:
+            return err
+        used_cache = True
 
     status = cc.status
     if not status.id:
-        return "❌ 暂无危机合约数据"
+        return cm.CRISIS_UNAVAILABLE_TIP
 
     user_pref = user_record.hide_uid_self_value if user_record and user_record.hide_uid_self_value else ""
     base_ctx = await cm.load_player_base(ev, uid, user_pref)
@@ -294,5 +325,8 @@ async def draw_crisis_img(ev: Event, uid: str, mode: str = "main") -> Union[byte
 
     img_bytes = await render_html(end_templates, "end_crisis_card.html", context)
     if img_bytes:
-        return await convert_img(Image.open(io.BytesIO(img_bytes)))
+        image = await convert_img(Image.open(io.BytesIO(img_bytes)))
+        if used_cache:
+            return cm.CRISIS_CACHE_TIP, image
+        return image
     return "❌ HTML 渲染失败，请检查渲染环境"

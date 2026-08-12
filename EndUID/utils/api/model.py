@@ -427,6 +427,81 @@ class IndieHardResponse(BaseModel):
     data: IndieHardData = Field(default_factory=IndieHardData)
 
 
+class WarEchoDungeon(BaseModel):
+    """战争回响单个难度副本"""
+    id: str = ""
+    name: str = ""
+    isPass: bool = False
+    firstPassTs: str = ""
+    recommendLevel: int = 0
+    desc: str = ""
+    feature: str = ""
+    plusTask: bool = False
+    additionalChallengeTarget: str = ""
+    enemies: List[IndieHardEnemy] = Field(default_factory=list)
+    bestRecord: Optional[DungeonBestRecord] = None
+
+
+class WarEchoStage(BaseModel):
+    """战争回响关卡（普通/困难/残酷三难度）"""
+    name: str = ""
+    star: int = 0
+    plusTask: bool = False
+    normalDungeon: WarEchoDungeon = Field(default_factory=WarEchoDungeon)
+    hardDungeon: WarEchoDungeon = Field(default_factory=WarEchoDungeon)
+    cruelDungeon: WarEchoDungeon = Field(default_factory=WarEchoDungeon)
+
+
+class WarEchoWeek(BaseModel):
+    """战争回响周次"""
+    id: str = ""
+    name: str = ""
+    startTs: str = ""
+    endTs: str = ""
+    stars: int = 0
+    allPlusTasks: bool = False
+    dungeonGroups: List[WarEchoStage] = Field(default_factory=list)
+
+
+class WarEchoSeason(BaseModel):
+    """战争回响赛季"""
+    id: str = ""
+    name: str = ""
+    kvImage: str = ""
+    headerImage: str = ""
+    startTs: str = ""
+    endTs: str = ""
+    stars: int = 0
+    allPlusTasks: bool = False
+    weeks: List[WarEchoWeek] = Field(default_factory=list)
+
+
+class WarEchoAchieve(BaseModel):
+    """战争回响荣誉（赛季成就）"""
+    name: str = ""
+    star: int = 0
+    firstPassTs: str = ""
+
+
+class WarEchoes(BaseModel):
+    """战争回响"""
+    seasons: List[WarEchoSeason] = Field(default_factory=list)
+    achieves: List[WarEchoAchieve] = Field(default_factory=list)
+
+
+class WarEchoesData(BaseModel):
+    """war-echoes 接口 data 容器"""
+    warEchoes: WarEchoes = Field(default_factory=WarEchoes)
+
+
+class WarEchoesResponse(BaseModel):
+    """war-echoes 接口响应"""
+    code: int = 0
+    message: str = ""
+    timestamp: str = ""
+    data: WarEchoesData = Field(default_factory=WarEchoesData)
+
+
 class CrisisChar(BaseModel):
     """危机合约通关阵容角色"""
     charId: str = ""
