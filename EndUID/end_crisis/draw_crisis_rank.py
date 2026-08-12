@@ -14,6 +14,7 @@ from ..utils.path import AVATAR_CACHE_PATH, PLAYER_PATH
 from ..utils.player_store import read_player_json_sync, remove_player_json
 from ..utils.api.model import CrisisContractResponse
 from ..utils.database.models import EndBind, EndUser
+from ..utils.at_help import _is_qq_default_avatar_url
 from ..end_config import PREFIX
 from . import _common as cm
 from .draw_crisis import end_templates
@@ -131,8 +132,12 @@ async def draw_crisis_rank_img(ev: Event, page: int = 1) -> Union[bytes, str]:
             avatar_url = f"http://q1.qlogo.cn/g?b=qq&nk={e['user_id']}&s=640"
         elif ev.bot_id == "qqgroup" and e["user_id"]:
             avatar_url = f"https://q.qlogo.cn/qqapp/{ev.bot_self_id}/{e['user_id']}/100"
+        if avatar_url and await _is_qq_default_avatar_url(avatar_url):
+            avatar_url = ""
         if not avatar_url and user_rec and user_rec.platform_avatar:
             avatar_url = user_rec.platform_avatar
+            if await _is_qq_default_avatar_url(avatar_url):
+                avatar_url = ""
         avatar_b64 = ""
         if avatar_url:
             try:
