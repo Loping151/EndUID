@@ -94,7 +94,7 @@ async def _fetch_wiki_data_via_playwright() -> Optional[Dict]:
 
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=True, args=["--disable-gpu"])
             page = await browser.new_page()
             page.on('response', on_response)
 
