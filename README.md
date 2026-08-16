@@ -35,6 +35,21 @@ git clone https://github.com/Loping151/EndUID
 
 支持森空岛扫码登录。链接登陆需自行配置网络。
 
+### 外置网页登录
+
+可使用支持 EndUID 协议的外置登录服务（例如新版 `ww-login`）：
+
+1. `EndLoginUrl` 填写外置服务的公网 HTTPS 地址；
+2. 关闭 `EndLoginUrlSelf`；
+3. 生成至少 32 位随机字符串，同时写入 EndUID 的 `EndLoginSharedSecret` 和
+   外置服务环境变量 `END_SHARED_SECRET`；
+4. 反向代理放行 `/end/*`。
+
+手机号验证由外置服务完成，Token 校验、Cred 换取、绑定入库和后续同步仍由
+EndUID 本体完成。开启 `EndGachaWebPage` 后，外置模式也会把抽卡摘要上传到同一
+服务，链接有效期为 10 分钟。若使用反代本 core 的旧部署方式，请保持
+`EndLoginUrlSelf` 开启。
+
 催更/反馈/Bug/建议：群号 885617919（注意入群问题的答案仓库是 [XutheringWavesUID](https://github.com/Loping151/XutheringWavesUID)），共用一个，不想再建群了。Issue亦会看。如果森空岛出了新的可查询内容，并且你希望通过EndUID查看，请告诉我。
 
 ## 丨其他

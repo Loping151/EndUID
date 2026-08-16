@@ -142,9 +142,11 @@ async def send_end_phone_login_msg(bot: Bot, ev: Event):
     if not EndConfig.get_config("EndLoginUrl").data:
         return await send_end_scan_login_msg(bot, ev)
 
-    from .web_login import phone_web_login_entry
+    from .web_login import phone_web_login_entry, phone_web_login_external_entry
 
-    return await phone_web_login_entry(bot, ev)
+    if EndConfig.get_config("EndLoginUrlSelf").data:
+        return await phone_web_login_entry(bot, ev)
+    return await phone_web_login_external_entry(bot, ev)
 
 
 async def _persist_login_cred(

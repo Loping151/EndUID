@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse
-
+import httpx
+from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.web_app import app
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse
 
+from ..end_bind.web_login import get_url
 from ..end_config import PREFIX
 from ..end_config.config_default import EndConfig
 from ..utils.cache import TimedCache
 from ..utils.path import MAIN_PATH, PLAYER_PATH
 from ..utils.player_store import player_json_exists
 from ..utils.util import hide_uid
-from ..end_bind.web_login import get_url
 from .draw_gachalogs import build_gacha_pools
 
 GACHA_WEB_TTL = 600  # 10 分钟
@@ -66,11 +68,58 @@ async def make_gacha_web_url(
         "now": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
-    token = secrets.token_urlsafe(16)
-    _token_cache.set(token, web_payload)
-
     base = (await get_url()).rstrip("/")
+    token = secrets.token_urlsafe(16)
+    configured_url = str(EndConfig.get_config("EndLoginUrl").data or "").strip()
+    if EndConfig.get_config("EndLoginUrlSelf").data or not configured_url:
+        _token_cache.set(token, web_payload)
+    else:
+        ok = await _push_gacha_to_external(base, token, web_payload)
+        if not ok:
+            return None, "外置抽卡页面上传失败，请稍后重试"
     return f"{base}/end/gacha/{token}", "ok"
+
+
+async def _push_gacha_to_external(base: str, token: str, payload: dict) -> bool:
+    """上传受限 JSON 摘要；外置服务不接收可执行 HTML。"""
+    shared_secret = str(
+        EndConfig.get_config("EndLoginSharedSecret").data or ""
+    ).strip()
+    if len(shared_secret) < 32:
+        logger.warning("[ENDUID·抽卡网页] 外置登录共享密钥未配置或不足 32 位")
+        return False
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
+        "utf-8"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{base}/end/gacha/data/{token}",
+                content=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-EndUID-Secret": shared_secret,
+                },
+            )
+        if response.status_code != 200:
+            logger.warning(
+                f"[ENDUID·抽卡网页] 外置上传失败: "
+                f"HTTP {response.status_code} {response.text[:160]}"
+            )
+            return False
+        result = response.json()
+        if not isinstance(result, dict):
+            raise TypeError("外置服务返回了无效响应")
+        if not result.get("success"):
+            logger.warning(f"[ENDUID·抽卡网页] 外置上传被拒绝: {result}")
+            return False
+        logger.info(
+            f"[ENDUID·抽卡网页] 已上传外置摘要 token={token} size={len(body)}"
+        )
+        return True
+    except (httpx.HTTPError, TypeError, ValueError) as exc:
+        logger.warning(f"[ENDUID·抽卡网页] 外置上传异常: {exc}")
+        return False
 
 
 _NOT_FOUND_HTML = """<!DOCTYPE html><html lang=zh-CN><meta charset=utf-8>

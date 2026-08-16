@@ -46,8 +46,20 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     # ==================== 登录配置 ====================
     "EndLoginUrl": GsStrConfig(
         "终末地登录url",
-        "EndUID 登录/抽卡网页的对外地址（域名/穿透/反代到本 core）。留空则用 core 的 HOST:PORT，"
-        "群聊远端用户需能访问到该地址，建议反代后在此填写。",
+        "EndUID 登录/抽卡网页的对外地址。使用本体登录时填写反代到 core 的地址；"
+        "使用外置登录时填写外置服务地址。留空则使用森空岛扫码登录。",
+        "",
+        secret=True,
+    ),
+    "EndLoginUrlSelf": GsBoolConfig(
+        "强制【终末地登录url】为自己的域名",
+        "外置登录服务请关闭；自己穿透或反代本 core 请打开。为兼容旧配置默认打开。",
+        True,
+    ),
+    "EndLoginSharedSecret": GsStrConfig(
+        "终末地外置登录共享密钥",
+        "仅在使用外置登录时填写，必须与外置服务的 END_SHARED_SECRET 完全一致。"
+        "建议使用至少32位随机字符串。",
         "",
         secret=True,
     ),
