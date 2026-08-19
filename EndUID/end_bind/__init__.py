@@ -13,7 +13,7 @@ from ..end_config import PREFIX, EndConfig
 from ..utils.api.requests import end_api
 from ..utils.constants import ARKNIGHTS_GAME_ID, ENDFIELD_GAME_ID
 from ..utils.database.models import EndBind, EndUser
-from ..utils.util import hide_uid
+from ..utils.util import get_hide_uid_pref, hide_uid
 
 GAME_TITLE = "「终末地」"
 
@@ -338,7 +338,9 @@ async def do_login_notify(send, user_id: str, bot_id: str, result: dict):
     if endfield:
         msg_lines.append(f"游戏昵称: {endfield['nickname']}")
         msg_lines.append(f"服务器: {endfield['channel']}")
-        msg_lines.append(f"UID: {hide_uid(endfield['uid'])}")
+        msg_lines.append(
+            f"UID: {hide_uid(endfield['uid'], await get_hide_uid_pref(endfield['uid'], user_id, bot_id))}"
+        )
     if result.get("ark_count", 0) > 0:
         msg_lines.append(f"绑定明日方舟UID {result['ark_count']} 个")
     endfield_uid = result.get("endfield_uid")
@@ -475,6 +477,8 @@ async def del_bind(bot: Bot, ev: Event):
     if not bind_data:
         return await _send_text(bot, ev, f"{GAME_TITLE} 未绑定账号")
 
+    target_pref = await get_hide_uid_pref(target_uid, ev.user_id, ev.bot_id)
+
     # 删除 EndUser 记录（所有 game_id）
     users = await EndUser.select_data_list(user_id=ev.user_id, bot_id=ev.bot_id)
     deleted_any = False
@@ -488,7 +492,7 @@ async def del_bind(bot: Bot, ev: Event):
     res_ark = await EndBind.remove_ark_uid(ev.user_id, ev.bot_id, target_uid)
 
     if res_uid != 0 and not res_ark and not deleted_any:
-        return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该UID[{hide_uid(target_uid)}]")
+        return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该UID[{hide_uid(target_uid, target_pref)}]")
 
     return await _send_text(bot, ev, f"{GAME_TITLE} 删除成功")
 
@@ -506,14 +510,16 @@ async def switch_or_view_uid(bot: Bot, ev: Event):
         if retcode == 0:
             uid_list = await EndBind.get_all_uids(ev.user_id, ev.bot_id)
             current_uid = uid_list[0] if uid_list else None
-            msg = f"{GAME_TITLE} 切换 UID 成功！\n当前 UID: {hide_uid(current_uid)}"
+            pref = await get_hide_uid_pref(current_uid, ev.user_id, ev.bot_id)
+            msg = f"{GAME_TITLE} 切换 UID 成功！\n当前 UID: {hide_uid(current_uid, pref)}"
             return await _send_text(bot, ev, msg)
         elif retcode == -1:
             return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定任何 UID")
         elif retcode == -3:
             return await _send_text(bot, ev, f"{GAME_TITLE} 只绑定了一个 UID，无需切换")
         else:
-            return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该 UID[{hide_uid(target_uid)}]")
+            pref = await get_hide_uid_pref(target_uid, ev.user_id, ev.bot_id)
+            return await _send_text(bot, ev, f"{GAME_TITLE} 尚未绑定该 UID[{hide_uid(target_uid, pref)}]")
     elif "查看" in ev.command:
         bind_data = await EndBind.get_data_by_user_id(ev.user_id, ev.bot_id)
         uid_list = bind_data.uid.split('_') if bind_data and bind_data.uid else []
@@ -526,14 +532,18 @@ async def switch_or_view_uid(bot: Bot, ev: Event):
 
         lines = [f"{GAME_TITLE} 已绑定的 UID 列表："]
         idx = 1
+        prefs = {}
         for uid in uid_list:
+            prefs[uid] = await get_hide_uid_pref(uid, ev.user_id, ev.bot_id)
             current = " (当前)" if idx == 1 else ""
-            lines.append(f"{idx}. [终末地] {hide_uid(uid)}{current}")
+            lines.append(f"{idx}. [终末地] {hide_uid(uid, prefs[uid])}{current}")
             idx += 1
         if uid_list and ark_uid_list:
             lines.append("--------------------------------")
+        # 明日方舟 uid 跟随当前终末地 uid 的开关
+        ark_pref = prefs.get(uid_list[0], "") if uid_list else ""
         for uid in ark_uid_list:
-            lines.append(f"{idx}. [明日方舟] {hide_uid(uid)}")
+            lines.append(f"{idx}. [明日方舟] {hide_uid(uid, ark_pref)}")
             idx += 1
         return await _send_text(bot, ev, "\n".join(lines))
 

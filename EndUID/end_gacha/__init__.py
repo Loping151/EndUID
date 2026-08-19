@@ -310,8 +310,9 @@ async def delete_gacha_record(bot: Bot, ev: Event):
             f"请先使用「{PREFIX}登录」绑定账号后再删除抽卡记录"
         )
 
+    masked_uid = hide_uid(uid, user.hide_uid_self_value)
     success = await delete_gachalogs(uid)
     if success:
-        await bot.send(f"已删除UID {hide_uid(uid)} 的抽卡记录")
+        await bot.send(f"已删除UID {masked_uid} 的抽卡记录")
     else:
-        await bot.send(f"未找到 UID {hide_uid(uid)} 的抽卡记录")
+        await bot.send(f"未找到 UID {masked_uid} 的抽卡记录")
