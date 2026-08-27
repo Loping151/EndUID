@@ -1467,6 +1467,21 @@ class EndApi:
     _web_public_token_time: float = 0
     WEB_PUBLIC_TOKEN_TTL = 1500  # 25 分钟，到期前主动刷新
 
+    _web_did: str = ""  # web 端设备 ID，进程内保持稳定（对应浏览器 localStorage 里的 dId）
+
+    def _get_web_did(self, force: bool = False) -> str:
+        """获取 web 端设备 ID；2026-08-19 起服务端校验 dId，为空返回 10001 设备信息无效"""
+        if force or not EndApi._web_did:
+            try:
+                EndApi._web_did = get_device_id(
+                    user_agent=WEB_USER_AGENT,
+                    referer="https://www.skland.com/",
+                )
+            except Exception as e:
+                logger.error(f"[ENDUID·公告] 生成 web 端设备 ID 失败: {e}")
+                EndApi._web_did = ""
+        return EndApi._web_did
+
     async def _web_public_refresh_token(self, force: bool = False) -> Optional[str]:
         """获取森空岛公开 Web API 使用的 token。
 
@@ -1483,18 +1498,21 @@ class EndApi:
             return EndApi._web_public_token
 
         path = "/web/v1/auth/refresh"
+        did = self._get_web_did()
+        if not did:
+            return None
         sign_data = generate_sign(
             token="",
             path=path,
             query_or_body="",
             platform="3",
             vname=SIGN_VNAME,
-            did="",
+            did=did,
         )
         headers = {
             "platform": "3",
             "timestamp": sign_data["timestamp"],
-            "dId": "",
+            "dId": did,
             "vName": SIGN_VNAME,
             "sign": sign_data["sign"],
             "User-Agent": WEB_USER_AGENT,
@@ -1513,6 +1531,34 @@ class EndApi:
         except Exception as e:
             logger.error(f"[ENDUID·公告] 获取 web token 异常: {e}")
             return None
+
+        # 设备 ID 被服务端判定无效时，换新设备 ID 重试一次
+        if res.get("code") == RespCode.CRED_INVALID:
+            logger.warning(f"[ENDUID·公告] web 设备 ID 被拒，重新生成后重试: {res}")
+            did = self._get_web_did(force=True)
+            if not did:
+                return None
+            sign_data = generate_sign(
+                token="",
+                path=path,
+                query_or_body="",
+                platform="3",
+                vname=SIGN_VNAME,
+                did=did,
+            )
+            headers["dId"] = did
+            headers["timestamp"] = sign_data["timestamp"]
+            headers["sign"] = sign_data["sign"]
+            try:
+                async with session.get(
+                    SKLAND_WEB_REFRESH_URL,
+                    headers=headers,
+                    proxy=self._get_proxy(),
+                ) as resp:
+                    res = await resp.json()
+            except Exception as e:
+                logger.error(f"[ENDUID·公告] 获取 web token 异常: {e}")
+                return None
 
         if res.get("code") != 0:
             logger.error(f"[ENDUID·公告] 获取 web token 失败: {res}")
@@ -1540,18 +1586,19 @@ class EndApi:
         url = f"https://zonai.skland.com{path}" + (f"?{query_string}" if query_string else "")
 
         async def do_request(token: str) -> Optional[dict]:
+            did = self._get_web_did()
             sign_data = generate_sign(
                 token=token,
                 path=path,
                 query_or_body=query_string,
                 platform="3",
                 vname=SIGN_VNAME,
-                did="",
+                did=did,
             )
             headers = {
                 "platform": "3",
                 "timestamp": sign_data["timestamp"],
-                "dId": "",
+                "dId": did,
                 "vName": SIGN_VNAME,
                 "sign": sign_data["sign"],
                 "User-Agent": WEB_USER_AGENT,
@@ -1585,6 +1632,12 @@ class EndApi:
             if not token:
                 return None
             res = await do_request(token)
+
+        # 设备 ID 被判定无效（10001）时，换新设备 ID 用同一 token 重试一次
+        if res and res.get("code") == RespCode.CRED_INVALID:
+            logger.warning(f"[ENDUID·公告] web 设备 ID 被拒，重新生成后重试: {path}")
+            if self._get_web_did(force=True):
+                res = await do_request(token)
 
         return res
 
