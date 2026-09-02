@@ -60,7 +60,7 @@ async def _refresh_id_map() -> dict:
     for sub_type_name, entries in catalog_items.items():
         for entry in entries:
             item_id = str(entry.get("itemId", ""))
-            name = entry.get("name", "")
+            name = str(entry.get("name", "") or "").strip()
             brief = entry.get("brief", {})
             cover = brief.get("cover", "")
             sub_type_list = brief.get("subTypeList", [])
@@ -124,7 +124,7 @@ def _find_item_id(
     id_map: dict, name: str, sub_type: str = "干员"
 ) -> int | None:
     for item_id_str, meta in id_map.get("items", {}).items():
-        if meta.get("name") == name and meta.get("sub_type") == sub_type:
+        if str(meta.get("name") or "").strip() == name and meta.get("sub_type") == sub_type:
             return int(item_id_str)
     return None
 

@@ -18,7 +18,6 @@ text 可附 "up"(非常驻六星, 默认) / "全部" / "六" / "五" 进一步�
 """,
 )
 async def handle_hold_rate(bot: Bot, ev: Event):
-    return await bot.send("样本量不足，请等待更新！")
     await bot.send(await draw_hold_rate_img(ev))
 
 
