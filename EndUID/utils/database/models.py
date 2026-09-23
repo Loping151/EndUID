@@ -17,9 +17,13 @@ from gsuid_core.utils.database.base_models import (
     BaseModel,
     BaseBotIDModel,
     with_session,
-    with_read_session,
 )
 from gsuid_core.server import on_core_start
+
+try:
+    from gsuid_core.utils.database.base_models import with_read_session
+except ImportError:
+    with_read_session = with_session
 from gsuid_core.utils.database.startup import exec_list
 from gsuid_core.utils.database.models import Subscribe
 from gsuid_core.webconsole.mount_app import site, GsAdminModel, PageSchema
@@ -680,6 +684,26 @@ class EndUserActivity(BaseBotIDModel, table=True):
         bot_self_id: str,
     ) -> bool:
         """更新用户活跃度（支持数据迁移）"""
+        return await cls._touch(session, user_id, bot_id, bot_self_id)
+
+    @classmethod
+    @with_session
+    async def update_many(
+        cls: Type["EndUserActivity"],
+        session: AsyncSession,
+        rows: List[tuple[str, str, str]],
+    ) -> None:
+        for user_id, bot_id, bot_self_id in rows:
+            await cls._touch(session, user_id, bot_id, bot_self_id)
+
+    @classmethod
+    async def _touch(
+        cls: Type["EndUserActivity"],
+        session: AsyncSession,
+        user_id: str,
+        bot_id: str,
+        bot_self_id: str,
+    ) -> bool:
         current_time = int(time.time())
 
         sql = select(cls).where(
@@ -723,16 +747,6 @@ class EndUserActivity(BaseBotIDModel, table=True):
         return True
 
     @classmethod
-    @with_session
-    async def update_many(
-        cls: Type["EndUserActivity"],
-        _session: AsyncSession,
-        rows: List[tuple[str, str, str]],
-    ) -> None:
-        for user_id, bot_id, bot_self_id in rows:
-            await cls.update_user_activity(user_id, bot_id, bot_self_id)
-
-    @classmethod
     @with_read_session
     async def get_active_user_ids(
         cls: Type["EndUserActivity"],
@@ -774,6 +788,26 @@ class EndGroupActivity(BaseBotIDModel, table=True):
         bot_id: str,
         bot_self_id: str,
     ) -> bool:
+        return await cls._touch(session, group_id, bot_id, bot_self_id)
+
+    @classmethod
+    @with_session
+    async def update_many(
+        cls: Type["EndGroupActivity"],
+        session: AsyncSession,
+        rows: List[tuple[str, str, str]],
+    ) -> None:
+        for group_id, bot_id, bot_self_id in rows:
+            await cls._touch(session, group_id, bot_id, bot_self_id)
+
+    @classmethod
+    async def _touch(
+        cls: Type["EndGroupActivity"],
+        session: AsyncSession,
+        group_id: str,
+        bot_id: str,
+        bot_self_id: str,
+    ) -> bool:
         current_time = int(time.time())
         sql = select(cls).where(
             and_(
@@ -797,16 +831,6 @@ class EndGroupActivity(BaseBotIDModel, table=True):
                 )
             )
         return True
-
-    @classmethod
-    @with_session
-    async def update_many(
-        cls: Type["EndGroupActivity"],
-        _session: AsyncSession,
-        rows: List[tuple[str, str, str]],
-    ) -> None:
-        for group_id, bot_id, bot_self_id in rows:
-            await cls.update_group_activity(group_id, bot_id, bot_self_id)
 
     @classmethod
     @with_read_session
