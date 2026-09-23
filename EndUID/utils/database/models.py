@@ -17,6 +17,7 @@ from gsuid_core.utils.database.base_models import (
     BaseModel,
     BaseBotIDModel,
     with_session,
+    with_read_session,
 )
 from gsuid_core.server import on_core_start
 from gsuid_core.utils.database.startup import exec_list
@@ -555,8 +556,41 @@ class EndSubscribe(BaseModel, table=True):
     updated_at: Optional[int] = Field(default=None, title="最后更新时间（秒）")
 
     @classmethod
-    @with_session
+    @with_read_session
+    async def _subscribe_needs_update(
+        cls,
+        session: AsyncSession,
+        group_id: str,
+        bot_self_id: str,
+    ) -> bool:
+        stmt = (
+            select(Subscribe)
+            .where(
+                and_(
+                    col(Subscribe.group_id) == group_id,
+                    col(Subscribe.bot_self_id) != bot_self_id,
+                )
+            )
+            .limit(1)
+        )
+        result = await session.execute(stmt)
+        return result.first() is not None
+
+    @classmethod
     async def check_and_update_bot(
+        cls,
+        group_id: str,
+        bot_id: str,
+        bot_self_id: str,
+    ) -> bool:
+        current = await cls.get_group_bot(group_id)
+        if current == (bot_id, bot_self_id) and not await cls._subscribe_needs_update(group_id, bot_self_id):
+            return False
+        return await cls._apply_bot_change(group_id, bot_id, bot_self_id)
+
+    @classmethod
+    @with_session
+    async def _apply_bot_change(
         cls,
         session: AsyncSession,
         group_id: str,
@@ -611,7 +645,7 @@ class EndSubscribe(BaseModel, table=True):
         return changed
 
     @classmethod
-    @with_session
+    @with_read_session
     async def get_group_bot(
         cls,
         session: AsyncSession,
@@ -690,6 +724,16 @@ class EndUserActivity(BaseBotIDModel, table=True):
 
     @classmethod
     @with_session
+    async def update_many(
+        cls: Type["EndUserActivity"],
+        _session: AsyncSession,
+        rows: List[tuple[str, str, str]],
+    ) -> None:
+        for user_id, bot_id, bot_self_id in rows:
+            await cls.update_user_activity(user_id, bot_id, bot_self_id)
+
+    @classmethod
+    @with_read_session
     async def get_active_user_ids(
         cls: Type["EndUserActivity"],
         session: AsyncSession,
@@ -756,6 +800,16 @@ class EndGroupActivity(BaseBotIDModel, table=True):
 
     @classmethod
     @with_session
+    async def update_many(
+        cls: Type["EndGroupActivity"],
+        _session: AsyncSession,
+        rows: List[tuple[str, str, str]],
+    ) -> None:
+        for group_id, bot_id, bot_self_id in rows:
+            await cls.update_group_activity(group_id, bot_id, bot_self_id)
+
+    @classmethod
+    @with_read_session
     async def get_active_group_ids(
         cls: Type["EndGroupActivity"],
         session: AsyncSession,
@@ -784,7 +838,7 @@ class EndSignRecord(BaseModel, table=True):
     date: str = Field(default="", title="签到日期")
 
     @classmethod
-    @with_session
+    @with_read_session
     async def get_sign_record(
         cls,
         session: AsyncSession,
