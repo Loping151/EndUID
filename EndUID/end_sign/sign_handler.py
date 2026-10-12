@@ -89,7 +89,7 @@ async def do_sign_in(
         return msg
 
     # 今日已签到
-    elif code == 10001:
+    elif _is_already_signed(res):
         return f"ℹ️ [{nickname}] 今天已经签到过了"
 
     # 凭证失效
@@ -252,7 +252,7 @@ async def do_sign_in_with_result(
                 logger.info(f"[ENDUID·签到] {display_uid} 签到成功")
                 await EndSignRecord.mark_signed(user.uid)
                 return {"status": "success", "message": f"[{display_uid}] 签到成功"}
-            elif code == 10001:
+            elif _is_already_signed(res):
                 logger.info(f"[ENDUID·签到] {display_uid} 今日已签到")
                 await EndSignRecord.mark_signed(user.uid)
                 return {"status": "signed", "message": f"[{display_uid}] 今日已签到"}
@@ -281,6 +281,11 @@ async def do_sign_in_with_result(
             return {"status": "fail", "message": f"[{display_uid}] 签到异常"}
 
     return {"status": "fail", "message": f"[{display_uid}] 签到失败"}
+
+
+def _is_already_signed(res: Dict) -> bool:
+    """判断是否为今日已签到响应"""
+    return res.get("code") == RespCode.CRED_INVALID and "签到" in (res.get("message") or "")
 
 
 def _extract_awards(data: Dict) -> List[Tuple[str, int]]:
