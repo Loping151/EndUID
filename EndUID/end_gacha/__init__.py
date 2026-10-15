@@ -142,7 +142,7 @@ async def import_gacha_record(bot: Bot, ev: Event):
     if is_uid_locked(uid):
         return
 
-    text = ev.text.strip()
+    text = ev.text.strip().removeprefix("记录").strip()
 
     if text:
         u8_token, _, _ = _parse_gacha_token(text)
