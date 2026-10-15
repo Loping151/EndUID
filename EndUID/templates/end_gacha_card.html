@@ -1,607 +1,442 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Endfield Gacha Record</title>
-    <style>
-        @import url('{{ font_css_url }}');
+<meta charset="UTF-8">
+<title>Endfield Headhunting Record</title>
+<style>
+@import url('{{ font_css_url }}');
 
-        :root {
-            --c-bg: #0f1014;
-            --c-accent: #ffe600;
-            --c-text: #ffffff;
-            --c-subtext: #8b8b8b;
-            --c-grid: rgba(255, 255, 255, 0.03);
+:root {
+    --ink: #121315;
+    --panel: rgba(24, 26, 30, 0.86);
+    --panel-2: rgba(32, 35, 40, 0.72);
+    --line: rgba(255, 255, 255, 0.07);
+    --text: #eceae4;
+    --sub: #9a9ea6;
+    --dim: #686c74;
+    --y: #f5d63d;
+    --r6: #ff8a3d;
+    --r5: #f3c33c;
+    --r4: #a98bf0;
+    --free: #5fc9d6;
+    --good: #6cc79a;
+    --mid: #e8c46a;
+    --bad: #ec7a62;
+    --wai: #ea8c9b;
+    --num: 'Oswald', sans-serif;
+    --sans: 'Source Han Sans CN', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: {{ card_width }}px; background: var(--ink); color: var(--text); font-family: var(--sans); }
+.container {
+    width: 100%;
+    padding: 26px 30px 24px;
+    display: flex; flex-direction: column; gap: 18px;
+    background:
+        radial-gradient(900px 500px at 15% 0%, rgba(245, 214, 61, 0.05), transparent 70%),
+        url("{{ tex.bg }}") 0 0 / 300px 300px repeat,
+        var(--ink);
+}
+.c-good { color: var(--good); } .c-mid { color: var(--mid); } .c-bad { color: var(--bad); }
 
-            --r-6: #ff4e20;
-            --r-5: #ffc900;
-            --r-4: #a366ff;
-            --r-3: #0091ff;
+/* 传送带 */
+.conv { position: relative; height: 12px; border-radius: 6px; overflow: hidden;
+    background: url("{{ tex.belt }}") 0 50% / auto 100% repeat-x, #3a3c40; background-blend-mode: multiply; }
+.conv > i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); border-radius: 6px;
+    background: url("{{ tex.belt }}") 0 50% / auto 100% repeat-x, currentColor; background-blend-mode: overlay; }
 
-            --luck-0: #ff4e20;
-            --luck-1: #ffc900;
-            --luck-2: #ffffff;
-            --luck-3: #a366ff;
-            --luck-4: #8b8b8b;
-        }
+/* 头部 */
+.hero {
+    position: relative; border-radius: 14px; overflow: hidden;
+    display: grid; grid-template-columns: 96px 1fr auto; gap: 22px; align-items: center;
+    padding: 26px 30px 28px;
+    background:
+        linear-gradient(90deg, rgba(14, 15, 17, 0.88) 0%, rgba(14, 15, 17, 0.55) 55%, rgba(14, 15, 17, 0.3) 100%),
+        url("{{ tex.header }}") center / cover no-repeat;
+    box-shadow: 0 0 0 1px var(--line);
+}
+.avatar { width: 96px; height: 96px; border-radius: 14px; overflow: hidden; background: #0e0f11; box-shadow: 0 0 0 2px rgba(245, 214, 61, 0.55); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.who-name { font-size: 34px; font-weight: 700; line-height: 1.15; letter-spacing: 1px; }
+.who-sub { margin-top: 8px; display: flex; gap: 14px; align-items: center; font-size: 14px; color: var(--sub); }
+.who-sub .lv { font-family: var(--num); font-weight: 500; font-size: 15px; color: #1b1a12; background: var(--y); padding: 1px 9px; border-radius: 5px; }
+.who-sub .uid { color: var(--text); letter-spacing: 1px; }
+.hero-right { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.hero-logo { height: 38px; opacity: 0.9; }
+.tally { display: grid; grid-template-columns: auto repeat(3, auto); column-gap: 18px; row-gap: 4px; align-items: baseline; }
+.tally .k { font-size: 13px; color: var(--sub); text-align: right; }
+.tally .v { font-family: var(--num); font-weight: 500; font-size: 26px; line-height: 1.1; text-align: right; }
+.tally .v small { font-family: var(--sans); font-size: 12px; color: var(--sub); margin-right: 5px; font-weight: 400; }
+.tally .v.o { color: var(--r6); } .tally .v.y { color: var(--y); }
+.tally .note { grid-column: span 2; font-size: 12px; color: var(--dim); }
+.qi { display: inline-block; width: 24px; height: 24px; margin: 0 1px 0 0; vertical-align: -5px; background: url("{{ quota_icon }}") center / contain no-repeat; }
+.tally .qi { width: 30px; height: 30px; margin: 0; vertical-align: middle; }
+.chip .qi { width: 17px; height: 17px; }
+.tally .v small.u, .g-stats b small.u, .chip b small.u { font-family: var(--sans); font-size: .62em; font-weight: 700; color: inherit; margin: 0 0 0 1px; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+/* 分组面板 */
+.group { position: relative; background: var(--panel); border-radius: 14px; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+.g-head { display: grid; grid-template-columns: 1fr 330px; gap: 26px; align-items: end; padding: 18px 24px 16px; }
+.g-title { display: flex; align-items: baseline; gap: 12px; }
+.g-title h2 { font-size: 25px; font-weight: 700; letter-spacing: 2px; white-space: nowrap; }
+.g-title h2::before { content: ''; display: inline-block; width: 6px; height: 20px; margin-right: 10px; border-radius: 2px; background: var(--y); vertical-align: -2px; }
+.g-title .rule { font-size: 13px; color: var(--sub); }
+.g-stats { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 14px; color: var(--sub); }
+.g-stats b { font-family: var(--num); font-weight: 500; font-size: 20px; color: var(--text); margin-left: 5px; }
+.g-stats b.y { color: var(--y); } .g-stats b.r { color: var(--wai); } .g-stats b.f { color: var(--free); }
+.g-stats .range { font-size: 12px; color: var(--dim); align-self: center; }
+.chain-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+.chain-top .k { font-size: 13px; color: var(--sub); }
+.chain-top .n { font-family: var(--num); font-weight: 500; font-size: 26px; line-height: 1; }
+.chain-top .n small { font-size: 14px; color: var(--sub); }
+.chain { position: relative; }
+.chain .conv { height: 16px; border-radius: 8px; }
+.chain .soft { position: absolute; top: 0; bottom: 0; left: var(--s); right: 0; border-radius: 0 8px 8px 0;
+    background: repeating-linear-gradient(-45deg, rgba(236, 122, 98, 0.18) 0 5px, transparent 5px 10px); border-left: 1px dashed rgba(236, 122, 98, 0.6); }
+.ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-top: 4px; }
 
-        body {
-            width: {{ card_width | default(1000) }}px;
-            min-height: 600px;
-            background-color: var(--c-bg);
-            font-family: 'Source Han Sans CN', sans-serif;
-            color: var(--c-text);
-            overflow-x: hidden;
-        }
+/* 角色池 */
+.bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 18px 16px; }
+.bcard { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 15px; border-radius: 12px; background: var(--panel-2); box-shadow: 0 0 0 1px var(--line); min-width: 0; }
+.bcard.current { box-shadow: 0 0 0 1px rgba(245, 214, 61, 0.35); }
+.bcard.has-art { position: relative; overflow: hidden; }
+.bcard.has-art > :not(.bc-art) { position: relative; }
+.bcard.has-art .bc-head { grid-template-columns: 1fr auto; }
+.cont { font-size: 12.5px; color: var(--dim); }
+.bcard.has-art .b-name, .bcard.has-art .b-meta { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.bcard.has-art .rush { background-color: rgba(24, 33, 37, 0.6); }
+.bc-art { position: absolute; top: 0; right: 82px; width: 250px; height: 150px;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 50%, #000 82%, transparent), linear-gradient(to bottom, #000 40%, transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.bc-art i { position: absolute; top: -80px; right: -10px; width: 260px; height: 364px; background-position: center top; background-size: cover; background-repeat: no-repeat; }
+.bc-art.multi { width: 330px; }
+.bc-art.multi i { top: -30px; width: 120px; height: 168px; -webkit-mask-image: linear-gradient(to right, transparent, #000 40%); mask-image: linear-gradient(to right, transparent, #000 40%); }
+.bc-head { display: grid; grid-template-columns: 58px 1fr auto; gap: 12px; align-items: center; }
+.b-up { width: 58px; height: 58px; border-radius: 10px; overflow: hidden; background: #191a1d center / cover; }
+.b-up.p6 { background-image: url("{{ tex.plate6 }}"); }
+.b-up.quad { display: grid; grid-template-columns: 1fr 1fr; }
+.b-up .pl { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--num); font-size: 24px; color: #3a3e46; }
+.b-name { font-size: 18px; font-weight: 700; line-height: 1.25; white-space: nowrap; }
+.b-meta { font-size: 12.5px; color: var(--sub); margin-top: 3px; white-space: nowrap; }
+.b-meta .upn { color: var(--y); font-weight: 700; }
+.bc-tot { text-align: right; white-space: nowrap; }
+.bc-tot .v { font-family: var(--num); font-weight: 500; font-size: 26px; line-height: 1; }
+.bc-tot .l { font-size: 11.5px; color: var(--sub); margin-top: 4px; }
+.bc-tot .l .f { color: var(--free); }
+.b-status { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; background: rgba(255, 255, 255, 0.06); color: var(--sub); white-space: nowrap; }
+.chip b { font-family: var(--num); font-weight: 500; font-size: 14px; color: var(--text); }
+.chip.up { background: rgba(245, 214, 61, 0.15); color: var(--y); }
+.chip.up b { color: var(--y); }
+.chip.ok { color: var(--text); }
+.chip.ok::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+.chip.free { background: rgba(95, 201, 214, 0.14); color: var(--free); }
+.chip .mini { width: 56px; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.4); position: relative; overflow: hidden; }
+.chip .mini > i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); background: var(--y); border-radius: 3px; }
+.empty { font-size: 13px; color: var(--dim); }
+.bc-body { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.bc-body.inline { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.others { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0 24px 16px; font-size: 12.5px; color: var(--dim); }
+.others b { color: var(--sub); font-weight: 400; margin-right: 4px; }
 
-        .container {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
+/* 六星 */
+.tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.tile { position: relative; width: 64px; }
+.tile .pic { position: relative; width: 64px; height: 64px; border-radius: 9px; overflow: hidden; background: #191a1d url("{{ tex.plate6 }}") center / cover; }
+.tile .pic::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(to top, rgba(0, 0, 0, 0.72), transparent); }
+.tile .pic .pl { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; color: rgba(255, 255, 255, 0.4); font-weight: 700; }
+.tile .n { position: absolute; right: 3px; bottom: 3px; z-index: 2; font-family: var(--num); font-weight: 500; font-size: 19px; line-height: 1.1; padding: 0 5px; border-radius: 6px; background: rgba(12, 12, 14, 0.78); }
+.tile .up { position: absolute; z-index: 3; right: -4px; top: -9px; width: 36px; height: 26px; background: url("{{ tex.up }}") center / contain no-repeat; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+.tile .tg { position: absolute; z-index: 3; left: 4px; top: 4px; font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 5px; }
+.tile .tg.wai { background: rgba(32, 18, 22, 0.85); color: var(--wai); }
+.tile .c { position: absolute; z-index: 3; left: 4px; bottom: 5px; font-size: 10px; line-height: 1; padding: 2px 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.55); color: #c4c7cd; }
+.tile .bar { height: 3px; margin-top: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.07); position: relative; overflow: hidden; }
+.tile .bar > i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); background: currentColor; border-radius: 2px; }
+.tiles.sm { gap: 6px; }
+.tiles.sm .tile, .tiles.sm .tile .pic { width: 52px; }
+.tiles.sm .tile .pic { height: 52px; border-radius: 8px; }
+.tiles.sm .tile .n { font-size: 15px; padding: 0 4px; right: 2px; bottom: 2px; }
+.tiles.sm .tile .up { width: 30px; height: 22px; right: -3px; top: -8px; }
+.tiles.xs { gap: 5px; }
+.tiles.xs .tile, .tiles.xs .tile .pic { width: 40px; }
+.tiles.xs .tile .pic { height: 40px; border-radius: 7px; }
+.tiles.xs .tile .n { font-size: 13px; padding: 0 3px; right: 1px; bottom: 1px; border-radius: 4px; }
+.tiles.xs .tile .up { width: 24px; height: 18px; right: -3px; top: -6px; }
+.tiles.xs .tile .bar { margin-top: 3px; }
 
-        .bg-layer {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -2;
-            background: radial-gradient(circle at 50% 20%, #1a1b20 0%, #0f1014 80%);
-        }
+/* 加急招募 */
+.rushes { display: flex; flex-wrap: wrap; gap: 8px; }
+.rush { display: flex; align-items: center; gap: 9px; padding: 6px 9px 6px 10px; border-radius: 10px; background: rgba(95, 201, 214, 0.07); }
+.rush-lbl { display: flex; flex-direction: column; line-height: 1.3; white-space: nowrap; }
+.rush-lbl b { font-size: 12.5px; color: var(--free); }
+.rush-lbl span { font-size: 10.5px; color: #7fa9af; }
+.rush-cards { display: flex; align-items: center; gap: 3px; }
+.rc { width: 24px; height: 24px; border-radius: 6px; overflow: hidden; background: #191a1d center / cover; }
+.rc.r6 { width: 30px; height: 30px; background-image: url("{{ tex.plate6 }}"); box-shadow: 0 0 0 1.5px var(--r6); }
+.rc.r6.up { box-shadow: 0 0 0 2px var(--y); }
+.rc.r6.wai { box-shadow: 0 0 0 2px var(--wai); }
+.rc.r5 { background-image: url("{{ tex.plate5 }}"); }
+.rc.r4 { background-image: url("{{ tex.plate4 }}"); }
+.rush.stack { flex-direction: column; align-items: flex-start; gap: 5px; padding: 6px 8px 7px; }
+.rush.stack .rc.r6 { width: 28px; height: 28px; }
+.rush.stack .rush-lbl { flex-direction: row; align-items: baseline; gap: 6px; }
+.rush.stack .rush-cards { display: grid; grid-template-columns: repeat(var(--cols), auto); }
+.rc .pl { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgba(255, 255, 255, 0.6); }
 
-        .grid-deco {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image:
-                linear-gradient(var(--c-grid) 1px, transparent 1px),
-                linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
-            background-size: 40px 40px;
-            z-index: -1;
-            mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
-        }
+/* 武库 */
+.wgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 4px 18px 18px; }
+.wcard { padding: 13px 14px 12px; display: flex; flex-direction: column; gap: 9px; border-radius: 12px; background: var(--panel-2); box-shadow: 0 0 0 1px var(--line); min-width: 0; }
+.wcard.current { box-shadow: 0 0 0 1px rgba(245, 214, 61, 0.35); }
+.w-head { display: grid; grid-template-columns: 46px 1fr auto; gap: 10px; align-items: center; }
+.w-up { width: 46px; height: 46px; border-radius: 9px; overflow: hidden; background: #191a1d url("{{ tex.plate6 }}") center / cover; }
+.w-name { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.w-sub { font-size: 12px; color: var(--y); margin-top: 2px; white-space: nowrap; }
+.w-total { text-align: right; }
+.w-total .v { font-family: var(--num); font-weight: 500; font-size: 23px; line-height: 1; }
+.w-total .l { font-size: 11px; color: var(--sub); margin-top: 3px; white-space: nowrap; }
+.wcard .b-status { margin-top: 0; }
+.w-foot { display: flex; align-items: center; gap: 9px; margin-top: auto; }
+.w-foot .conv { flex: 1; height: 8px; }
+.k { font-size: 12px; color: var(--sub); white-space: nowrap; }
+.k b { font-family: var(--num); font-weight: 500; font-size: 15px; }
 
-        .hero-section {
-            position: relative;
-            display: flex;
-            background: rgba(20, 21, 24, 0.55);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px);
-        }
+.flat { padding: 2px 24px 18px; }
 
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 4px; height: 100%;
-            background: var(--c-accent);
-        }
+.ic { display: block; width: 100%; height: 100%; position: relative; z-index: 1; background: center / cover no-repeat; }
+.b-up .ic { background-position: top; }
+.b-up.quad .ic { height: 38px; }
+.w-up .ic, .tiles.sm .ic { background-size: 84%; }
+{% for n, c in art_cls.items() %}.{{ c }} { background-image: url("{{ arts[n] }}"); }
+{% endfor %}{% for n, c in icon_cls.items() %}.{{ c }} { background-image: url("{{ icons[n] }}"); }
+{% endfor %}
 
-        .hero-info {
-            display: flex;
-            align-items: center;
-            gap: 22px;
-            padding: 22px 36px;
-        }
-
-        .avatar-box {
-            width: 92px;
-            height: 92px;
-            flex-shrink: 0;
-            border: 2px solid rgba(255,255,255,0.2);
-            background: #111;
-            position: relative;
-        }
-
-        .avatar-box::after {
-            content: '';
-            position: absolute;
-            top: -5px; left: -5px;
-            width: 20px; height: 20px;
-            border-top: 3px solid var(--c-accent);
-            border-left: 3px solid var(--c-accent);
-        }
-
-        .avatar-box::before {
-            content: '';
-            position: absolute;
-            bottom: -5px; right: -5px;
-            width: 20px; height: 20px;
-            border-bottom: 3px solid var(--c-accent);
-            border-right: 3px solid var(--c-accent);
-        }
-
-        .avatar-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .user-meta {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .user-name {
-            font-size: 38px;
-            font-weight: 700;
-            line-height: 1;
-            color: #fff;
-            letter-spacing: 1px;
-        }
-
-        .user-sub {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .lv-tag {
-            font-family: 'Oswald', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            color: #0f1014;
-            background: var(--c-accent);
-            padding: 3px 10px;
-            letter-spacing: 1px;
-        }
-
-        .uid-tag {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 15px;
-            color: var(--c-accent);
-            background: rgba(255, 230, 0, 0.1);
-            padding: 3px 8px;
-            border: 1px solid rgba(255, 230, 0, 0.3);
-            letter-spacing: 1px;
-        }
-
-        .data-time {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--c-subtext);
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .data-time::before {
-            content: '//';
-            color: var(--c-accent);
-        }
-
-        .pool-section {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: rgba(20, 21, 24, 0.6);
-            border: 1px solid rgba(255,255,255,0.08);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            position: relative;
-        }
-
-        .pool-section::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 4px; height: 100%;
-            background: var(--c-accent);
-        }
-
-        .pool-header {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 10px;
-        }
-
-        .pool-title {
-            font-size: 22px;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .pool-time {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            color: var(--c-subtext);
-        }
-
-        .stats-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-        }
-
-        .stat-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-        }
-
-        .stat-num {
-            font-family: 'Oswald', sans-serif;
-            font-weight: 700;
-            font-size: 32px;
-            line-height: 1;
-            color: #fff;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: var(--c-subtext);
-            margin-top: 4px;
-            letter-spacing: 1px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .pull-unlucky { color: #e63a3a; }
-        .pull-normal { color: #ffffff; }
-        .pull-lucky { color: #2bd22b; }
-
-        .six-star-grid {
-            display: grid;
-            grid-template-columns: repeat({{ columns | default(5) }}, 1fr);
-            gap: 10px;
-            margin-top: 8px;
-        }
-
-        .six-star-item {
-            position: relative;
-            background: rgba(0,0,0,0.6);
-            border-top: 3px solid var(--r-6);
-            display: flex;
-            flex-direction: column;
-            clip-path: polygon(0 0, 100% 0, 100% 85%, 88% 100%, 0 100%);
-            transition: transform 0.2s;
-        }
-
-        .six-star-img-box {
-            width: 100%;
-            aspect-ratio: 1/1;
-            position: relative;
-            background: rgba(255,255,255,0.05);
-            overflow: hidden;
-        }
-
-        .six-star-img-box img:not(.up-tag) {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .six-star-img-box::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 50%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            z-index: 1;
-        }
-
-        .six-star-empty {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            color: rgba(255,255,255,0.1);
-            font-family: 'Oswald', sans-serif;
-            background: repeating-linear-gradient(
-                45deg,
-                rgba(255,255,255,0.03),
-                rgba(255,255,255,0.03) 10px,
-                rgba(255,255,255,0.01) 10px,
-                rgba(255,255,255,0.01) 20px
-            );
-        }
-
-        .six-star-img-box img.up-tag {
-            position: absolute;
-            top: 3px;
-            right: 3px;
-            z-index: 3;
-            height: 60px;
-            width: auto;
-            object-fit: contain;
-            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
-        }
-
-        .pull-badge {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            z-index: 2;
-            text-align: right;
-            line-height: 1;
-        }
-
-        .pull-num {
-            font-family: 'Oswald', sans-serif;
-            font-size: 34px;
-            font-weight: 700;
-            text-shadow: 0 2px 10px rgba(0,0,0,1);
-        }
-
-        .pull-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: #aaa;
-            display: block;
-            margin-top: -2px;
-        }
-
-        .six-star-info {
-            padding: 6px 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 34px;
-            background: rgba(255,255,255,0.02);
-            border-top: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .six-star-name {
-            font-size: 14px;
-            font-weight: 700;
-            color: #eee;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-
-        .stats-bar.merged {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .sub-pool-list {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-        }
-
-        .sub-pool-chip {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .sp-name {
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .sp-stat {
-            color: var(--c-subtext);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-        }
-
-        .sp-pity {
-            font-family: 'Oswald', sans-serif;
-            font-weight: 700;
-            font-size: 14px;
-            margin-left: auto;
-        }
-
-        .pool-label-tag {
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            z-index: 3;
-            font-size: 14px;
-            color: #ddd;
-            background: rgba(0,0,0,0.75);
-            padding: 2px 6px;
-            font-family: 'Source Han Sans CN', sans-serif;
-            line-height: 1.3;
-        }
-
-        .pool-empty {
-            color: var(--c-subtext);
-            font-size: 14px;
-            text-align: center;
-            padding: 20px;
-            background: rgba(255,255,255,0.02);
-            border: 1px dashed rgba(255,255,255,0.1);
-        }
-
-        .footer {
-            margin-top: auto;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: 15px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 20px;
-        }
-
-        .footer-text {
-            color: var(--c-subtext);
-            font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .ef-logo {
-            height: 40px;
-            opacity: 0.8;
-        }
-    </style>
+.footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding: 2px 4px 0; }
+.footer .note { font-size: 12px; color: var(--dim); line-height: 1.75; }
+.footer .note b { color: var(--sub); font-weight: 500; }
+.footer img { height: 46px; opacity: 0.55; }
+</style>
 </head>
 <body>
+{% macro pcls(n, weapon) -%}
+{%- if weapon -%}{% if n >= 35 %}c-bad{% elif n >= 20 %}c-mid{% else %}c-good{% endif %}
+{%- else -%}{% if n >= 70 %}c-bad{% elif n >= 50 %}c-mid{% else %}c-good{% endif %}{%- endif -%}
+{%- endmacro %}
 
-    <div class="bg-layer">
-        {% if bg %}
-        <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.15; mix-blend-mode: overlay;">
+{% macro pct(n, cap, lo=2) -%}{{ [[(n * 100 / cap)|round|int, lo]|max, 100]|min }}{%- endmacro %}
+
+{% macro img(name) -%}
+{%- if icon_cls.get(name) -%}<i class="ic {{ icon_cls[name] }}"></i>
+{%- else -%}<div class="pl">{{ name[:1] }}</div>{%- endif -%}
+{%- endmacro %}
+
+{% macro tile(s, weapon=false) -%}
+{%- set cap = 40 if weapon else 80 -%}
+<div class="tile">
+    <div class="pic">{{ img(s.name) }}
+        {%- if s.tag == 'wai' %}<span class="tg wai">歪</span>{% endif -%}
+        {%- if s.carry %}<span class="c">+{{ s.carry }}</span>{% endif -%}
+        <span class="n {{ pcls(s.pity, weapon) }}">{{ s.pity }}</span>
+    </div>
+    {% if s.tag == 'up' %}<i class="up"></i>{% endif %}
+    <div class="bar {{ pcls(s.pity, weapon) }}"><i style="--w:{{ pct(s.pity, cap, 6) }}%"></i></div>
+</div>
+{%- endmacro %}
+
+{% macro wan(n) -%}
+{%- if n >= 10000 %}{{ '%.1f'|format(n / 10000) }}<small class="u">万</small>{% else %}{{ n }}{% endif -%}
+{%- endmacro %}
+
+{% macro short_range(tr) -%}
+{%- set p = tr.split(' - ') -%}{{ p[0] }}{% if p|length > 1 %}–{{ p[1][5:] if p[1][:4] == p[0][:4] else p[1] }}{% endif %}
+{%- endmacro %}
+
+{% macro rush(g, fb, idx, n, cols=0) -%}
+<div class="rush{% if cols %} stack" style="--cols:{{ cols }}{% endif %}">
+    <div class="rush-lbl"><b>加急招募{% if n > 1 %} #{{ idx }}{% endif %}</b><span>不计保底</span></div>
+    <div class="rush-cards">
+        {%- for it in fb['items']|sort(attribute='rarity', reverse=true) -%}
+        <i class="rc r{{ it.rarity }}{% if it.rarity == 6 and g.has_up %} {{ 'up' if it.up else 'wai' }}{% endif %}">{{ img(it.name) }}</i>
+        {%- endfor -%}
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro chain(g) -%}
+{%- set cap = g.pity_max -%}
+<div>
+    <div class="chain-top">
+        <span class="k">{% if g.key in ('special', 'rerun') %}当前垫抽 · 跨期继承{% elif g.chain == 'per_pool' %}当期垫抽{% else %}当前垫抽{% endif %}</span>
+        <span class="n {{ pcls(g.pity, false) }}">{{ g.pity }}<small> / {{ cap }}</small></span>
+    </div>
+    <div class="chain">
+        <div class="conv {{ pcls(g.pity, false) }}"><i style="--w:{{ pct(g.pity, cap) }}%"></i></div>
+        {% if cap == 80 %}<div class="soft" style="--s:{{ (65 * 100 / 80)|round(2) }}%"></div>{% endif %}
+    </div>
+    <div class="ticks"><span>0</span>{% if cap == 80 %}<span>65</span>{% endif %}<span>{{ cap }}</span></div>
+</div>
+{%- endmacro %}
+
+{% macro group_head(g) -%}
+{%- set weapon = g.type == 'weapon' -%}
+<div class="g-head">
+    <div>
+        <div class="g-title">
+            <h2>{{ g.title }}</h2>
+            {% if g.key == 'special' %}<span class="rule">80 抽保底跨期继承，每期 120 抽必得 UP</span>
+            {% elif g.key == 'rerun' %}<span class="rule">重构间继承保底，系列累计 120 抽必得 UP</span>
+            {% elif g.key == 'joint' %}<span class="rule">保底独立，120 抽自选</span>
+            {% elif g.key == 'weapon' %}<span class="rule">每期独立，40 抽必出六星，80 抽必出 UP</span>
+            {% elif g.key == 'beginner' %}<span class="rule">40 抽内必出六星</span>
+            {% endif %}
+        </div>
+        <div class="g-stats">
+            <span>{% if weapon %}申领{% else %}寻访{% endif %}<b>{{ g.total }}</b></span>
+            {% if g.free %}<span>加急<b class="f">{{ g.free }}</b></span>{% endif %}
+            <span>六星<b>{{ g.six_count }}</b></span>
+            {% if g.has_up %}<span>UP<b class="y">{{ g.up_count }}</b></span>
+            <span>{% if weapon %}常驻{% else %}歪{% endif %}<b{% if not weapon %} class="r"{% endif %}>{{ g.wai_count }}</b></span>{% endif %}
+            {% if g.avg_six %}<span>每金<b>{{ g.avg_six }}</b></span>{% endif %}
+            {% if g.has_up and g.avg_up %}<span>每UP<b>{{ g.avg_up }}</b></span>{% endif %}
+            {% if g.arsenal_quota %}<span>{% if quota_icon %}<i class="qi"></i>{% else %}武库配额{% endif %}<b>{{ wan(g.arsenal_quota) }}</b></span>{% endif %}
+            {% if g.time_range %}<span class="range">{{ g.time_range }}</span>{% endif %}
+        </div>
+    </div>
+    {% if not weapon and g.key != 'beginner' %}{{ chain(g) }}{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro banner_status(b, first) -%}
+{% if b.guarantee %}
+    {% if b.up_at %}<span class="chip up">UP · 第<b>{{ b.up_at }}</b>抽</span>
+    {% elif b.free_up %}<span class="chip free">加急出 UP{% if first %} · 120 仍有效{% endif %}</span>
+    {% elif not first %}<span class="chip">未出 UP</span>
+    {% else %}<span class="chip">120 保底 <span class="mini"><i style="--w:{{ pct(b.guarantee.progress, b.guarantee.target, 0) }}%"></i></span> <b>{{ b.guarantee.progress }}</b>/{{ b.guarantee.target }}</span>{% endif %}
+{% endif %}
+{% for m in b.milestones %}
+    {% if m.key == 'keepsake' %}{% if m.done %}<span class="chip ok">信物 ×{{ m.done }}</span>{% endif %}
+    {% elif m.key == 'rush' %}{% if m.done > b.free_batches|length %}<span class="chip free">加急待用 ×{{ m.done - b.free_batches|length }}</span>{% endif %}
+    {% elif m.done %}<span class="chip ok">{{ m.label }}</span>
+    {% endif %}
+{% endfor %}
+{% if b.arsenal_quota %}<span class="chip">{% if quota_icon %}<i class="qi"></i>{% else %}武库配额 {% endif %}<b>{{ wan(b.arsenal_quota) }}</b></span>{% endif %}
+{%- endmacro %}
+
+{% macro banner_card(g, c) -%}
+{%- set b, first = c.b, c.first -%}
+{%- set art = (b.featured[:4] if g.key == 'joint' else b.featured[:1])|select('in', art_cls)|list -%}
+<div class="bcard{% if first %} current{% endif %}{% if art %} has-art{% endif %}" style="grid-column: span {{ c.span }}">
+    {% if art %}<div class="bc-art{% if art|length > 1 %} multi{% endif %}">{% for n in art|reverse %}<i class="{{ art_cls[n] }}"{% if art|length > 1 %} style="right: {{ loop.revindex0 * 66 }}px"{% endif %}></i>{% endfor %}</div>{% endif %}
+    <div class="bc-head">
+        {% if art %}{% elif g.key == 'joint' and b.featured|length > 1 %}
+        <div class="b-up quad">{% for n in b.featured[:4] %}{{ img(n) }}{% endfor %}</div>
+        {% else %}
+        <div class="b-up p6">{% if b.featured %}{{ img(b.featured[0]) }}{% else %}<div class="pl">?</div>{% endif %}</div>
+        {% endif %}
+        <div style="min-width:0">
+            <div class="b-name">{{ b.name }}</div>
+            <div class="b-meta">{% if b.featured and g.key != 'joint' %}<span class="upn">{{ b.featured[0] }}</span> · {% endif %}{{ short_range(b.time_range) }}</div>
+        </div>
+        <div class="bc-tot"><div class="v">{{ b.paid }}</div><div class="l">付费{% if b.free %} · <span class="f">加急 {{ b.free }}</span>{% endif %}</div></div>
+    </div>
+    <div class="b-status">{{ banner_status(b, first) }}</div>
+    {% if c.tiles or b.free_batches %}
+    <div class="bc-body{% if c.inline %} inline{% endif %}">
+        {% if c.tiles %}<div class="tiles">{% for s in c.tiles %}{{ tile(s) }}{% endfor %}</div>{% endif %}
+        {% if b.free_batches %}<div class="rushes">{% for fb in b.free_batches %}{{ rush(g, fb, loop.index, b.free_batches|length, c.rush_cols) }}{% endfor %}</div>{% endif %}
+    </div>
+    {% else %}<div class="empty">本期未出六星</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro weapon_card(g, c) -%}
+{%- set b = c.b -%}
+{%- set up_name = b.featured[0] if b.featured else '' -%}
+<div class="wcard{% if c.first %} current{% endif %}" style="grid-column: span {{ c.span }}">
+    {% if c.head %}
+    <div class="w-head">
+        <div class="w-up">{% if up_name %}{{ img(up_name) }}{% endif %}</div>
+        <div style="min-width:0">
+            <div class="w-name">{{ b.name }}</div>
+            <div class="w-sub">{{ up_name or '—' }}</div>
+        </div>
+        <div class="w-total"><div class="v">{{ b.total }}</div><div class="l">{{ b.claims }} 次申领</div></div>
+    </div>
+    <div class="b-status">
+        {% if b.up_at %}<span class="chip up">UP · 第<b>{{ b.up_at }}</b>抽</span>
+        {% elif g.key == 'weapon' %}<span class="chip">80 保底 <span class="mini"><i style="--w:{{ pct(b.guarantee.progress, 80, 0) }}%"></i></span> <b>{{ b.guarantee.progress }}</b>/80</span>{% endif %}
+        {% if b.gifts and (b.gifts.up or b.gifts.box) %}<span class="chip ok">赠{% if b.gifts.up %} UP×{{ b.gifts.up }}{% endif %}{% if b.gifts.box %} 箱×{{ b.gifts.box }}{% endif %}</span>{% endif %}
+    </div>
+    {% else %}<div class="cont">{{ b.name }} · 续</div>{% endif %}
+    {% if c.tiles %}<div class="tiles {{ 'sm' if c.head else 'xs' }}">{% for s in c.tiles %}{{ tile(s, true) }}{% endfor %}</div>{% endif %}
+    {% if c.tail %}
+    <div class="w-foot">
+        <span class="k">已垫 <b class="{{ pcls(b.pity, true) }}">{{ b.pity }}</b>/40</span>
+        <div class="conv {{ pcls(b.pity, true) }}"><i style="--w:{{ pct(b.pity, 40) }}%"></i></div>
+    </div>
+    {% endif %}
+</div>
+{%- endmacro %}
+
+<div class="container">
+
+    <div class="hero">
+        <div class="avatar">{% if avatar %}<img src="{{ avatar }}">{% endif %}</div>
+        <div style="min-width:0">
+            <div class="who-name">{{ name }}</div>
+            <div class="who-sub">
+                {% if level %}<span class="lv">Lv.{{ level }}</span>{% endif %}
+                {% if uid %}<span class="uid">UID {{ uid }}</span>{% endif %}
+                {% if data_time %}<span>更新于 {{ data_time }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="hero-right">
+            {% if tex.logo %}<img class="hero-logo" src="{{ tex.logo }}">{% endif %}
+            <div class="tally">
+                <span class="k">干员寻访</span>
+                <span class="v">{{ summary.char_total }}</span>
+                <span class="v o"><small>六星</small>{{ summary.char_six }}</span>
+                <span class="v y"><small>UP</small>{{ summary.char_up }}</span>
+                <span class="k">武库申领</span>
+                <span class="v">{{ summary.weapon_total }}</span>
+                <span class="v o"><small>六星</small>{{ summary.weapon_six }}</span>
+                <span class="v y"><small>UP</small>{{ summary.weapon_up }}</span>
+                <span class="k">{% if quota_icon %}<i class="qi"></i>{% else %}武库配额{% endif %}</span>
+                <span class="v">{{ wan(summary.arsenal_quota) }}</span>
+                <span class="note">可申领 {{ summary.arsenal_draws }} 次</span>
+            </div>
+        </div>
+    </div>
+
+    {% for g in groups %}
+    <div class="group">
+        {{ group_head(g) }}
+        {% if g.type == 'weapon' %}
+        {% set wc = weapon_cards[g.key] %}
+        <div class="wgrid">{% for c in wc.cards %}{{ weapon_card(g, c) }}{% endfor %}</div>
+        {% if wc.rest %}<div class="others"><span>其余申领（未出六星）</span>{% for b in wc.rest %}<span><b>{{ b.name }}</b>{{ b.total }} 抽</span>{% endfor %}</div>{% endif %}
+        {% elif g.key in ('special', 'rerun', 'joint') %}
+        {% set cc = char_cards[g.key] %}
+        <div class="bgrid">{% for c in cc.cards %}{{ banner_card(g, c) }}{% endfor %}</div>
+        {% if cc.rest %}<div class="others"><span>其余卡池（未出六星）</span>{% for b in cc.rest %}<span><b>{{ b.name }}</b>{{ b.paid }} 抽</span>{% endfor %}</div>{% endif %}
+        {% else %}
+        <div class="flat">
+            {% set six = [] %}{% for b in g.banners %}{% for s in b.six %}{% set _ = six.append(s) %}{% endfor %}{% endfor %}
+            {% if six %}<div class="tiles">{% for s in six %}{{ tile(s) }}{% endfor %}</div>
+            {% else %}<div class="empty">暂未出六星</div>{% endif %}
+        </div>
         {% endif %}
     </div>
-    <div class="grid-deco"></div>
+    {% endfor %}
 
-    <div class="container">
-
-        <div class="hero-section">
-            <div class="hero-info">
-                <div class="avatar-box">
-                    {% if avatar %}
-                    <img src="{{ avatar }}">
-                    {% else %}
-                    <div style="width:100%; height:100%; display:flex; justify-content:center; align-items:center; font-size:40px; color:#333;">?</div>
-                    {% endif %}
-                </div>
-                <div class="user-meta">
-                    <div class="user-name">{{ name }}</div>
-                    <div class="user-sub">
-                        {% if level %}<span class="lv-tag">LV.{{ level }}</span>{% endif %}
-                        {% if uid %}<span class="uid-tag">UID_{{ uid }}</span>{% endif %}
-                    </div>
-                    {% if data_time %}
-                    <div class="data-time">LAST_UPDATE: {{ data_time }}</div>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="footer">
+        <div class="note">
+            <b>数字</b>：卡池「付费」为本期付费抽数，「加急」为赠送的免费十连；六星头像右下为垫抽数，左下 +N 为其中从上期继承的部分；武器为距上一把六星的抽数。<br>
+            <b>保底</b>：65 抽起六星概率每抽 +5%，80 抽必出，特许与重构各自跨期继承；每期 120 抽未出 UP 则第 120 抽必得并清零保底，歪后下一只不保证 UP；武库申领 40 抽必出六星、80 抽必出 UP。<br>
+            <b>加急</b>：付费满 30 抽赠送（重构为 30 / 60 / 90），结果不计保底、不清保底，也不计入 120 抽与累计奖励；结果条六星黄框为 UP、红框为歪。<br>
+            <b>配额</b>：寻访与加急所得的武库配额按规则估算（六星 2000、五星 200、四星 20），每 1980 可申领 10 次；记录不全时可能有出入，以游戏内为准。
         </div>
-
-        {% for pool in pools %}
-        <div class="pool-section">
-            <div class="pool-header">
-                <div class="pool-title">{{ pool.pool_name }}</div>
-                {% if pool.time_range %}
-                <div class="pool-time">{{ pool.time_range }}</div>
-                {% endif %}
-            </div>
-
-            {% if pool.total > 0 %}
-
-            {% if pool.is_merged %}
-            {# ---- 合并武器池: 3列统计 + 子池标签 ---- #}
-            <div class="stats-bar merged">
-                <div class="stat-card">
-                    <div class="stat-num">{{ pool.total }}</div>
-                    <div class="stat-label">总抽数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">{{ pool.six_star_count }}</div>
-                    <div class="stat-label">六星数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">{{ pool.avg_pulls }}</div>
-                    <div class="stat-label">平均抽数</div>
-                </div>
-            </div>
-
-            {% if pool.sub_pools %}
-            <div class="sub-pool-list">
-                {% for sp in pool.sub_pools %}
-                <div class="sub-pool-chip">
-                    <span class="sp-name">{{ sp.short_name }}</span>
-                    <span class="sp-stat">{{ sp.total }}抽</span>
-                    <span class="sp-pity {% if sp.remain >= 60 %}pull-unlucky{% elif sp.remain >= 30 %}pull-normal{% else %}pull-lucky{% endif %}">未出UP {{ sp.remain }}</span>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            {% else %}
-            {# ---- 普通池: 4列统计 ---- #}
-            <div class="stats-bar">
-                <div class="stat-card">
-                    <div class="stat-num">{{ pool.total }}</div>
-                    <div class="stat-label">总抽数</div>
-                </div>
-                <div class="stat-card">
-                    {% if pool.has_up %}
-                    <div class="stat-num">{{ pool.avg_up_pulls }}</div>
-                    <div class="stat-label">平均每UP</div>
-                    {% else %}
-                    <div class="stat-num">{{ pool.six_star_count }}</div>
-                    <div class="stat-label">六星数</div>
-                    {% endif %}
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">{{ pool.avg_pulls }}</div>
-                    <div class="stat-label">平均抽数</div>
-                </div>
-                <div class="stat-card">
-                    {% if pool.has_up %}
-                    <div class="stat-num {% if pool.remain >= 80 %}pull-unlucky{% elif pool.remain >= 30 %}pull-normal{% else %}pull-lucky{% endif %}">{{ pool.remain }}</div>
-                    <div class="stat-label">未出UP</div>
-                    {% else %}
-                    <div class="stat-num {% if pool.pity >= 80 %}pull-unlucky{% elif pool.pity >= 30 %}pull-normal{% else %}pull-lucky{% endif %}">{{ pool.pity }}</div>
-                    <div class="stat-label">未出六星</div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            {% if pool.six_star_items %}
-            <div class="six-star-grid">
-                {% for item in pool.six_star_items %}
-                <div class="six-star-item">
-                    <div class="six-star-img-box">
-                        {% if item.avatar %}
-                        <img src="{{ item.avatar }}">
-                        {% else %}
-                        <div class="six-star-empty">NO IMG</div>
-                        {% endif %}
-
-                        {% if item.pool_label %}
-                        <span class="pool-label-tag">{{ item.pool_label }}</span>
-                        {% endif %}
-
-                        {% if item.is_up and up_tag %}
-                        <img class="up-tag" src="{{ up_tag }}">
-                        {% endif %}
-
-                        <div class="pull-badge">
-                            <div class="pull-num {% if pool.pool_type == 'weapon' %}{% if item.color_pulls >= 50 %}pull-unlucky{% elif item.color_pulls >= 20 %}pull-normal{% else %}pull-lucky{% endif %}{% else %}{% if item.color_pulls >= 80 %}pull-unlucky{% elif item.color_pulls >= 50 %}pull-normal{% else %}pull-lucky{% endif %}{% endif %}">{% if pool.pool_type == 'weapon' %}{{ item.color_pulls }}{% else %}{{ item.pull_count }}{% endif %}</div>
-                        </div>
-                    </div>
-
-                    <div class="six-star-info">
-                        <div class="six-star-name">{{ item.name }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            {% else %}
-            <div class="pool-empty">NO DATA RECORDED // 暂无记录</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-
-        <div class="footer">
-            <div class="footer-text">Endfield Gacha Record Analysis Module // Ver 1.0</div>
-            {% if end_logo %}
-            <img class="ef-logo" src="{{ end_logo }}">
-            {% endif %}
-        </div>
-
+        {% if end_logo %}<img src="{{ end_logo }}">{% endif %}
     </div>
+</div>
 </body>
 </html>

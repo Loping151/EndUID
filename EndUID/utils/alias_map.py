@@ -257,6 +257,21 @@ def get_avatar_by_id(char_id: str, prefer: str = "rt") -> str:
     return ""
 
 
+def _entry_by_name(name: str) -> dict:
+    return next((e for e in _avatar_index().values() if name in _get_alias_list(e)), {})
+
+
+def get_avatar_by_name(name: str) -> str:
+    """按角色名取方头像 URL（只读）"""
+    entry = _entry_by_name(name)
+    return entry.get("avatarSqUrl") or entry.get("avatarRtUrl") or ""
+
+
+def get_portrait_by_name(name: str) -> str:
+    """按角色名取半身像 URL（只读）"""
+    return _entry_by_name(name).get("avatarRtUrl") or ""
+
+
 def resolve_alias_entry(value: str) -> Optional[Tuple[str, AliasEntry]]:
     if not value:
         return None

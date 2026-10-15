@@ -1393,6 +1393,24 @@ class EndApi:
             params=params,
         )
 
+    async def get_gacha_char_meta(
+        self,
+        u8_token: str,
+        server_id: str = "1",
+        lang: str = "zh-cn",
+    ) -> Optional[dict]:
+        """获取角色寻访的卡池类型列表（data.tabs[].poolType）"""
+        params = {
+            "token": u8_token,
+            "server_id": server_id,
+            "lang": lang,
+        }
+
+        return await self._gacha_request(
+            url=GACHA_CHAR_META_URL,
+            params=params,
+        )
+
     async def get_gacha_weapon_pools(
         self,
         u8_token: str,

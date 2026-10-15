@@ -13,7 +13,7 @@ from ..utils.api import endapi
 from ..utils.render_utils import render_html, get_image_b64_with_cache, image_to_base64
 from ..utils.alias_map import get_avatar_by_id
 from ..utils.path import AVATAR_CACHE_PATH
-from ..end_gacha.draw_gachalogs import STANDARD_CHAR_NAMES
+from ..end_gacha.pool_meta import get_pool_meta
 
 TEMPLATE_PATH = Path(__file__).parents[1] / "templates"
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
@@ -45,9 +45,9 @@ def _is_admin(name: str) -> bool:
     return "管理员" in (name or "")
 
 
-def _passes_filter(flt: str, rarity: int, name: str) -> bool:
+def _passes_filter(flt: str, rarity: int, name: str, std_chars: set) -> bool:
     if flt == "UP":
-        return rarity == 6 and name not in STANDARD_CHAR_NAMES
+        return rarity == 6 and name not in std_chars
     if flt == "6":
         return rarity == 6
     if flt == "5":
@@ -82,6 +82,7 @@ async def draw_hold_rate_img(ev: Event) -> Union[bytes, str]:
         return "❌ 暂无持有率数据，可能尚无足够样本"
 
     flt = _parse_filter(ev.text)
+    std_chars = set((await get_pool_meta())["standard_chars"])
 
     entries = []
     for r in rows:
@@ -91,7 +92,7 @@ async def draw_hold_rate_img(ev: Event) -> Union[bytes, str]:
         name = r.get("name") or ""
         if _is_admin(name):
             continue
-        if not _passes_filter(flt, rarity, name):
+        if not _passes_filter(flt, rarity, name, std_chars):
             continue
 
         hold_rate = round(float(r.get("hold_rate") or 0), 2)

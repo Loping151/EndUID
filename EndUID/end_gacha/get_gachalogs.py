@@ -41,17 +41,45 @@ CHAR_POOL_TYPE_MAP = {
     "E_CharacterGachaPoolType_Standard": "基础寻访",
     "E_CharacterGachaPoolType_Beginner": "启程寻访",
     "E_CharacterGachaPoolType_Joint": "辉光庆典",
+    "E_CharacterGachaPoolType_Rerun": "重构寻访",
 }
+
+OPTIONAL_POOL_TYPES = {"E_CharacterGachaPoolType_Rerun"}
+
+
+async def _char_pool_types(u8_token: str, server_id: str) -> dict[str, str]:
+    """已知类型并上官方 meta 列出的类型；没见过的类型以原始枚举名为键照常保存"""
+    types = dict(CHAR_POOL_TYPE_MAP)
+    res = await end_api.get_gacha_char_meta(u8_token=u8_token, server_id=server_id)
+    if not res or res.get("code", 0) != 0:
+        return types
+    for tab in (res.get("data") or {}).get("tabs") or []:
+        pool_type = tab.get("poolType")
+        if pool_type and pool_type not in types:
+            types[pool_type] = pool_type
+            logger.info(f"[ENDUID·抽卡] 发现未知角色池类型 {pool_type}")
+    return types
+
+
+def _adopt_known_pool_types(pool_data: dict) -> dict:
+    """以原始枚举名存下的卡池，补上映射后并入正式分组"""
+    for pool_type, pool_name in CHAR_POOL_TYPE_MAP.items():
+        if pool_type in pool_data:
+            pool_data[pool_name] = _merge_records(pool_data.get(pool_name, []), pool_data.pop(pool_type))
+    return pool_data
 
 
 async def load_gachalogs(uid: str) -> Optional[dict]:
     """读取已保存的抽卡记录"""
     path = PLAYER_PATH / uid / "gacha_logs.json"
     try:
-        return await read_player_json(path)
+        data = await read_player_json(path)
     except Exception as e:
         logger.error(f"[ENDUID·抽卡] 读取抽卡记录失败: {e}")
         return None
+    if data and isinstance(data.get("data"), dict):
+        _adopt_known_pool_types(data["data"])
+    return data
 
 
 async def save_gachalogs(uid: str, gacha_data: dict):
@@ -123,7 +151,8 @@ async def _get_new_gachalog(
     first_error = ""
     request_interval = _get_request_interval()
 
-    for pool_type, pool_name in CHAR_POOL_TYPE_MAP.items():
+    pool_types = await _char_pool_types(u8_token, server_id)
+    for pool_type, pool_name in pool_types.items():
         logger.info(f"[ENDUID·抽卡] 拉取 {pool_name} (pool_type={pool_type})")
         records = []
         seq_id = None
@@ -147,7 +176,8 @@ async def _get_new_gachalog(
             code = res.get("code")
             if code is not None and code != 0:
                 msg = res.get("msg") or res.get("message") or "未知错误"
-                if not first_error:
+                required = pool_type in CHAR_POOL_TYPE_MAP and pool_type not in OPTIONAL_POOL_TYPES
+                if not first_error and required:
                     first_error = f"{pool_name}: {msg} (code={code})"
                 logger.warning(f"[ENDUID·抽卡] {pool_name} 错误: {msg}")
                 break

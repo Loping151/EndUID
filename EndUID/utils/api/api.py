@@ -80,6 +80,7 @@ GACHA_BASE_URL_CN = "https://ef-webview.hypergryph.com"
 GACHA_BASE_URL_GLOBAL = "https://ef-webview.gryphline.com"
 
 GACHA_CHAR_RECORD_URL = f"{GACHA_BASE_URL_CN}/api/record/char"
+GACHA_CHAR_META_URL = f"{GACHA_BASE_URL_CN}/api/record/char/meta"
 GACHA_WEAPON_POOL_LIST_URL = f"{GACHA_BASE_URL_CN}/api/record/weapon/pool"
 GACHA_WEAPON_RECORD_URL = f"{GACHA_BASE_URL_CN}/api/record/weapon"
 

@@ -19,7 +19,7 @@ from ..utils.path import MAIN_PATH, PLAYER_PATH
 from ..utils.player_store import player_json_exists
 from ..utils.util import hide_uid
 from ..end_bind.web_login import get_url
-from .draw_gachalogs import build_gacha_pools
+from .draw_gachalogs import build_gacha_payload
 
 GACHA_WEB_TTL = 600  # 10 分钟
 
@@ -29,7 +29,14 @@ _token_cache = TimedCache(
     persist_path=MAIN_PATH / "end_gacha_url_cache.db",
 )
 
-_TEMPLATE_PATH = Path(__file__).parent.parent / "templates" / "end_gacha_page.html"
+_MODULE_PATH = Path(__file__).parent.parent
+_TEMPLATE_PATH = _MODULE_PATH / "templates" / "end_gacha_page.html"
+_GACHA_TEX = Path(__file__).parent / "texture2d"
+_ASSETS = {
+    **{f.name: f for f in _GACHA_TEX.glob("*.webp")},
+    "logo.png": _MODULE_PATH / "end_daily" / "texture2d" / "logo.png",
+    "up.png": _MODULE_PATH / "end_char" / "texture2d" / "up_tag.png",
+}
 
 
 def _is_feature_enabled() -> bool:
@@ -50,9 +57,9 @@ async def make_gacha_web_url(
     if not player_json_exists(PLAYER_PATH / uid / "gacha_logs.json"):
         return None, f"还没有抽卡记录噢！请先使用「{PREFIX}导入抽卡记录」导入"
 
-    payload, err = await build_gacha_pools(uid, ev, user_pref, web=True)
-    if err:
-        return None, err
+    payload, err = await build_gacha_payload(uid, ev, user_pref, with_trays=True)
+    if err or payload is None:
+        return None, err or "抽卡记录为空"
 
     web_payload = {
         "base": {
@@ -62,7 +69,12 @@ async def make_gacha_web_url(
             "avatar": payload["avatar"],
             "data_time": payload.get("data_time", ""),
         },
-        "pools": payload["pools"],
+        "groups": payload["groups"],
+        "summary": payload["summary"],
+        "icons": payload["icons"],
+        "icons_minor": payload["icons_minor"],
+        "arts": payload["arts"],
+        "quota_icon": payload["quota_icon"],
         "now": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
@@ -86,6 +98,14 @@ p{font-size:13px;color:#8b8b8b;line-height:1.7;margin:6px 0}</style>
 <div class=box><h1>页面已过期或不存在</h1>
 <p>抽卡记录网页仅在 10 分钟内有效。</p>
 <p>请重新发送「抽卡页面」获取新链接。</p></div></html>"""
+
+
+@app.get("/end/gacha/assets/{name}")
+async def end_gacha_asset(name: str):
+    path = _ASSETS.get(name)
+    if path is None or not path.exists():
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/end/gacha/{token}")

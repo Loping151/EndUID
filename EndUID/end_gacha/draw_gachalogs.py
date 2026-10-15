@@ -1,6 +1,7 @@
 """抽卡记录渲染上下文构建"""
 import io
-from datetime import datetime
+import asyncio
+from functools import lru_cache
 from pathlib import Path
 from typing import Union
 
@@ -14,6 +15,7 @@ from gsuid_core.utils.image.convert import convert_img
 from ..utils.database.models import EndBind
 from ..utils.util import get_hide_uid_pref, hide_uid
 from ..utils.api.model import CardDetailResponse
+from ..utils.alias_map import get_avatar_by_name, get_portrait_by_name
 from ..utils.render_utils import (
     render_html,
     image_to_base64,
@@ -24,343 +26,47 @@ from ..utils.tips import TIP_NOT_BOUND
 from ..utils.path import (
     AVATAR_CACHE_PATH,
     EQUIP_CACHE_PATH,
+    PILE_CACHE_PATH,
     PLAYER_PATH,
+    WIKI_IMG_CACHE,
 )
 from ..utils.player_store import read_player_json, player_json_exists
 from .get_gachalogs import load_gachalogs
+from .pool_meta import ARSENAL_QUOTA_ITEM, get_pool_meta
+from .analysis import WEAPON_PREFIX, analyze, summarize
 
 
-TEXTURE_PATH = Path(__file__).parent.parent / "end_char" / "texture2d"
-TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
+MODULE_PATH = Path(__file__).parent.parent
+TEXTURE_PATH = MODULE_PATH / "end_char" / "texture2d"
+GACHA_TEXTURE_PATH = Path(__file__).parent / "texture2d"
+TEMPLATE_PATH = MODULE_PATH / "templates"
 
 end_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 
-# 运气等级
-LUCK_LEVELS = ["非到极致", "运气不好", "平稳保底", "小欧一把", "欧皇在此"]
-
-# 角色池保底
-CHAR_PITY = 80
-
-# 常驻角色 ID（不算 UP）
-# 常驻角色名（使用 charName 判断）
-STANDARD_CHAR_NAMES = {
-    "艾尔黛拉",
-    "别礼",
-    "余烬",
-    "黎风",
-    "骏卫",
-}
-
-# 常驻武器池名（池名去掉"武器寻访-"后的短名）
-STANDARD_WEAPON_POOL_NAMES = {
-    "坚冰申领", "星声申领", "远途申领", "崇山申领", "雷鸣申领",
-}
-
-# 常驻武器名（使用 weaponName 判断）
-STANDARD_WEAPON_NAMES = {
-    "扶摇",
-    "热熔切割器",
-    "宏愿",
-    "显赫声名",
-    # "不知归",
-    "白夜新星",
-    # "大雷斑",
-    # "赫拉芬格",
-    "典范",
-    "昔日精品",
-    "破碎君王",
-    # "负山",
-    "骁勇",
-    "J.E.T.",
-    "同类相食",
-    "领航者",
-    "楔子",
-    # "沧溟星梦",
-    "爆破单元",
-    "遗忘",
-    "骑士精神",
-    "作品：蚀迹",
-    "联结点",
-    "遥望",
-    "黄金时代",
-}
+ICON_SIZE = (128, 128)
+MINOR_ICON_SIZE = (64, 64)
+ART_SIZE = (264, 370)
+CARD_WIDTH = 1200
+# 卡片几何，需与 end_gacha_card.html 的尺寸一致；*_CAP 为跨 1..N 列时一行放得下的六星数，
+# 武器接续段用缩小的头像排两行
+CHAR_TILE_CAP = (7, 15)
+WEAPON_TILE_CAP = (4, 9, 13, 18)
+WEAPON_CONT_CAP = (5, 11, 17, 24)
+CARD_INNER_W = (514, 1072)
+TILE_STEP = 72
+RUSH_LABEL_W = 104
+RUSH_MAX_ROWS = 3
 
 
-def _format_gacha_ts(ts: str) -> str:
-    """将 gachaTs 转换为可读日期 (支持 Unix 时间戳和 ISO 格式)"""
-    if not ts:
-        return ""
-    try:
-        ts_num = int(ts)
-        if ts_num > 1e12:  # 毫秒
-            ts_num = ts_num // 1000
-        return datetime.fromtimestamp(ts_num).strftime("%Y.%m.%d")
-    except (ValueError, OSError):
-        pass
-    return ts[:10].replace("-", ".")
-
-
-def _calc_pool_stats(pool_name: str, records: list) -> dict:
-    """计算单个池的统计数据
-
-    Args:
-        pool_name: 池名称
-        records: 该池的记录列表（最新在前）
-
-    Returns:
-        池统计字典
-    """
-    is_weapon = pool_name.startswith("武器寻访")
-    pool_type = "weapon" if is_weapon else "char"
-    is_special = pool_name == "特许寻访"
-    has_up = is_special or is_weapon
-
-    if not records:
-        return {
-            "pool_name": pool_name,
-            "pool_type": pool_type,
-            "total": 0,
-            "six_star_count": 0,
-            "up_count": 0,
-            "avg_pulls": 0,
-            "avg_up_pulls": 0,
-            "remain": 0,
-            "pity": 0,
-            "has_up": has_up,
-            "time_range": "",
-            "level": 2,
-            "level_tag": LUCK_LEVELS[2],
-            "six_star_items": [],
-        }
-
-    # 从旧到新排列以便计算
-    sorted_records = list(reversed(records))
-
-    total = len(sorted_records)
-    six_star_items = []
-    pull_counter = 0
-    six_star_pull_counts = []
-    period_five: dict = {}
-    period_four: dict = {}
-
-    def _pack(counter: dict) -> list:
-        return [
-            {"name": k, "count": v}
-            for k, v in sorted(counter.items(), key=lambda x: -x[1])
-        ]
-
-    for record in sorted_records:
-        rarity = record.get("rarity", 0)
-
-        # is_free = record.get("isFree", False)
-        # if is_special and is_free:
-        #     continue
-
-        pull_counter += 1
-        if rarity == 5:
-            nm = record.get("charName") or record.get("weaponName") or "?"
-            period_five[nm] = period_five.get(nm, 0) + 1
-        elif rarity == 4:
-            nm = record.get("charName") or record.get("weaponName") or "?"
-            period_four[nm] = period_four.get(nm, 0) + 1
-
-        if rarity == 6:
-            six_star_pull_counts.append(pull_counter)
-
-            if is_weapon:
-                name = record.get("weaponName", "???")
-                item_id = record.get("weaponId", "")
-                is_up = name not in STANDARD_WEAPON_NAMES
-            else:
-                name = record.get("charName", "???")
-                item_id = record.get("charId", "")
-                is_up = name not in STANDARD_CHAR_NAMES
-
-            six_star_items.append({
-                "name": name,
-                "pull_count": pull_counter,
-                "type": pool_type,
-                "item_id": item_id,
-                "avatar": "",
-                "is_up": is_up,
-                "gacha_ts": record.get("gachaTs", ""),
-                "banner": record.get("poolName") or pool_name,
-                "five_count": sum(period_five.values()),
-                "four_count": sum(period_four.values()),
-                "five_items": _pack(period_five),
-                "four_items": _pack(period_four),
-            })
-            pull_counter = 0
-            period_five = {}
-            period_four = {}
-
-    # 距离上次 UP 的抽数（跨过中间的常驻六星）
-    remain = pull_counter
-    for item in reversed(six_star_items):
-        if item["is_up"]:
-            break
-        remain += item["pull_count"]
-
-    # 六星平均抽数
-    six_star_count = len(six_star_pull_counts)
-    avg_pulls = (
-        round(sum(six_star_pull_counts) / six_star_count, 1)
-        if six_star_count > 0
-        else 0
-    )
-
-    # UP 平均抽数 (total / up_count)
-    up_count = sum(1 for it in six_star_items if it["is_up"])
-    avg_up_pulls = round(total / up_count, 1) if up_count > 0 else 0
-
-    # 运气等级
-    if six_star_count == 0:
-        level = 2
-    elif avg_pulls <= 30:
-        level = 4
-    elif avg_pulls <= 45:
-        level = 3
-    elif avg_pulls <= 60:
-        level = 2
-    elif avg_pulls <= 70:
-        level = 1
-    else:
-        level = 0
-
-    level_tag = LUCK_LEVELS[level]
-
-    # 时间范围
-    timestamps = [r.get("gachaTs", "") for r in records if r.get("gachaTs")]
-    if timestamps:
-        timestamps.sort()
-        earliest = _format_gacha_ts(timestamps[0])
-        latest = _format_gacha_ts(timestamps[-1])
-        time_range = f"{earliest} - {latest}"
-    else:
-        time_range = ""
-
-    # UP 角色/武器的颜色抽数: 累加前面连续常驻的抽数
-    for i, item in enumerate(six_star_items):
-        if item["is_up"]:
-            color_pulls = item["pull_count"]
-            j = i - 1
-            while j >= 0 and not six_star_items[j]["is_up"]:
-                color_pulls += six_star_items[j]["pull_count"]
-                j -= 1
-            item["color_pulls"] = color_pulls
-        else:
-            item["color_pulls"] = item["pull_count"]
-
-    # 六星列表反转，最新的在前
-    six_star_items.reverse()
-
-    return {
-        "pool_name": pool_name,
-        "pool_type": pool_type,
-        "has_up": has_up,
-        "total": total,
-        "six_star_count": six_star_count,
-        "up_count": up_count,
-        "avg_pulls": avg_pulls,
-        "avg_up_pulls": avg_up_pulls,
-        "remain": remain,
-        "pity": pull_counter,
-        "time_range": time_range,
-        "level": level,
-        "level_tag": level_tag,
-        "six_star_items": six_star_items,
-    }
-
-
-def _merge_weapon_pools(pool_stats_list: list, merged_name: str) -> dict:
-    """将多个武器池统计合并为一个区块"""
-    combined_total = 0
-    combined_six_star_count = 0
-    all_six_star_items: list = []
-    all_pull_counts: list = []
-    sub_pools: list = []
-    time_parts: list = []
-
-    for ps in pool_stats_list:
-        combined_total += ps["total"]
-        combined_six_star_count += ps["six_star_count"]
-
-        short_name = ps["pool_name"].replace("武器寻访-", "")
-        for item in ps["six_star_items"]:
-            item_copy = dict(item)
-            item_copy["pool_label"] = short_name
-            all_six_star_items.append(item_copy)
-            all_pull_counts.append(item_copy["pull_count"])
-
-        sub_pools.append({
-            "short_name": short_name,
-            "total": ps["total"],
-            "pity": ps["pity"],
-            "remain": ps["remain"],
-            "six_star_count": ps["six_star_count"],
-        })
-
-        if ps["time_range"]:
-            for part in ps["time_range"].split(" - "):
-                time_parts.append(part.strip())
-
-    avg_pulls = (
-        round(sum(all_pull_counts) / len(all_pull_counts), 1)
-        if all_pull_counts else 0
-    )
-
-    if combined_six_star_count == 0:
-        level = 2
-    elif avg_pulls <= 30:
-        level = 4
-    elif avg_pulls <= 45:
-        level = 3
-    elif avg_pulls <= 60:
-        level = 2
-    elif avg_pulls <= 70:
-        level = 1
-    else:
-        level = 0
-
-    time_range = ""
-    if time_parts:
-        time_parts.sort()
-        time_range = f"{time_parts[0]} - {time_parts[-1]}"
-
-    # 仅保留 UP 武器；非 UP 的抽数已通过 color_pulls 累计到下一把 UP 上
-    # 按抽卡时间从新到旧排序
-    def _ts_key(it: dict) -> int:
-        ts = it.get("gacha_ts", "")
-        try:
-            n = int(ts)
-            if n > 1e12:
-                n //= 1000
-            return n
-        except (ValueError, TypeError):
-            try:
-                return int(datetime.fromisoformat(ts[:19]).timestamp())
-            except Exception:
-                return 0
-
-    display_items = [it for it in all_six_star_items if it.get("is_up")]
-    display_items.sort(key=_ts_key, reverse=True)
-
-    return {
-        "pool_name": merged_name,
-        "pool_type": "weapon",
-        "is_merged": True,
-        "has_up": False,
-        "total": combined_total,
-        "six_star_count": combined_six_star_count,
-        "avg_pulls": avg_pulls,
-        "remain": 0,
-        "pity": 0,
-        "time_range": time_range,
-        "level": level,
-        "level_tag": LUCK_LEVELS[level],
-        "six_star_items": display_items,
-        "sub_pools": sub_pools,
-    }
+@lru_cache(maxsize=1)
+def card_textures() -> dict:
+    tex = {k: image_to_base64(GACHA_TEXTURE_PATH / f"{f}.webp") for k, f in (
+        ("bg", "bg_tile"), ("belt", "belt_tile"), ("header", "header_bg"),
+        ("plate6", "plate_6"), ("plate5", "plate_5"), ("plate4", "plate_4"),
+    )}
+    tex["logo"] = image_to_base64(MODULE_PATH / "end_daily" / "texture2d" / "logo.png")
+    tex["up"] = image_to_base64(TEXTURE_PATH / "up_tag.png")
+    return tex
 
 
 async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
@@ -407,27 +113,11 @@ async def _load_card_maps(uid: str, user_pref: str = "") -> tuple:
     return name, level, avatar_b64, char_map, weapon_map, ok
 
 
-def _calc_grid_columns(pools: list) -> int:
-    """按最大池的六星数量自动选列数，让网格区域接近方形"""
-    ref_n = max((len(p.get("six_star_items", [])) for p in pools), default=0)
-    if ref_n <= 0:
-        return 5
-    item_w, item_h = 178, 212
-    best_col, best_diff = 5, None
-    for col in range(5, 11):
-        rows = ((ref_n - 1) // col) + 1
-        ratio = (item_w * col) / (item_h * rows)
-        diff = abs(ratio - 1.0)
-        if best_diff is None or diff < best_diff:
-            best_col, best_diff = col, diff
-    return best_col
-
-
 def _collect_gacha_char_names(pool_data: dict) -> set:
     """收集抽卡记录中所有六星角色名"""
     names: set = set()
     for pn, records in pool_data.items():
-        if pn.startswith("武器寻访"):
+        if pn.startswith(WEAPON_PREFIX):
             continue
         for r in records:
             if r.get("rarity") == 6:
@@ -437,95 +127,91 @@ def _collect_gacha_char_names(pool_data: dict) -> set:
     return names
 
 
-def _gts_int(ts) -> int:
-    try:
-        return int(ts)
-    except (ValueError, TypeError):
-        return 0
+def _pool_names(pool_data: dict) -> set:
+    names: set = set()
+    for key, recs in pool_data.items():
+        if key.startswith(WEAPON_PREFIX):
+            names.add(key[len(WEAPON_PREFIX):])
+        elif key not in ("基础寻访", "启程寻访"):
+            names.update(r.get("poolName") for r in recs if r.get("poolName"))
+    return names
 
 
-def _iter_six_items(pools):
-    """遍历池中所有六星条目，兼容 web 的 banners 嵌套结构。"""
-    for pool in pools:
-        if pool.get("banners"):
-            for b in pool["banners"]:
-                yield from b.get("six_star_items", [])
+def _major_names(groups: list) -> dict:
+    """6 星与各期 UP -> 类型"""
+    wanted: dict[str, str] = {}
+    for g in groups:
+        kind = "weapon" if g["type"] == "weapon" else "char"
+        for b in g["banners"]:
+            for n in b["featured"]:
+                wanted[n] = kind
+            for s in b["six"]:
+                wanted[s["name"]] = kind
+    return wanted
+
+
+def _minor_names(groups: list, rush_only: bool = False) -> dict:
+    """加急十连与各金期间的 5/4 星 -> 类型"""
+    wanted: dict[str, str] = {}
+    for g in groups:
+        for b in g["banners"]:
+            for fb in b.get("free_batches", []):
+                wanted.update((it["name"], "char") for it in fb["items"] if it["rarity"] < 6)
+            if rush_only:
+                continue
+            for s in b["six"]:
+                for it in s.get("five_items", []) + s.get("four_items", []):
+                    wanted[it["name"]] = "char"
+    return wanted
+
+
+async def _resolve_icons(
+    wanted: dict, char_map: dict, weapon_map: dict, covers: dict, size: tuple
+) -> dict:
+    """图标：自己的卡片 → 别名表 → 百科封面"""
+    async def one(name: str, kind: str) -> tuple[str, str]:
+        if kind == "weapon":
+            urls = [
+                weapon_map.get(name),
+                covers.get(name),
+                f"https://imgheybox.max-c.com/endfield/icon/{name.rstrip('.')}.png",
+            ]
+            cache = EQUIP_CACHE_PATH
         else:
-            yield from pool.get("six_star_items", [])
+            urls = [char_map.get(name), get_avatar_by_name(name), covers.get(name)]
+            cache = AVATAR_CACHE_PATH
+        for url in urls:
+            if not url:
+                continue
+            b64 = await get_image_b64_with_cache(
+                url, cache, quality=85, cover_size=size
+            )
+            if b64:
+                return name, b64
+        return name, ""
+
+    pairs = await asyncio.gather(*(one(n, k) for n, k in wanted.items()))
+    return {n: b64 for n, b64 in pairs if b64}
 
 
-def _build_web_pools(pool_data: dict) -> list:
-    """网页用：角色池保留共享保底的连续时间线（每条标卡池名）；
-    武器各申领卡池独立、不合并、按出现顺序排列。"""
-    pools = []
+async def _resolve_arts(groups: list) -> dict:
+    """角色池各期 UP 的半身像，与角色面板共用 pile 缓存"""
+    names = {n for g in groups if g["type"] == "char" for b in g["banners"] for n in b["featured"]}
 
-    def add_char(pn: str):
-        if pn not in pool_data:
-            return
-        pools.append(_calc_pool_stats(pn, pool_data[pn]))
+    async def one(name: str) -> tuple[str, str]:
+        url = get_portrait_by_name(name)
+        if not url:
+            return name, ""
+        return name, await get_image_b64_with_cache(url, PILE_CACHE_PATH, quality=80, cover_size=ART_SIZE)
 
-    add_char("特许寻访")
-    add_char("基础寻访")
-
-    weapon_keys = [pn for pn in pool_data if pn.startswith("武器寻访")]
-    if weapon_keys:
-        w = []
-        for pn in weapon_keys:
-            recs = pool_data[pn]
-            st = _calc_pool_stats(pn, recs)
-            latest = max((_gts_int(r.get("gachaTs")) for r in recs), default=0)
-            w.append((latest, pn.replace("武器寻访-", ""), st))
-        w.sort(key=lambda x: x[0], reverse=True)
-        banners = [
-            {
-                "name": short,
-                "total": st["total"],
-                "six_star_count": st["six_star_count"],
-                "up_count": st["up_count"],
-                "avg_pulls": st["avg_pulls"],
-                "remain": st["remain"],   # 未出UP
-                "pity": st["pity"],       # 未出六星
-                "time_range": st["time_range"],
-                "six_star_items": st["six_star_items"],
-            }
-            for _, short, st in w
-        ]
-        pools.append({
-            "pool_name": "武器寻访",
-            "pool_type": "weapon",
-            "has_up": False,
-            "total": sum(b["total"] for b in banners),
-            "six_star_count": sum(b["six_star_count"] for b in banners),
-            "up_count": sum(
-                1 for _, _, st in w for it in st["six_star_items"] if it["is_up"]
-            ),
-            "avg_pulls": 0,
-            "remain": 0,
-            "pity": 0,
-            "time_range": "",
-            "banners": banners,
-        })
-
-    add_char("辉光庆典")
-    add_char("启程寻访")
-    for pn in pool_data:
-        if pn in ("特许寻访", "基础寻访", "辉光庆典", "启程寻访"):
-            continue
-        if pn.startswith("武器寻访"):
-            continue
-        add_char(pn)
-
-    return pools
+    pairs = await asyncio.gather(*(one(n) for n in names))
+    return {n: b64 for n, b64 in pairs if b64}
 
 
-async def build_gacha_pools(
-    uid: str, ev: Event, user_pref: str = "", web: bool = False
+async def build_gacha_payload(
+    uid: str, ev: Event, user_pref: str = "", with_trays: bool = False
 ) -> tuple[Union[dict, None], Union[str, None]]:
-    """加载抽卡记录并构建带头像的池统计（图片与网页共用）。
-
-    web=True 时返回按卡池名分组、武器不合并的结构（供网页使用）。
-    返回 (payload, err)。payload = {name, level, avatar, pools, data_time}。
-    """
+    """加载抽卡记录并分析（图片与网页共用）。返回 (payload, err)。"""
     gacha_data = await load_gachalogs(uid)
     if not gacha_data:
         return None, f"未找到抽卡记录，请先使用「{PREFIX}导入抽卡记录」导入"
@@ -550,8 +236,7 @@ async def build_gacha_pools(
     ) = await _load_card_maps(uid, user_pref)
 
     # 若抽卡记录中存在 card_detail 里没有的六星角色，触发一次刷新并重新加载
-    gacha_char_names = _collect_gacha_char_names(pool_data)
-    missing_chars = gacha_char_names - set(char_avatar_map.keys())
+    missing_chars = _collect_gacha_char_names(pool_data) - set(char_avatar_map.keys())
     if missing_chars:
         logger.info(
             f"[ENDUID·抽卡] 六星角色头像缺失 {missing_chars}，触发刷新"
@@ -567,72 +252,116 @@ async def build_gacha_pools(
         except Exception as e:
             logger.debug(f"[ENDUID·抽卡] 刷新头像失败: {e}")
 
-    if web:
-        pools = _build_web_pools(pool_data)
-    else:
-        weapon_up_stats = []
-        weapon_std_stats = []
-        handled_pool_names = {"特许寻访", "基础寻访", "启程寻访", "辉光庆典"}
-        for pn in sorted(pool_data.keys()):
-            if not pn.startswith("武器寻访"):
-                continue
-            handled_pool_names.add(pn)
-            stats = _calc_pool_stats(pn, pool_data[pn])
-            short_name = pn.replace("武器寻访-", "")
-            if short_name in STANDARD_WEAPON_POOL_NAMES:
-                weapon_std_stats.append(stats)
-            else:
-                weapon_up_stats.append(stats)
-
-        weapon_up_merged = _merge_weapon_pools(weapon_up_stats, "武器寻访") if weapon_up_stats else None
-        weapon_std_merged = _merge_weapon_pools(weapon_std_stats, "武器寻访-常驻") if weapon_std_stats else None
-
-        # 池显示顺序: 特许寻访 → 基础寻访 → 武器寻访 → 武器寻访-常驻 → 辉光庆典 → 启程寻访
-        pools = []
-        if "特许寻访" in pool_data:
-            pools.append(_calc_pool_stats("特许寻访", pool_data["特许寻访"]))
-        if "基础寻访" in pool_data:
-            pools.append(_calc_pool_stats("基础寻访", pool_data["基础寻访"]))
-        if weapon_up_merged:
-            pools.append(weapon_up_merged)
-        if weapon_std_merged:
-            pools.append(weapon_std_merged)
-        if "辉光庆典" in pool_data:
-            pools.append(_calc_pool_stats("辉光庆典", pool_data["辉光庆典"]))
-        if "启程寻访" in pool_data:
-            pools.append(_calc_pool_stats("启程寻访", pool_data["启程寻访"]))
-
-        for pn in pool_data:
-            if pn not in handled_pool_names:
-                pools.append(_calc_pool_stats(pn, pool_data[pn]))
-
-    for item in _iter_six_items(pools):
-        item_name = item.get("name", "")
-        if item.get("type") == "weapon":
-            url = weapon_icon_map.get(
-                item_name,
-                f"https://imgheybox.max-c.com/endfield/icon/{item_name.rstrip('.')}.png",
-            )
-        else:
-            url = char_avatar_map.get(item_name, "")
-        if url:
-            try:
-                cache_path = (
-                    EQUIP_CACHE_PATH
-                    if item.get("type") == "weapon"
-                    else AVATAR_CACHE_PATH
-                )
-                item["avatar"] = await get_image_b64_with_cache(url, cache_path)
-            except Exception:
-                pass
+    meta = await get_pool_meta(_pool_names(pool_data))
+    groups = analyze(pool_data, meta)
+    covers = meta.get("covers", {})
+    maps = (char_avatar_map, weapon_icon_map, covers)
+    icons = await _resolve_icons(_major_names(groups), *maps, ICON_SIZE)
+    icons_minor = await _resolve_icons(_minor_names(groups, rush_only=not with_trays), *maps, MINOR_ICON_SIZE)
+    quota_url = covers.get(ARSENAL_QUOTA_ITEM)
+    quota_icon = await get_image_b64_with_cache(quota_url, WIKI_IMG_CACHE, quality=85, cover_size=MINOR_ICON_SIZE) if quota_url else ""
 
     return {
         "name": name,
         "level": level,
         "avatar": avatar_b64,
-        "pools": pools,
+        "groups": groups,
+        "summary": summarize(groups),
+        "icons": icons,
+        "icons_minor": icons_minor,
+        "arts": await _resolve_arts(groups),
+        "quota_icon": quota_icon,
         "data_time": gacha_data.get("data_time", ""),
     }, None
+
+
+def _rush_cols(items: list, room: int) -> int:
+    """加急结果在 room 宽内最少排几行，返回列数；排满 RUSH_MAX_ROWS 行仍放不下返回 0"""
+    sizes = sorted((28 if it["rarity"] == 6 else 24 for it in items), reverse=True)
+    for rows in range(1, RUSH_MAX_ROWS + 1):
+        cols = -(-len(sizes) // rows)
+        if 16 + max(RUSH_LABEL_W, sum(sizes[:cols]) + 3 * (cols - 1)) <= room:
+            return cols
+    return 0
+
+
+def _flow(cards: list, caps: tuple, cont_caps: tuple) -> list:
+    """按顺序排进 len(caps) 列的网格；放不下时先用本行剩余列排一行，余下的六星换行接续，
+    接续段没有标题，按两行排以对齐同行卡片。返回各行的段。"""
+    cols = len(caps)
+    rows: list[list[dict]] = [[]]
+    used = 0
+    for card in cards:
+        tiles, head = card["tiles"], True
+        while True:
+            if used == cols:
+                rows.append([])
+                used = 0
+            free = cols - used
+            per, lim = (1, caps) if head else (2, cont_caps)
+            need = next((k for k, cap in enumerate(lim, 1) if len(tiles) <= cap * per), cols)
+            lines = max(1, -(-len(tiles) // lim[need - 1]))
+            if need <= free or len(tiles) <= lim[free - 1] * lines:
+                span = min(need, free)
+                rows[-1].append({**card, "tiles": tiles, "span": span, "head": head, "tail": True})
+                used += span
+                break
+            cut = caps[free - 1]
+            rows[-1].append({**card, "tiles": tiles[:cut], "span": free, "head": head, "tail": False})
+            used = cols
+            tiles, head = tiles[cut:], False
+    return [row for row in rows if row]
+
+
+def _char_cards(g: dict) -> dict:
+    """角色池卡片的两列排布：返回按行展开的卡片与合并成一行的其余卡池。"""
+    cards, rest = [], []
+    for i, b in enumerate(g["banners"]):
+        if i and not b["six"] and not b["free_batches"]:
+            rest.append(b)
+            continue
+        tiles = [s for s in b["six"] if not s["free"]]
+        span = 2 if len(tiles) > CHAR_TILE_CAP[0] else 1
+        cards.append({"b": b, "tiles": tiles, "span": span, "first": i == 0})
+
+    rows: list[list[dict]] = []
+    open_row = None
+    for c in cards:
+        if c["span"] == 2:
+            rows.append([c])
+        elif open_row is not None:
+            open_row.append(c)
+            open_row = None
+        else:
+            open_row = [c]
+            rows.append(open_row)
+    for row in rows:
+        if len(row) == 1 and len(row[0]["b"]["free_batches"]) > 1:
+            row[0]["span"] = 2
+        inner = CARD_INNER_W[row[0]["span"] - 1]
+        for c in row:
+            fbs, tiles = c["b"]["free_batches"], len(c["tiles"]) * TILE_STEP - 8
+            fits = len(fbs) == 1 and 0 < tiles <= inner
+            c["rush_cols"] = _rush_cols(fbs[0]["items"], inner - tiles - 8) if fits else 0
+        inline = all(c["rush_cols"] for c in row if c["b"]["free_batches"] and c["tiles"])
+        for c in row:
+            fbs = c["b"]["free_batches"]
+            c["inline"] = inline and c["rush_cols"] > 0
+            if not c["inline"]:
+                c["rush_cols"] = len(fbs[0]["items"]) if c["span"] == 2 and len(fbs) > 1 else 0
+    return {"cards": [c for row in rows for c in row], "rest": rest}
+
+
+def _weapon_cards(g: dict) -> dict:
+    """武器池卡片排布：只列出过六星的池（当期限定池始终保留），其余合并成一行。"""
+    cards, rest = [], []
+    for i, b in enumerate(g["banners"]):
+        first = i == 0 and g["key"] == "weapon"
+        if b["six"] or first:
+            cards.append({"b": b, "tiles": b["six"], "first": first})
+        else:
+            rest.append(b)
+    return {"cards": [c for row in _flow(cards, WEAPON_TILE_CAP, WEAPON_CONT_CAP) for c in row], "rest": rest}
 
 
 async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
@@ -642,29 +371,31 @@ async def draw_gacha_card(ev: Event) -> Union[bytes, str]:
         return TIP_NOT_BOUND
     user_pref = await get_hide_uid_pref(uid, ev.user_id, ev.bot_id)
 
-    payload, err = await build_gacha_pools(uid, ev, user_pref)
-    if err:
-        return err
+    payload, err = await build_gacha_payload(uid, ev, user_pref)
+    if err or payload is None:
+        return err or "抽卡记录为空"
 
-    name = payload["name"]
-    level = payload["level"]
-    avatar_b64 = payload["avatar"]
-    pools = payload["pools"]
-
-    columns = _calc_grid_columns(pools)
-
+    icons = {**payload["icons_minor"], **payload["icons"]}
     context = {
-        "name": name,
+        "name": payload["name"],
         "uid": hide_uid(uid, user_pref=user_pref),
-        "avatar": avatar_b64,
-        "level": level,
-        "pools": pools,
-        "columns": columns,
-        "card_width": 110 + 178 * columns,
+        "avatar": payload["avatar"],
+        "level": payload["level"],
+        "groups": payload["groups"],
+        "char_cards": {
+            g["key"]: _char_cards(g) for g in payload["groups"] if g["key"] in ("special", "rerun", "joint")
+        },
+        "weapon_cards": {g["key"]: _weapon_cards(g) for g in payload["groups"] if g["type"] == "weapon"},
+        "summary": payload["summary"],
+        "icons": icons,
+        "icon_cls": {n: f"i{i}" for i, n in enumerate(icons)},
+        "arts": payload["arts"],
+        "art_cls": {n: f"a{i}" for i, n in enumerate(payload["arts"])},
+        "quota_icon": payload["quota_icon"],
+        "card_width": CARD_WIDTH,
+        "tex": card_textures(),
         "data_time": payload.get("data_time", ""),
-        "bg": image_to_base64(TEXTURE_PATH / "bg.png", quality=75),
         "end_logo": image_to_base64(TEXTURE_PATH / "end.png", quality=75),
-        "up_tag": image_to_base64(TEXTURE_PATH / "up_tag.png"),
     }
 
     img_bytes = await render_html(end_templates, "end_gacha_card.html", context)
