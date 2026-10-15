@@ -132,6 +132,7 @@ async def phone_web_login_entry(bot: Bot, ev: Event):
             "user_id": ev.user_id,
             "bot_id": ev.bot_id,
             "bot_self_id": ev.bot_self_id,
+            "ws_bot_id": ev.WS_BOT_ID,
             "group_id": ev.group_id,
             "bg": bg,
         },
@@ -176,7 +177,12 @@ async def _push_text(state: dict, text: str):
     bot_id = state.get("bot_id")
     group_id = state.get("group_id")
     bot_self_id = state.get("bot_self_id") or ""
-    for active_id in list(gss.active_bot):
+    ws_bot_id = state.get("ws_bot_id")
+    if ws_bot_id in gss.active_bot:
+        targets = [ws_bot_id]
+    else:
+        targets = list(gss.active_bot)
+    for active_id in targets:
         try:
             if group_id:
                 await gss.active_bot[active_id].target_send(
@@ -186,7 +192,6 @@ async def _push_text(state: dict, text: str):
                 await gss.active_bot[active_id].target_send(
                     text, "direct", user_id, bot_id, bot_self_id, ""
                 )
-            return
         except Exception as e:
             logger.warning(f"[ENDUID·网页登录] 结果推送失败: {e}")
 
