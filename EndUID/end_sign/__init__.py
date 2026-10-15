@@ -56,9 +56,11 @@ async def sign_all(bot: Bot, ev: Event):
     await bot.send("[EndUID] 全部签到开始执行...")
     try:
         msg = await end_auto_sign()
-        await bot.send(msg)
-    finally:
+    except Exception:
         signing_state.clear_state()
+        raise
+    signing_state.clear_state()
+    await bot.send(msg)
 
 
 @end_sign_switch_sv.on_fullmatch(
@@ -157,13 +159,15 @@ async def end_scheduled_sign():
     signing_state.set_state("auto")
     try:
         msg = await end_auto_sign()
-        subscribes = await gs_subscribe.get_subscribe(TASK_NAME_SIGN_RESULT)
-        if subscribes and msg:
-            logger.info(f"[ENDUID·签到] 推送签到结果: {msg}")
-            for sub in subscribes:
-                await sub.send(msg)
-    finally:
+    except Exception:
         signing_state.clear_state()
+        raise
+    signing_state.clear_state()
+    subscribes = await gs_subscribe.get_subscribe(TASK_NAME_SIGN_RESULT)
+    if subscribes and msg:
+        logger.info(f"[ENDUID·签到] 推送签到结果: {msg}")
+        for sub in subscribes:
+            await sub.send(msg)
 
 
 def setup_scheduler():
