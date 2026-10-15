@@ -12,6 +12,7 @@ from ._common import parse_trailing_number
 from ..end_config import PREFIX
 from ..utils.tips import TIP_NOT_BOUND
 from ..utils.database.models import EndBind
+from ..utils.util import use_longest_keyword
 
 # 拆分为独立 SV, 用优先级(越小越优先)避免「危机合约/合约/危机」前缀抢匹配:
 # 具体指令(总排行/指标/群排行/信息) 优先级 3, 主指令兜底 5, 两侧留空隙便于以后插入
@@ -100,8 +101,11 @@ async def crisis_info_entry(bot: Bot, ev: Event):
     return await _send_draw_result(bot, await draw_crisis_info_img(ev, uid))
 
 
+_CRISIS_ENTRY_KEYWORDS = ("危机合约", "危机", "合约", "wjhy", "wj", "hy")
+
+
 @sv_crisis.on_command(
-    ("危机合约", "危机", "合约", "wjhy", "wj", "hy"),
+    _CRISIS_ENTRY_KEYWORDS,
     block=True,
     to_ai="""查询自己终末地账号的危机合约（crisis-contract）。
 
@@ -113,6 +117,7 @@ async def crisis_info_entry(bot: Bot, ev: Event):
 """,
 )
 async def crisis_entry(bot: Bot, ev: Event):
+    use_longest_keyword(ev, _CRISIS_ENTRY_KEYWORDS)
     uid = await _bound_uid(ev)
     if not uid:
         return await _need_login(bot)

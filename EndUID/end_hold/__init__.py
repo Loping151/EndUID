@@ -4,12 +4,16 @@ from gsuid_core.models import Event
 
 from .draw_hold_rate import draw_hold_rate_img
 from .draw_group_hold_rate import draw_group_hold_rate_img
+from ..utils.util import use_longest_keyword
 
 sv_hold_rate = SV("End持有率")
 
 
+_HANDLE_HOLD_RATE_KEYWORDS = ("持有率", "角色持有率", "持有率统计")
+
+
 @sv_hold_rate.on_command(
-    ("持有率", "角色持有率", "持有率统计"),
+    _HANDLE_HOLD_RATE_KEYWORDS,
     block=True,
     to_ai="""查询终末地服务器角色持有率统计图(仅统计五星六星)。
 
@@ -18,11 +22,15 @@ text 可附 "up"(非常驻六星, 默认) / "全部" / "六" / "五" 进一步�
 """,
 )
 async def handle_hold_rate(bot: Bot, ev: Event):
+    use_longest_keyword(ev, _HANDLE_HOLD_RATE_KEYWORDS)
     await bot.send(await draw_hold_rate_img(ev))
 
 
+_HANDLE_GROUP_HOLD_RATE_KEYWORDS = ("群持有率", "群角色持有率", "群持有率统计")
+
+
 @sv_hold_rate.on_command(
-    ("群持有率", "群角色持有率", "群持有率统计"),
+    _HANDLE_GROUP_HOLD_RATE_KEYWORDS,
     block=True,
     to_ai="""查询本群角色持有率统计图(仅统计五星六星)。
 
@@ -32,4 +40,5 @@ text 可附 "up"(非常驻六星, 默认) / "全部" / "六" / "五" 进一步�
 """,
 )
 async def handle_group_hold_rate(bot: Bot, ev: Event):
+    use_longest_keyword(ev, _HANDLE_GROUP_HOLD_RATE_KEYWORDS)
     await bot.send(await draw_group_hold_rate_img(ev))

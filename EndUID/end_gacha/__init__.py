@@ -13,7 +13,7 @@ from ..utils.database.models import EndBind, EndUser
 from ..utils.api.requests import end_api
 from ..utils.path import PLAYER_PATH
 from ..utils.player_store import compress_all
-from ..utils.util import hide_uid
+from ..utils.util import hide_uid, use_longest_keyword
 from .get_gachalogs import (
     get_new_gachalog,
     is_uid_locked,
@@ -133,8 +133,12 @@ async def import_gacha_by_file(bot: Bot, ev: Event):
         await bot.send(msg)
 
 
-@sv_gacha_import.on_command(("导入抽卡记录", "导入抽卡", "更新抽卡记录", "更新抽卡", "刷新抽卡记录", "刷新抽卡"), block=True)
+_IMPORT_GACHA_RECORD_KEYWORDS = ("导入抽卡记录", "导入抽卡", "更新抽卡记录", "更新抽卡", "刷新抽卡记录", "刷新抽卡")
+
+
+@sv_gacha_import.on_command(_IMPORT_GACHA_RECORD_KEYWORDS, block=True)
 async def import_gacha_record(bot: Bot, ev: Event):
+    use_longest_keyword(ev, _IMPORT_GACHA_RECORD_KEYWORDS)
     uid = await EndBind.get_bound_uid(ev.user_id, ev.bot_id)
     if not uid:
         return await bot.send(TIP_NOT_BOUND)
@@ -142,7 +146,7 @@ async def import_gacha_record(bot: Bot, ev: Event):
     if is_uid_locked(uid):
         return
 
-    text = ev.text.strip().removeprefix("记录").strip()
+    text = ev.text.strip()
 
     if text:
         u8_token, _, _ = _parse_gacha_token(text)
