@@ -15,7 +15,13 @@ from .ann_card import ann_list_card, ann_detail_card
 from ..utils.api.requests import end_api
 from ..utils.database.models import EndSubscribe, EndGroupActivity, EndUserActivity, ANN_PUSH_GUARD
 from ..end_config import EndConfig
-from ..utils.path import ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH, BAKE_PATH
+from ..utils.path import (
+    BAKE_PATH,
+    ANN_CACHE_PATH,
+    CALENDAR_IMG_CACHE,
+    ANN_RENDER_CACHE_PATH,
+    CALENDAR_OFFICIAL_CACHE,
+)
 from .utils.ann_config import get_ann_new_ids, set_ann_new_ids
 
 sv_ann = SV("终末地公告")
@@ -241,19 +247,14 @@ def clean_old_cache_files(directory: Path, days: int) -> tuple[int, float]:
 
 
 async def clean_cache_directories(days: int) -> str:
-    """清理公告缓存目录"""
+    """清理公告/日历缓存目录"""
     total_count = 0
     total_space = 0.0
 
-    ann_count, ann_space = clean_old_cache_files(ANN_CACHE_PATH, days)
-    if ann_count > 0:
-        total_count += ann_count
-        total_space += ann_space
-
-    r_count, r_space = clean_old_cache_files(ANN_RENDER_CACHE_PATH, days)
-    if r_count > 0:
-        total_count += r_count
-        total_space += r_space
+    for directory in (ANN_CACHE_PATH, ANN_RENDER_CACHE_PATH, CALENDAR_IMG_CACHE, CALENDAR_OFFICIAL_CACHE):
+        count, space = clean_old_cache_files(directory, days)
+        total_count += count
+        total_space += space
 
     # 烘焙缓存（含子目录）
     bake_count, bake_space = 0, 0.0

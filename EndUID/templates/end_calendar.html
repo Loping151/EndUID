@@ -140,8 +140,10 @@
 
         .pool-chars {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             flex-shrink: 0;
+            max-width: 550px;
         }
 
         .pool-char {
@@ -182,6 +184,9 @@
             padding: 2px 0;
             color: var(--c-accent);
         }
+
+        .pool-char-badge.tone-blue { color: #4a9eff; }
+        .pool-char-badge.tone-gray { color: #999; }
 
         .pool-info {
             flex: 1;
@@ -231,6 +236,12 @@
             background: rgba(74,158,255,0.15);
             color: #4a9eff;
             border: 1px solid rgba(74,158,255,0.3);
+        }
+
+        .status-badge.permanent {
+            background: rgba(52,211,153,0.12);
+            color: #34d399;
+            border: 1px solid rgba(52,211,153,0.3);
         }
 
         .remaining-text {
@@ -329,6 +340,52 @@
     </style>
 </head>
 <body>
+    {% macro status_row(item, cls) %}
+    {% if item.state != 'none' %}
+    <div class="{{ cls }}">
+        <span class="status-badge {{ item.state }}">{{ item.status }}</span>
+        {% if item.remaining %}
+        <span class="remaining-text">{{ item.remaining }}</span>
+        {% endif %}
+        {% if item.state != 'permanent' %}
+        <div class="progress-bar">
+            <div class="progress-bar-fill" style="width: {{ item.progress }}%; background: {{ item.color }};"></div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endmacro %}
+
+    {% macro pool_list(pools) %}
+    <div class="pool-grid">
+        {% for pool in pools %}
+        <div class="pool-card">
+            {% if pool.icons %}
+            <div class="pool-chars">
+                {% for ic in pool.icons %}
+                <div class="pool-char {{ ic.rarity }}">
+                    {% if ic.pic %}
+                    <img src="{{ ic.pic }}">
+                    {% endif %}
+                    {% if ic.label %}
+                    <div class="pool-char-badge tone-{{ ic.tone }}">{{ ic.label }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="pool-info">
+                <div class="pool-name">{{ pool.name }}</div>
+                {% if pool.state != 'none' %}
+                <div class="pool-time">{{ pool.startTime }} ~ {{ pool.endTime }}</div>
+                {% endif %}
+                {{ status_row(pool, 'pool-status-row') }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endmacro %}
+
     <div class="bg-layer">
         {% if bg %}
         <img src="{{ bg }}" style="width:100%; height:100%; object-fit:cover; opacity:0.1; mix-blend-mode: overlay;">
@@ -352,74 +409,14 @@
         {% if charPools %}
         <div>
             <div class="section-title">干员寻访 <span>RECRUITMENT</span></div>
-            <div class="pool-grid">
-                {% for pool in charPools %}
-                <div class="pool-card">
-                    <div class="pool-chars">
-                        {% for ch in pool.chars %}
-                        <div class="pool-char {{ ch.rarity }}">
-                            {% if ch.pic %}
-                            <img src="{{ ch.pic }}">
-                            {% endif %}
-                            {% if ch.dotType == 'label_type_up' %}
-                            <div class="pool-char-badge">UP</div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="pool-info">
-                        <div class="pool-name">{{ pool.name }}</div>
-                        <div class="pool-time">{{ pool.startTime }} ~ {{ pool.endTime }}</div>
-                        <div class="pool-status-row">
-                            {% if pool.status == '进行中' %}
-                            <span class="status-badge ongoing">{{ pool.status }}</span>
-                            {% elif pool.status == '已结束' %}
-                            <span class="status-badge ended">{{ pool.status }}</span>
-                            {% else %}
-                            <span class="status-badge upcoming">{{ pool.status }}</span>
-                            {% endif %}
-                            {% if pool.remaining %}
-                            <span class="remaining-text">{{ pool.remaining }}</span>
-                            {% endif %}
-                            <div class="progress-bar">
-                                <div class="progress-bar-fill" style="width: {{ pool.progress }}%; background: {{ pool.color }};"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            {{ pool_list(charPools) }}
         </div>
         {% endif %}
 
         {% if weaponPools %}
         <div>
             <div class="section-title">武器寻访 <span>WEAPON POOL</span></div>
-            <div class="pool-grid">
-                {% for pool in weaponPools %}
-                <div class="pool-card">
-                    <div class="pool-info">
-                        <div class="pool-name">{{ pool.name }}</div>
-                        <div class="pool-time">{{ pool.startTime }} ~ {{ pool.endTime }}</div>
-                        <div class="pool-status-row">
-                            {% if pool.status == '进行中' %}
-                            <span class="status-badge ongoing">{{ pool.status }}</span>
-                            {% elif pool.status == '已结束' %}
-                            <span class="status-badge ended">{{ pool.status }}</span>
-                            {% else %}
-                            <span class="status-badge upcoming">{{ pool.status }}</span>
-                            {% endif %}
-                            {% if pool.remaining %}
-                            <span class="remaining-text">{{ pool.remaining }}</span>
-                            {% endif %}
-                            <div class="progress-bar">
-                                <div class="progress-bar-fill" style="width: {{ pool.progress }}%; background: {{ pool.color }};"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            {{ pool_list(weaponPools) }}
         </div>
         {% endif %}
 
@@ -439,22 +436,10 @@
                             <div class="activity-name">{{ act.name }}</div>
                             <div class="activity-desc">{{ act.description }}</div>
                         </div>
+                        {% if act.state not in ('permanent', 'none') %}
                         <div class="activity-time">{{ act.startTime }} ~ {{ act.endTime }}</div>
-                        <div class="activity-bottom">
-                            {% if act.status == '进行中' %}
-                            <span class="status-badge ongoing">{{ act.status }}</span>
-                            {% elif act.status == '已结束' %}
-                            <span class="status-badge ended">{{ act.status }}</span>
-                            {% else %}
-                            <span class="status-badge upcoming">{{ act.status }}</span>
-                            {% endif %}
-                            {% if act.remaining %}
-                            <span class="remaining-text">{{ act.remaining }}</span>
-                            {% endif %}
-                            <div class="progress-bar">
-                                <div class="progress-bar-fill" style="width: {{ act.progress }}%; background: {{ act.color }};"></div>
-                            </div>
-                        </div>
+                        {% endif %}
+                        {{ status_row(act, 'activity-bottom') }}
                     </div>
                 </div>
                 {% endfor %}

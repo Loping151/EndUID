@@ -1,12 +1,10 @@
 import asyncio
 import io
-import json
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-import aiofiles
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
 
@@ -19,15 +17,12 @@ from ..utils.render_utils import (
     image_to_base64,
     get_image_b64_with_cache,
 )
-from ..utils.path import CACHE_BASE
-from .zonai_client import fetch_landing as _fetch_landing_http
+from ..utils.path import CALENDAR_IMG_CACHE
+from ..end_wiki.skland_wiki import wiki_client
+from .official_calendar import append_official_calendar
 
 TEXTURE_PATH = Path(__file__).parent.parent / "end_char" / "texture2d"
 TEMPLATE_PATH = Path(__file__).parent.parent / "templates"
-CALENDAR_CACHE_PATH = CACHE_BASE / "calendar"
-CALENDAR_CACHE_PATH.mkdir(parents=True, exist_ok=True)
-CALENDAR_IMG_CACHE = CALENDAR_CACHE_PATH / "img"
-CALENDAR_IMG_CACHE.mkdir(parents=True, exist_ok=True)
 
 calendar_templates = Environment(loader=FileSystemLoader(str(TEMPLATE_PATH)))
 
@@ -35,6 +30,34 @@ CACHE_DURATION = 3600  # 1 hour
 _cache: Dict[str, dict] = {}
 _cache_time: float = 0
 _fetch_lock = asyncio.Lock()
+
+LANDING_ENDPOINTS = ("char-pool", "activity", "banner", "weapon-pool")
+
+# 同 wiki 角标
+DOT_LABELS = {
+    "label_type_up": ("UP", "yellow"),
+    "label_type_new": ("NEW", "yellow"),
+    "label_type_remake": ("复刻", "yellow"),
+    "label_type_time_limited": ("限时", "yellow"),
+    "label_type_limited": ("限定", "yellow"),
+    "label_type_preview": ("预告", "blue"),
+    "label_type_foresee": ("前瞻", "blue"),
+    "un_online": ("未上线", "gray"),
+}
+
+ACTIVITY_PERMANENT = 2
+STATE_ORDER = {"ongoing": 0, "upcoming": 1, "ended": 2, "none": 3, "permanent": 3}
+
+
+async def _fetch_landing_http() -> Optional[Dict[str, dict]]:
+    out: Dict[str, dict] = {}
+    for ep in LANDING_ENDPOINTS:
+        data = await wiki_client.get_landing(ep)
+        if data is None:
+            logger.warning(f"[ENDUID·日历] HTTP 拉取 {ep} 失败")
+            return None
+        out[ep] = data
+    return out
 
 
 async def _fetch_wiki_data() -> Optional[Dict]:
@@ -79,7 +102,7 @@ async def _fetch_wiki_data_via_playwright() -> Optional[Dict]:
         return None
 
     results: Dict[str, dict] = {}
-    targets = ['char-pool', 'activity', 'banner', 'weapon-pool']
+    targets = LANDING_ENDPOINTS
 
     async def on_response(resp):
         url = resp.url
@@ -122,27 +145,34 @@ def _ts_to_str(ts_str: str, fmt: str = "%m.%d %H:%M") -> str:
         return ""
 
 
-def _get_event_status(start_ts: str, end_ts: str):
-    """Return (status_text, progress_pct, color, remaining_text)."""
-    now = time.time()
+def _get_event_status(start_ts: str, end_ts: str) -> dict:
     try:
         start = int(start_ts)
         end = int(end_ts)
     except (ValueError, TypeError):
-        return "未知", 0, "#555", ""
+        start = end = 0
+    if start <= 0 or end <= 0:
+        return {"state": "none", "status": "", "progress": 0, "color": "#555", "remaining": ""}
 
+    now = time.time()
     if now < start:
-        delta = start - now
-        return "未开始", 0, "#555", _fmt_remaining(delta)
-    elif now > end:
-        return "已结束", 100, "#555", ""
-    else:
-        elapsed = now - start
-        total = end - start
-        pct = min(100, round(elapsed / total * 100)) if total > 0 else 0
-        remaining = end - now
-        color = "#ef4444" if remaining < 3 * 86400 else "#ffe600"
-        return "进行中", pct, color, _fmt_remaining(remaining)
+        return {
+            "state": "upcoming",
+            "status": "未开始",
+            "progress": 0,
+            "color": "#555",
+            "remaining": f"{_fmt_remaining(start - now)}后开启",
+        }
+    if now > end:
+        return {"state": "ended", "status": "已结束", "progress": 100, "color": "#555", "remaining": ""}
+    remaining = end - now
+    return {
+        "state": "ongoing",
+        "status": "进行中",
+        "progress": min(100, round((now - start) / max(end - start, 1) * 100)),
+        "color": "#ef4444" if remaining < 3 * 86400 else "#ffe600",
+        "remaining": f"还剩{_fmt_remaining(remaining)}",
+    }
 
 
 def _fmt_remaining(seconds: float) -> str:
@@ -155,6 +185,36 @@ def _fmt_remaining(seconds: float) -> str:
     if hours > 0:
         return f"{hours}小时{minutes}分"
     return f"{minutes}分钟"
+
+
+async def _build_icons(items: List[dict]) -> List[dict]:
+    icons = []
+    for it in items:
+        pic_url = it.get("pic", "")
+        label, tone = DOT_LABELS.get(it.get("dotType", ""), ("", ""))
+        icons.append({
+            "pic": await get_image_b64_with_cache(pic_url, CALENDAR_IMG_CACHE) if pic_url else "",
+            "rarity": it.get("rarity", ""),
+            "label": label,
+            "tone": tone,
+        })
+    return icons
+
+
+async def _build_pools(pools: List[dict], icon_key: str) -> List[dict]:
+    out = []
+    for pool in pools:
+        start_ts = pool.get("poolStartAtTs", "0")
+        end_ts = pool.get("poolEndAtTs", "0")
+        out.append({
+            "name": pool.get("name", ""),
+            "icons": await _build_icons(pool.get(icon_key) or []),
+            "startTime": _ts_to_str(start_ts),
+            "endTime": _ts_to_str(end_ts),
+            **_get_event_status(start_ts, end_ts),
+        })
+    out.sort(key=lambda x: STATE_ORDER[x["state"]])
+    return out
 
 
 async def draw_calendar(ev: Event) -> Union[bytes, str]:
@@ -174,54 +234,8 @@ async def draw_calendar(ev: Event) -> Union[bytes, str]:
                 banner_url, CALENDAR_IMG_CACHE
             )
 
-    # Char pools
-    char_pools = []
-    for pool in data.get("char-pool", {}).get("list", []):
-        chars = []
-        for ch in pool.get("chars", []):
-            pic_url = ch.get("pic", "")
-            pic_b64 = ""
-            if pic_url:
-                pic_b64 = await get_image_b64_with_cache(
-                    pic_url, CALENDAR_IMG_CACHE
-                )
-            chars.append({
-                "name": ch.get("name", ""),
-                "pic": pic_b64,
-                "rarity": ch.get("rarity", ""),
-                "dotType": ch.get("dotType", ""),
-            })
-
-        start_ts = pool.get("poolStartAtTs", "0")
-        end_ts = pool.get("poolEndAtTs", "0")
-        status, pct, color, remaining = _get_event_status(start_ts, end_ts)
-
-        char_pools.append({
-            "name": pool.get("name", ""),
-            "chars": chars,
-            "startTime": _ts_to_str(start_ts),
-            "endTime": _ts_to_str(end_ts),
-            "status": status,
-            "progress": pct,
-            "color": color,
-            "remaining": remaining,
-        })
-
-    # Weapon pools
-    weapon_pools = []
-    for pool in data.get("weapon-pool", {}).get("list", []):
-        start_ts = pool.get("poolStartAtTs", "0")
-        end_ts = pool.get("poolEndAtTs", "0")
-        status, pct, color, remaining = _get_event_status(start_ts, end_ts)
-        weapon_pools.append({
-            "name": pool.get("name", ""),
-            "startTime": _ts_to_str(start_ts),
-            "endTime": _ts_to_str(end_ts),
-            "status": status,
-            "progress": pct,
-            "color": color,
-            "remaining": remaining,
-        })
+    char_pools = await _build_pools(data.get("char-pool", {}).get("list", []), "chars")
+    weapon_pools = await _build_pools(data.get("weapon-pool", {}).get("list", []), "weapons")
 
     # Activities
     activities = []
@@ -235,7 +249,10 @@ async def draw_calendar(ev: Event) -> Union[bytes, str]:
 
         start_ts = act.get("activityStartAtTs", "0")
         end_ts = act.get("activityEndAtTs", "0")
-        status, pct, color, remaining = _get_event_status(start_ts, end_ts)
+        if act.get("activityType") == ACTIVITY_PERMANENT:
+            st = {"state": "permanent", "status": "常驻活动", "progress": 0, "color": "#555", "remaining": ""}
+        else:
+            st = _get_event_status(start_ts, end_ts)
 
         activities.append({
             "name": act.get("name", ""),
@@ -243,11 +260,9 @@ async def draw_calendar(ev: Event) -> Union[bytes, str]:
             "pic": pic_b64,
             "startTime": _ts_to_str(start_ts),
             "endTime": _ts_to_str(end_ts),
-            "status": status,
-            "progress": pct,
-            "color": color,
-            "remaining": remaining,
+            **st,
         })
+    activities.sort(key=lambda x: STATE_ORDER[x["state"]])
 
     context = {
         "now": now.strftime("%Y-%m-%d %H:%M"),
@@ -263,6 +278,7 @@ async def draw_calendar(ev: Event) -> Union[bytes, str]:
         calendar_templates, "end_calendar.html", context
     )
     if img_bytes:
-        return await convert_img(Image.open(io.BytesIO(img_bytes)))
+        img = await append_official_calendar(Image.open(io.BytesIO(img_bytes)))
+        return await convert_img(img)
 
     return "❌ HTML 渲染失败"

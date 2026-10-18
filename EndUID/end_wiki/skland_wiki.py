@@ -159,6 +159,10 @@ class SklandWikiClient:
 
     # ---- public methods ----
 
+    async def get_landing(self, endpoint: str) -> Optional[dict]:
+        """首页卡片数据：char-pool / weapon-pool / activity / banner"""
+        return await self._get(f"/web/v1/wiki/{endpoint}")
+
     async def get_item_info(self, item_id: int) -> Optional[dict]:
         """Fetch wiki item detail by ID."""
         data = await self._get(WIKI_ITEM_INFO, f"id={item_id}")
