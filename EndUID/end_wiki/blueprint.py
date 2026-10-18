@@ -90,6 +90,8 @@ def _extract_bp_info(item: dict) -> dict:
                 if "：" in t:
                     key, val = t.split("：", 1)
                     info[key.strip()] = val.strip()
+                elif "解锁此蓝图" in t:
+                    info["解锁"] = t.strip()
             elif block.get("kind") == "image":
                 url = block.get("image", {}).get("url", "")
                 if url:
@@ -103,7 +105,7 @@ def _extract_bp_info(item: dict) -> dict:
         "materials": info.get("蓝图原料", ""),
         "intermediates": info.get("蓝图中间产物", ""),
         "products": info.get("蓝图最终产物", ""),
-        "unlock": info.get("完成", ""),
+        "unlock": info.get("解锁", ""),
     }
 
 

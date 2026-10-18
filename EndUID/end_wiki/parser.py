@@ -447,14 +447,13 @@ def parse_skland_char_wiki(
             elif sid == "10200":  # 职业
                 profession = PROF_ID_MAP.get(val, val)
 
-        # Basic info from tableList in 干员资料 widget
-        _, info_widget = _find_widget(
-            chapter_group, widget_common_map, "干员资料"
-        )
-        table_list = info_widget.get("tableList", [])
+        # Basic info from tableList in 干员信息 widget
         info_map: dict[str, str] = {}
-        for entry in table_list:
-            info_map[entry.get("label", "")] = entry.get("value", "")
+        for wdata in widget_common_map.values():
+            for entry in wdata.get("tableList") or []:
+                info_map.setdefault(
+                    entry.get("label", ""), entry.get("value", "")
+                )
 
         faction = info_map.get("身份认证", "")
         race = info_map.get("种族", "")
