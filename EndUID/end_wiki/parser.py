@@ -62,8 +62,10 @@ def _extract_text_kind(doc: dict, block_id: str) -> str:
     return block.get("text", {}).get("kind", "")
 
 
-def _parse_table_block(doc: dict, block_id: str) -> list[list[str]]:
-    """Parse a table block into a 2D list of cell texts."""
+def _parse_table_block(
+    doc: dict, block_id: str, sep: str = ""
+) -> list[list[str]]:
+    """Parse a table block into a 2D list of cell texts (paragraphs joined by sep)."""
     block = doc.get("blockMap", {}).get(block_id, {})
     if block.get("kind") != "table":
         return []
@@ -83,13 +85,13 @@ def _parse_table_block(doc: dict, block_id: str) -> list[list[str]]:
             cell_texts: list[str] = []
             for child_id in cell.get("childIds", []):
                 child = block_map.get(child_id, {})
-                if child.get("kind") == "text":
-                    for elem in child.get("text", {}).get(
-                        "inlineElements", []
-                    ):
-                        if elem.get("kind") == "text":
-                            cell_texts.append(elem["text"]["text"])
-            row.append("".join(cell_texts))
+                if child.get("kind") != "text":
+                    continue
+                elems = child.get("text", {}).get("inlineElements", [])
+                cell_texts.append("".join(
+                    e["text"]["text"] for e in elems if e.get("kind") == "text"
+                ))
+            row.append(sep.join(cell_texts))
         rows.append(row)
     return rows
 
@@ -527,223 +529,51 @@ def parse_skland_char_wiki(
 # ==================== Weapon wiki parsing ====================
 
 
-def _parse_weapon_tab(
-    intro: dict, content_id: str, document_map: dict
-) -> tuple[int, list[WeaponStatBonus], WeaponPassive | None]:
-    """Parse one weapon tab (level 1 or max) from intro + content doc.
-
-    Returns (base_attack, stat_bonuses, passive).
-    """
-
-    # Base attack from intro.description doc
-    base_attack = 0
-    desc_id = intro.get("description", "")
-    if desc_id and desc_id in document_map:
-        doc = document_map[desc_id]
-        for bid in doc.get("blockIds", []):
-            text = _extract_text(doc, bid)
-            m = re.search(r"基础攻击力\s*(\d+)", text)
-            if m:
-                base_attack = int(m.group(1))
-                break
-
-    # Stats and passive from content doc
-    bonuses: list[WeaponStatBonus] = []
-    passive: WeaponPassive | None = None
-
-    if not content_id or content_id not in document_map:
-        return base_attack, bonuses, passive
-
-    doc = document_map[content_id]
-
-    # Entries are delimited by horizontalLine; the leading heading2 ("属性能力")
-    # sits in its own segment and is ignored. Within an entry the first body
-    # line is the name, heading3 lines are values, and any other body lines are
-    # notes (e.g. 叠加/触发规则) belonging to the entry.
-    segments: list[list[str]] = []
-    cur: list[str] = []
-    for bid in doc.get("blockIds", []):
-        block = doc.get("blockMap", {}).get(bid, {})
-        if block.get("kind") == "horizontalLine":
-            if cur:
-                segments.append(cur)
-                cur = []
-            continue
-        cur.append(bid)
-    if cur:
-        segments.append(cur)
-
-    for seg in segments:
-        name = ""
-        content_lines: list[str] = []
-        value_count = 0
-        for bid in seg:
-            kind = _extract_text_kind(doc, bid)
-            text = _extract_text(doc, bid).strip()
-            if not text or kind == "heading2":
-                continue
-            if not name and kind == "body":
-                name = re.sub(r"\s*\d+/\d+\s*$", "", text)
-                continue
-            content_lines.append(text)
-            if kind == "heading3":
-                value_count += 1
-
-        if not name or not content_lines:
-            continue
-
-        if value_count == 1 and len(content_lines) == 1:
-            # Single value, no notes → stat bonus
-            bonuses.append(
-                WeaponStatBonus(
-                    name=name,
-                    value=content_lines[0].rstrip("。."),
-                )
-            )
-        else:
-            # Effect lines (+ notes) → passive skill
-            passive = WeaponPassive(
-                name=name,
-                description="\n".join(content_lines),
-            )
-
-    return base_attack, bonuses, passive
-
-
-def _extract_entry_id_from_table(
-    doc: dict, table_block_id: str
-) -> str:
-    """Extract the first entry ID from a table block's cells."""
-    block = doc.get("blockMap", {}).get(table_block_id, {})
-    if block.get("kind") != "table":
-        return ""
-    tbl = block.get("table", {})
+def _table_entries(doc: dict, block_id: str) -> list[list[list[dict]]]:
+    """Collect entry references (item links) per cell of a table block."""
+    table = doc.get("blockMap", {}).get(block_id, {}).get("table", {})
+    cell_map = table.get("cellMap", {})
     block_map = doc.get("blockMap", {})
-    for rid in tbl.get("rowIds", []):
-        for cid in tbl.get("columnIds", []):
-            cell = tbl.get("cellMap", {}).get(f"{rid}_{cid}", {})
+
+    rows: list[list[list[dict]]] = []
+    for row_id in table.get("rowIds", []):
+        row: list[list[dict]] = []
+        for col_id in table.get("columnIds", []):
+            cell = cell_map.get(f"{row_id}_{col_id}", {})
+            entries: list[dict] = []
             for child_id in cell.get("childIds", []):
                 child = block_map.get(child_id, {})
-                if child.get("kind") == "text":
-                    for elem in child.get("text", {}).get(
-                        "inlineElements", []
-                    ):
-                        if elem.get("kind") == "entry":
-                            return elem["entry"].get("id", "")
-    return ""
-
-
-def _parse_weapon_skill_ranks(
-    widget: dict, document_map: dict
-) -> list[WeaponSkillRank]:
-    """Parse 武器技能和基质 widget → per-skill RANK 1-9 values + gem."""
-    ranks: list[WeaponSkillRank] = []
-    tab_list = widget.get("tabList", [])
-    tab_data_map = widget.get("tabDataMap", {})
-
-    for tab in tab_list:
-        tab_id = tab.get("tabId", "")
-        skill_name = tab.get("title", "")
-        td = tab_data_map.get(tab_id, {})
-        content_id = td.get("content", "")
-
-        if not content_id or content_id not in document_map:
-            continue
-
-        doc = document_map[content_id]
-        header: list[str] = []
-        values: list[str] = []
-        gem_id = ""
-        table_idx = 0
-
-        for bid in doc.get("blockIds", []):
-            block = doc.get("blockMap", {}).get(bid, {})
-            if block.get("kind") != "table":
-                continue
-            table_idx += 1
-            if table_idx == 1:
-                # 武器技能数值
-                rows = _parse_table_block(doc, bid)
-                if rows and len(rows) >= 2:
-                    header = rows[0]
-                    values = rows[1]
-            elif table_idx == 2:
-                # 基质推荐
-                gem_id = _extract_entry_id_from_table(doc, bid)
-                break
-
-        if header:
-            ranks.append(
-                WeaponSkillRank(
-                    name=skill_name,
-                    header=header,
-                    values=values,
-                    recommended_gem_id=gem_id,
-                )
-            )
-
-    return ranks
+                if child.get("kind") != "text":
+                    continue
+                for elem in child.get("text", {}).get("inlineElements", []):
+                    if elem.get("kind") == "entry":
+                        entries.append(elem["entry"])
+            row.append(entries)
+        rows.append(row)
+    return rows
 
 
 def _parse_weapon_breakthroughs(
-    widget: dict, document_map: dict
+    doc: dict, block_id: str, rows: list[list[str]]
 ) -> list[WeaponBreakthrough]:
-    """Parse 突破材料 widget → material entries per level."""
+    """Parse 突破总览 table: 材料消耗 row, one column per stage."""
+    first_col = [row[0] for row in rows]
+    level_row = rows[first_col.index("武器等级")] if "武器等级" in first_col else []
+    mat_row = _table_entries(doc, block_id)[first_col.index("材料消耗")]
+
     results: list[WeaponBreakthrough] = []
-    tab_list = widget.get("tabList", [])
-    tab_data_map = widget.get("tabDataMap", {})
-
-    for tab in tab_list:
-        tab_id = tab.get("tabId", "")
-        level_name = tab.get("title", "")
-        td = tab_data_map.get(tab_id, {})
-        content_id = td.get("content", "")
-
-        if not content_id or content_id not in document_map:
+    for col, entries in enumerate(mat_row[1:], start=1):
+        materials = [
+            MaterialEntry(item_id=e["id"], count=e.get("count", "0"))
+            for e in entries
+            if e.get("id")
+        ]
+        if not materials:
             continue
-
-        doc = document_map[content_id]
-        materials: list[MaterialEntry] = []
-
-        for bid in doc.get("blockIds", []):
-            block = doc.get("blockMap", {}).get(bid, {})
-            if block.get("kind") != "table":
-                continue
-            tbl = block.get("table", {})
-            block_map = doc.get("blockMap", {})
-
-            # Material entries are in row index 1
-            if len(tbl.get("rowIds", [])) < 2:
-                break
-            mat_row_id = tbl["rowIds"][1]
-            for col_id in tbl.get("columnIds", []):
-                cell = tbl.get("cellMap", {}).get(
-                    f"{mat_row_id}_{col_id}", {}
-                )
-                for child_id in cell.get("childIds", []):
-                    child = block_map.get(child_id, {})
-                    if child.get("kind") == "text":
-                        for elem in child.get("text", {}).get(
-                            "inlineElements", []
-                        ):
-                            if elem.get("kind") == "entry":
-                                e = elem["entry"]
-                                materials.append(
-                                    MaterialEntry(
-                                        item_id=e.get("id", ""),
-                                        count=e.get("count", "0"),
-                                    )
-                                )
-            break  # Only first table per tab
-
-        if materials:
-            results.append(
-                WeaponBreakthrough(
-                    level=level_name,
-                    materials=materials,
-                )
-            )
-
+        # "20级（突破后）-40级" -> "20级突破"
+        m = re.match(r"(\d+)级", level_row[col]) if col < len(level_row) else None
+        level = f"{m.group(1)}级突破" if m else rows[0][col]
+        results.append(WeaponBreakthrough(level=level, materials=materials))
     return results
 
 
@@ -756,7 +586,6 @@ def parse_skland_weapon_wiki(
         brief = item.get("brief", {})
         document = item.get("document", {})
         document_map = document.get("documentMap", {})
-        chapter_group = document.get("chapterGroup", [])
         widget_common_map = document.get("widgetCommonMap", {})
 
         # Rarity and weapon type from subTypeList
@@ -771,78 +600,84 @@ def parse_skland_weapon_wiki(
             elif sid == "10223":
                 weapon_type = WEAPON_TYPE_ID_MAP.get(val, val)
 
+        # Weapon type from 武器资料 tableList (fallback)
+        if not weapon_type:
+            for wdata in widget_common_map.values():
+                for entry in wdata.get("tableList") or []:
+                    if entry.get("label") == "类型":
+                        weapon_type = entry.get("value", "")
+
         # Cover image from brief
         cover_url = brief.get("cover", "")
 
-        # Find 基本信息 widget (first widget with tabs)
-        info_widget: dict = {}
-        for group in chapter_group:
-            for w in group.get("widgets", []):
-                wid = w["id"]
-                wdata = widget_common_map.get(wid, {})
-                if wdata.get("tabList"):
-                    info_widget = wdata
-                    break
-            if info_widget:
-                break
-
-        tab_list = info_widget.get("tabList", [])
-        tab_data_map = info_widget.get("tabDataMap", {})
-
-        # Weapon type from intro (fallback)
-        if not weapon_type and tab_list:
-            first_tab = tab_data_map.get(
-                tab_list[0].get("tabId", ""), {}
-            )
-            intro = first_tab.get("intro", {})
-            if intro:
-                weapon_type = intro.get("type", "")
-
-        # Tab 0 = initial stats, Tab 1 = max stats
         base_attack = 0
         base_attack_max = 0
-        stat_bonuses: list[WeaponStatBonus] = []
-        stat_bonuses_max: list[WeaponStatBonus] = []
+        skill_rows: list[list[str]] = []
+        breakthroughs: list[WeaponBreakthrough] = []
+        gem_id = ""
+
+        for doc in document_map.values():
+            for bid in doc.get("blockIds", []):
+                rows = [
+                    [cell.strip() for cell in row]
+                    for row in _parse_table_block(doc, bid, sep="\n")
+                ]
+                if not rows or not rows[0]:
+                    continue
+                first_col = [row[0] for row in rows]
+
+                if rows[0][0] == "技能详情" and not skill_rows:
+                    skill_rows = rows
+                elif "基础攻击力" in first_col and not base_attack:
+                    atk_row = rows[first_col.index("基础攻击力")]
+                    if atk_row[1].isdigit() and atk_row[-1].isdigit():
+                        base_attack = int(atk_row[1])
+                        base_attack_max = int(atk_row[-1])
+                elif "材料消耗" in first_col and not breakthroughs:
+                    breakthroughs = _parse_weapon_breakthroughs(
+                        doc, bid, rows
+                    )
+                elif "推荐武器基质" in rows[0] and not gem_id:
+                    col = rows[0].index("推荐武器基质")
+                    entries = _table_entries(doc, bid)
+                    if len(entries) > 1 and entries[1][col]:
+                        gem_id = entries[1][col][0].get("id", "")
+
+        # 技能详情: last column is the passive, the rest are stat bonuses
+        skills: list[tuple[str, list[str]]] = [
+            (skill_name, [row[col] for row in skill_rows[1:]])
+            for col, skill_name in enumerate(skill_rows[0][1:], start=1)
+            if skill_name
+        ] if len(skill_rows) > 1 else []
+        rank_header = [row[0].upper() for row in skill_rows[1:]]
+
+        skill_ranks = [
+            WeaponSkillRank(
+                name=skill_name,
+                header=rank_header,
+                values=[v.replace("\n", "") for v in values],
+                recommended_gem_id=gem_id,
+            )
+            for skill_name, values in skills
+        ]
+        stat_bonuses = [
+            WeaponStatBonus(name=skill_name, value=values[0])
+            for skill_name, values in skills[:-1]
+        ]
+        stat_bonuses_max = [
+            WeaponStatBonus(name=skill_name, value=values[-1])
+            for skill_name, values in skills[:-1]
+        ]
         passive: WeaponPassive | None = None
         passive_max: WeaponPassive | None = None
-
-        for i, tab in enumerate(tab_list[:2]):
-            tid = tab.get("tabId", "")
-            td = tab_data_map.get(tid, {})
-            intro = td.get("intro", {})
-            content_id = td.get("content", "")
-
-            if not intro:
-                continue
-
-            atk, bonuses, pas = _parse_weapon_tab(
-                intro, content_id, document_map
+        if skills:
+            passive_name, passive_values = skills[-1]
+            passive = WeaponPassive(
+                name=passive_name, description=passive_values[0]
             )
-
-            if i == 0:
-                base_attack = atk
-                stat_bonuses = bonuses
-                passive = pas
-            elif i == 1:
-                base_attack_max = atk
-                stat_bonuses_max = bonuses
-                passive_max = pas
-
-        # Skill rank tables from 武器技能和基质 widget
-        _, skill_widget = _find_widget(
-            chapter_group, widget_common_map, "技能详情"
-        )
-        skill_ranks = _parse_weapon_skill_ranks(
-            skill_widget, document_map
-        )
-
-        # Breakthroughs from 突破材料 → 材料一览 widget
-        _, bt_widget = _find_widget(
-            chapter_group, widget_common_map, "材料一览"
-        )
-        breakthroughs = _parse_weapon_breakthroughs(
-            bt_widget, document_map
-        )
+            passive_max = WeaponPassive(
+                name=passive_name, description=passive_values[-1]
+            )
 
         return WeaponWiki(
             name=name,

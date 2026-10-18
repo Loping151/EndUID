@@ -146,6 +146,10 @@ def _is_detail_expired(cache_path) -> bool:
         return True
 
 
+def _is_weapon_wiki_complete(wiki: WeaponWiki) -> bool:
+    return bool(wiki.base_attack and wiki.skill_ranks)
+
+
 # ==================== Public API ====================
 
 
@@ -267,7 +271,9 @@ async def get_weapon_wiki(
                 cache_path, "r", encoding="utf-8"
             ) as f:
                 data = json.loads(await f.read())
-            return WeaponWiki.model_validate(data)
+            cached = WeaponWiki.model_validate(data)
+            if _is_weapon_wiki_complete(cached):
+                return cached
         except Exception as e:
             logger.warning(f"[ENDUID·百科] Cache load failed {weapon_name}: {e}")
 
@@ -280,6 +286,12 @@ async def get_weapon_wiki(
         return None
 
     wiki.fetch_time = time.time()
+
+    if not _is_weapon_wiki_complete(wiki):
+        logger.warning(
+            f"[ENDUID·百科] Weapon wiki incomplete, skip cache: {weapon_name}"
+        )
+        return wiki
 
     try:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
