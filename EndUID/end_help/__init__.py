@@ -12,7 +12,7 @@ sv_end_help = SV("End帮助")
 
 
 @sv_end_help.on_fullmatch(
-    ("帮助", "help", "bz"),
+    ("帮助", "help", "bz", "菜单", "菜單", "功能"),
     block=True,
     to_ai="""返回 EndUID（明日方舟：终末地）插件的命令帮助图。
 
