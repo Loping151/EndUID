@@ -35,7 +35,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/end/fonts/SourceHanSansCN-Regular.ttc') format('truetype');
+  src: local('NotoSansCJKjp-Regular'), url('/end/fonts/SourceHanSansCN-Regular.ttc') format('truetype');
 }
 
 @font-face {
@@ -43,7 +43,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/end/fonts/SourceHanSansCN-Bold.ttc') format('truetype');
+  src: local('NotoSansCJKjp-Bold'), url('/end/fonts/SourceHanSansCN-Bold.ttc') format('truetype');
 }
 
 @font-face {
