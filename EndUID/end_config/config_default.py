@@ -27,15 +27,6 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "开启后，所有渲染卡片中显示的UID将以 前2位 + **** + 后2位 的形式显示",
         False,
     ),
-    "NeedProxyFunc": GsListStrConfig(
-        "需要代理的函数",
-        "需要代理的函数",
-        ["all"],
-        options=[
-            "all",
-        ],
-    ),
-
     "EndToken": GsStrConfig(
         "终末全排行Token",
         "终末全排行Token",
